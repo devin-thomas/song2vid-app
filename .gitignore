@@ -1,0 +1,25 @@
+# Build output
+build/
+DerivedData/
+.build/
+.swiftpm/
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+
+# Secrets and local config
+.env
+.env.*
+
+# Archives (release zips are attached to GitHub Releases, not committed)
+*.zip
+
+# Cloudflare tooling
+.wrangler/
+
+# macOS
+.DS_Store
+
+# Local test media
+TestMedia/

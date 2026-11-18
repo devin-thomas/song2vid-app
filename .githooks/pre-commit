@@ -1,0 +1,26 @@
+#!/bin/bash
+# Enabled with: git config core.hooksPath .githooks
+# Refuses commits not authored as the repo-local identity, then runs the public-safety scan.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+OWNER_EMAIL='127160473+devin-thomas@users.noreply.github.com'
+want_name=$(git config --local user.name || true)
+want_email=$(git config --local user.email || true)
+
+if [[ "$want_email" != "$OWNER_EMAIL" || -z "$want_name" ]]; then
+  echo "pre-commit: set the repo-local identity first:" >&2
+  echo "  git config user.name devin && git config user.email $OWNER_EMAIL" >&2
+  exit 1
+fi
+
+for kind in AUTHOR COMMITTER; do
+  ident=$(git var "GIT_${kind}_IDENT")
+  ident="${ident%% [0-9]*}" # drop the timestamp and zone
+  if [[ "$ident" != "$want_name <$want_email>" ]]; then
+    echo "pre-commit: commit $kind is '$ident', expected '$want_name <$want_email>'" >&2
+    exit 1
+  fi
+done
+
+exec scripts/safety-scan.sh --staged

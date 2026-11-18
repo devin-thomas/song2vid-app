@@ -1,0 +1,600 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0AF443F1ECE07899942B2998 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = 718E2BF8E4F05B1562C19883 /* Song2VidCore */; };
+		2CBAF6F5AFA7FDEE02854047 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = E0A392506BDB0F1F9AA90805 /* Song2VidCore */; };
+		C37EA1E2565A02BD71F12CC3 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = 36F7F86747C1ADB0BCBAEFD7 /* Song2VidCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		20C9F7AD5AE940AFEAE9C959 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2CB523EF5210271EA038343 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C476EC778B1D2CDF9C99A2AB;
+			remoteInfo = Song2Vid;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		14325A3DAB61B02253A07E8D /* Song2VidCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Song2VidCore; path = Song2VidCore; sourceTree = SOURCE_ROOT; };
+		413FD2F0FD3D4BDFC17D83A6 /* Song2VidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Song2VidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		71289846C09182FE794B2CB3 /* Song2Vid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Song2Vid.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Song2VidIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5F92D05E971266AF85563502 /* Song2Vid */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Song2Vid;
+			sourceTree = "<group>";
+		};
+		ADBF0BEF21224B06D2DF3A1A /* Song2VidTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Song2VidTests;
+			sourceTree = "<group>";
+		};
+		B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Song2VidIntegrationTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2B05DE8CD67B0A3F185237E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CBAF6F5AFA7FDEE02854047 /* Song2VidCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6DC98FC333AD875162A81858 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C37EA1E2565A02BD71F12CC3 /* Song2VidCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C4796A7C45E1FE227818DBA9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0AF443F1ECE07899942B2998 /* Song2VidCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		103C3732C9473B0B60144C72 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				71289846C09182FE794B2CB3 /* Song2Vid.app */,
+				C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */,
+				413FD2F0FD3D4BDFC17D83A6 /* Song2VidTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1B86248CDF60FCB2709F577D = {
+			isa = PBXGroup;
+			children = (
+				98AD10552DC3D01F4B0F09F8 /* Packages */,
+				5F92D05E971266AF85563502 /* Song2Vid */,
+				B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */,
+				ADBF0BEF21224B06D2DF3A1A /* Song2VidTests */,
+				103C3732C9473B0B60144C72 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		98AD10552DC3D01F4B0F09F8 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				14325A3DAB61B02253A07E8D /* Song2VidCore */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		447710850DAFE7FC99ED1D1D /* Song2VidTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFF4FAD49FF63D3DC2F06FE1 /* Build configuration list for PBXNativeTarget "Song2VidTests" */;
+			buildPhases = (
+				2672980991A7CE1AE898B127 /* Sources */,
+				D672C362A491D80C8B8A4403 /* Resources */,
+				C4796A7C45E1FE227818DBA9 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D31EBCDAC890E0357863CAA0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				ADBF0BEF21224B06D2DF3A1A /* Song2VidTests */,
+			);
+			name = Song2VidTests;
+			packageProductDependencies = (
+				718E2BF8E4F05B1562C19883 /* Song2VidCore */,
+			);
+			productName = Song2VidTests;
+			productReference = 413FD2F0FD3D4BDFC17D83A6 /* Song2VidTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		508A8E7A89608C18419FFBDF /* Song2VidIntegrationTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3549D2788AAAF8CF63CB67B1 /* Build configuration list for PBXNativeTarget "Song2VidIntegrationTests" */;
+			buildPhases = (
+				FFEF0DD877DBAEA27E9503B7 /* Sources */,
+				DA115FAD9B61A57FC13A0C49 /* Resources */,
+				2B05DE8CD67B0A3F185237E4 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */,
+			);
+			name = Song2VidIntegrationTests;
+			packageProductDependencies = (
+				E0A392506BDB0F1F9AA90805 /* Song2VidCore */,
+			);
+			productName = Song2VidIntegrationTests;
+			productReference = C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C476EC778B1D2CDF9C99A2AB /* Song2Vid */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFC4D4EDA5542F0E2DE0EA8F /* Build configuration list for PBXNativeTarget "Song2Vid" */;
+			buildPhases = (
+				B1C2D213ABE7A4AFD23243C8 /* Sources */,
+				FD0A26F7719C9D63259A48E4 /* Resources */,
+				6DC98FC333AD875162A81858 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5F92D05E971266AF85563502 /* Song2Vid */,
+			);
+			name = Song2Vid;
+			packageProductDependencies = (
+				36F7F86747C1ADB0BCBAEFD7 /* Song2VidCore */,
+			);
+			productName = Song2Vid;
+			productReference = 71289846C09182FE794B2CB3 /* Song2Vid.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B2CB523EF5210271EA038343 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					447710850DAFE7FC99ED1D1D = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+					508A8E7A89608C18419FFBDF = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+					C476EC778B1D2CDF9C99A2AB = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = A97AF009DCDAAC14D6CB53C4 /* Build configuration list for PBXProject "Song2Vid" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1B86248CDF60FCB2709F577D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1987CDA4483B7BF0B411BBA9 /* XCLocalSwiftPackageReference "Song2VidCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 103C3732C9473B0B60144C72 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C476EC778B1D2CDF9C99A2AB /* Song2Vid */,
+				447710850DAFE7FC99ED1D1D /* Song2VidTests */,
+				508A8E7A89608C18419FFBDF /* Song2VidIntegrationTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D672C362A491D80C8B8A4403 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA115FAD9B61A57FC13A0C49 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD0A26F7719C9D63259A48E4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2672980991A7CE1AE898B127 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1C2D213ABE7A4AFD23243C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFEF0DD877DBAEA27E9503B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D31EBCDAC890E0357863CAA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C476EC778B1D2CDF9C99A2AB /* Song2Vid */;
+			targetProxy = 20C9F7AD5AE940AFEAE9C959 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3DD3C272AE9B36D73A93A29C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "arm64 x86_64";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		583F47289499CBBB3349A161 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "arm64 x86_64";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		6E240B1F3683EA20C6C9B1F6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Song2Vid;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2026 devin. MIT licence.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid";
+				PRODUCT_NAME = Song2Vid;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		7236D6A56103CF45C57B213E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid.integrationtests";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		AA76548FA98C9668723091E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Song2Vid;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2026 devin. MIT licence.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid";
+				PRODUCT_NAME = Song2Vid;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AC693E39B96F0A13A0821673 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid.tests";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Song2Vid.app/Contents/MacOS/Song2Vid";
+			};
+			name = Debug;
+		};
+		B4437EA5C4FA3998998DF1BC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid.tests";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Song2Vid.app/Contents/MacOS/Song2Vid";
+			};
+			name = Release;
+		};
+		C3250B0E94B00C54B8706155 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.devin-thomas.song2vid.integrationtests";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3549D2788AAAF8CF63CB67B1 /* Build configuration list for PBXNativeTarget "Song2VidIntegrationTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3250B0E94B00C54B8706155 /* Debug */,
+				7236D6A56103CF45C57B213E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A97AF009DCDAAC14D6CB53C4 /* Build configuration list for PBXProject "Song2Vid" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				583F47289499CBBB3349A161 /* Debug */,
+				3DD3C272AE9B36D73A93A29C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DFC4D4EDA5542F0E2DE0EA8F /* Build configuration list for PBXNativeTarget "Song2Vid" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA76548FA98C9668723091E4 /* Debug */,
+				6E240B1F3683EA20C6C9B1F6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DFF4FAD49FF63D3DC2F06FE1 /* Build configuration list for PBXNativeTarget "Song2VidTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC693E39B96F0A13A0821673 /* Debug */,
+				B4437EA5C4FA3998998DF1BC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1987CDA4483B7BF0B411BBA9 /* XCLocalSwiftPackageReference "Song2VidCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Song2VidCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		36F7F86747C1ADB0BCBAEFD7 /* Song2VidCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Song2VidCore;
+		};
+		718E2BF8E4F05B1562C19883 /* Song2VidCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Song2VidCore;
+		};
+		E0A392506BDB0F1F9AA90805 /* Song2VidCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Song2VidCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B2CB523EF5210271EA038343 /* Project object */;
+}
