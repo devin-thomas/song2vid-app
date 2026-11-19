@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song2Vid - turn a song and an image into a video</title>
+<meta name="description" content="Song2Vid is a free Mac app that turns one song and one image into an MP4 video.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f6fb;
+    --card: #ffffff;
+    --text: #1b1a22;
+    --muted: #55535f;
+    --line: #e2e0ec;
+    --link: #5236d6;
+    --accent-a: #4f3cf0;
+    --accent-b: #9b2fe0;
+    --accent-c: #f2408f;
+    --btn-a: #5a3ff0;
+    --btn-b: #9b2fe0;
+    --btn-c: #c52a86;
+    --glow: rgba(155, 47, 224, 0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151419;
+      --card: #1f1d26;
+      --text: #f3f2f8;
+      --muted: #b0aeba;
+      --line: #34313f;
+      --link: #c4b5ff;
+      --accent-a: #8f85ff;
+      --accent-b: #c77bff;
+      --accent-c: #ff7ab0;
+      --glow: rgba(155, 47, 224, 0.28);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image: radial-gradient(60rem 28rem at 50% -8rem, var(--glow), transparent 70%);
+    background-repeat: no-repeat;
+    color: var(--text);
+    font: 17px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  main { width: 100%; max-width: 40rem; margin: 0 auto; padding: 3.5rem 1rem 2rem; flex: 1; }
+  header { text-align: center; }
+  .logo { width: 112px; height: 112px; display: block; margin: 0 auto 1.25rem; filter: drop-shadow(0 10px 22px rgba(79, 60, 240, 0.35)); }
+  h1 {
+    margin: 0 0 .5rem;
+    font-size: clamp(2.1rem, 8vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    background: linear-gradient(100deg, var(--accent-a), var(--accent-b) 55%, var(--accent-c));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .lede { margin: 0 auto; max-width: 28rem; font-size: 1.15rem; color: var(--muted); }
+  .cta { text-align: center; margin: 2rem 0 2.5rem; }
+  .button {
+    display: inline-block;
+    padding: .9rem 2rem;
+    border-radius: 999px;
+    background: linear-gradient(100deg, var(--btn-a), var(--btn-b) 55%, var(--btn-c));
+    color: #fff;
+    font-weight: 650;
+    font-size: 1.1rem;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(155, 47, 224, 0.35);
+  }
+  .button:hover { filter: brightness(1.08); }
+  .button:focus-visible, a:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  .req { margin: .9rem 0 0; color: var(--muted); font-size: .95rem; }
+  h2 { font-size: 1.3rem; margin: 0 0 1rem; }
+  ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: .75rem; }
+  li {
+    counter-increment: step;
+    display: flex;
+    gap: .9rem;
+    align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+  }
+  li::before {
+    content: counter(step);
+    flex: none;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--btn-a), var(--btn-c));
+    color: #fff;
+    font-weight: 700;
+    font-size: .95rem;
+    line-height: 1.9rem;
+    text-align: center;
+  }
+  li span { min-width: 0; overflow-wrap: anywhere; }
+  a { color: var(--link); }
+  footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img class="logo" src="/logo.svg" width="112" height="112" alt="Song2Vid app icon: a music note whose flag is a play button">
+    <h1>Song2Vid</h1>
+    <p class="lede">Turn one song and one image into a video. Drop them in, click once, and get an MP4.</p>
+  </header>
+
+  <div class="cta">
+    <a class="button" href="https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.0.0.zip">Download for Mac</a>
+    <p class="req">Requires macOS 14 or later</p>
+  </div>
+
+  <section aria-labelledby="steps">
+    <h2 id="steps">How to get started</h2>
+    <ol>
+      <li><span>Unzip the download and move Song2Vid to your Applications folder.</span></li>
+      <li><span>Open it. If macOS blocks it, go to System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>.</span></li>
+      <li><span>Choose a song and an image, then click <strong>Make Video</strong>.</span></li>
+    </ol>
+  </section>
+</main>
+<footer>
+  <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a>
+</footer>
+</body>
+</html>
