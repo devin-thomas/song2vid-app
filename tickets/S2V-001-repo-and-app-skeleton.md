@@ -1,6 +1,6 @@
 # S2V-001 - Public repo and app skeleton
 
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Goal
@@ -28,3 +28,9 @@ A public `song2vid-app` repo containing the plan files and a macOS app that buil
 ## Dependencies
 
 None.
+
+## Comments
+
+- Implemented in 8f58c5c (initial commit: plan files and app skeleton). Follow-up commits on `build/v1` only adjusted the CI workflow triggers.
+- `scripts/check.sh` passes locally and from a clean clone. The `check` workflow passes on GitHub (macOS runner).
+- Push-triggered workflow runs did not start on GitHub after the first pushes. Only a manual `workflow_dispatch` run was seen, so the workflow also allows manual runs.
