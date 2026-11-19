@@ -44,13 +44,13 @@ public enum VideoExporter {
 
         let folder = request.destinationURL.deletingLastPathComponent()
         var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory), isDirectory.boolValue,
-              FileManager.default.isWritableFile(atPath: folder.path)
+        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory), isDirectory.boolValue
         else { return .failed(.cannotSaveToFolder) }
         if FileManager.default.fileExists(atPath: request.destinationURL.path, isDirectory: &isDirectory),
            isDirectory.boolValue {
             return .failed(.cannotSaveToFolder)
         }
+        guard canWrite(to: request.destinationURL) else { return .failed(.cannotSaveToFolder) }
 
         let session = ExportSession(request: request, feeder: feeder, audio: audio, encoded: encoded, frameCount: frameCount, progress: progress)
         return await withTaskCancellationHandler {
@@ -61,6 +61,17 @@ public enum VideoExporter {
             session.cancel()
         }
     }
+}
+
+/// True if a video can be saved at `destination`. In a sandboxed app the person's choice in the save dialog opens up
+/// that one file but not its folder, so the folder can't be asked whether it is writable: the file is tried instead.
+private func canWrite(to destination: URL) -> Bool {
+    let manager = FileManager.default
+    if manager.isWritableFile(atPath: destination.deletingLastPathComponent().path) { return true }
+    if manager.fileExists(atPath: destination.path) { return manager.isWritableFile(atPath: destination.path) }
+    guard manager.createFile(atPath: destination.path, contents: nil) else { return false }
+    try? manager.removeItem(at: destination)
+    return true
 }
 
 /// One export in flight. The writer is fed from two queues (audio and video), and any of those, the
@@ -101,7 +112,10 @@ private final class ExportSession: @unchecked Sendable {
         self.progress = progress
 
         let folder = request.destinationURL.deletingLastPathComponent()
-        partialURL = folder.appendingPathComponent(".\(UUID().uuidString).song2vid-partial")
+        // Beside the destination when the folder is writable (so the final move stays on one volume). A sandboxed
+        // app may only write the chosen file itself, so the work is done in the temporary folder instead.
+        let partialFolder = FileManager.default.isWritableFile(atPath: folder.path) ? folder : FileManager.default.temporaryDirectory
+        partialURL = partialFolder.appendingPathComponent(".\(UUID().uuidString).song2vid-partial")
 
         let target = AudioFeeder.outputFormat(for: audio)
         audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [

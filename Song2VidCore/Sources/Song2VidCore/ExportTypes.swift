@@ -69,3 +69,17 @@ public struct ImageInfo: Equatable, Sendable {
     /// The pixel size after applying the image's orientation tag.
     public let size: PixelSize
 }
+
+/// Makes the video. The window depends on this rather than on `VideoExporter` so it can be tested without real media.
+public protocol VideoExporting: Sendable {
+    func export(_ request: ExportRequest, progress: @escaping @Sendable (Double) -> Void) async -> ExportOutcome
+}
+
+/// The real exporter.
+public struct SystemVideoExporter: VideoExporting {
+    public init() {}
+
+    public func export(_ request: ExportRequest, progress: @escaping @Sendable (Double) -> Void) async -> ExportOutcome {
+        await VideoExporter.export(request, progress: progress)
+    }
+}

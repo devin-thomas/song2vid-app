@@ -1,6 +1,6 @@
 # S2V-005 - Make Video flow
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: S2V-003, S2V-004, S2V-008
 
 ## Goal

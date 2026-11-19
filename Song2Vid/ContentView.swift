@@ -4,8 +4,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @State private var model = MainWindowModel()
-    @State private var picking: FileKind?
+    @State private var model = MainWindowModel(lastSaveFolder: SavePanel.rememberedFolder)
+    @State private var picking: FileKind = .audio
+    @State private var isPicking = false
     @State private var dropHighlighted = false
 
     private enum FileKind {
@@ -34,10 +35,11 @@ struct ContentView: View {
         .padding(20)
         .frame(minWidth: 560, minHeight: 540)
         .fileImporter(
-            isPresented: Binding(get: { picking != nil }, set: { if !$0 { picking = nil } }),
-            allowedContentTypes: picking?.types ?? []
+            isPresented: $isPicking,
+            allowedContentTypes: picking.types
         ) { result in
-            guard case .success(let url) = result, let kind = picking else { return }
+            guard case .success(let url) = result else { return }
+            let kind = picking
             Task {
                 switch kind {
                 case .audio: await model.chooseAudio(at: url)
@@ -79,14 +81,16 @@ struct ContentView: View {
     private var controls: some View {
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
             GridRow {
-                Button("Choose Audio…") { picking = .audio }
+                Button("Choose Audio…") { picking = .audio; isPicking = true }
+                    .disabled(model.controlsLocked)
                     .keyboardShortcut("o", modifiers: .command)
                     .accessibilityLabel("Choose Audio")
                     .accessibilityHint("Opens a file chooser for a song")
                 fileSummary(model.audioSummary, empty: "No audio chosen")
             }
             GridRow {
-                Button("Choose Image…") { picking = .image }
+                Button("Choose Image…") { picking = .image; isPicking = true }
+                    .disabled(model.controlsLocked)
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                     .accessibilityLabel("Choose Image")
                     .accessibilityHint("Opens a file chooser for a picture")
@@ -101,6 +105,7 @@ struct ContentView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
+                .disabled(model.controlsLocked)
             }
             GridRow {
                 Text("Resolution")
@@ -111,6 +116,7 @@ struct ContentView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .fixedSize()
+                    .disabled(model.controlsLocked)
                 } else if let label = model.outputSizeLabel {
                     Text(label)
                         .monospacedDigit()
@@ -140,9 +146,42 @@ struct ContentView: View {
                 Label(notice, systemImage: "xmark.octagon")
                     .foregroundStyle(.red)
             }
+            if let progress = model.progressFraction, let label = model.progressLabel {
+                progressRow(progress, label: label)
+            }
+            if let saved = model.savedVideoMessage, let url = model.savedVideoURL {
+                HStack {
+                    Label(saved, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                        .accessibilityHint("Shows the saved video in a Finder window")
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func progressRow(_ progress: Double, label: String) -> some View {
+        HStack(spacing: 12) {
+            // Drawn by hand: the system ProgressView's fill did not follow the value while the encoder was busy.
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.quaternary)
+                    Capsule().fill(Color.accentColor)
+                        .frame(width: max(8, proxy.size.width * progress))
+                }
+            }
+            .frame(height: 8)
+            .accessibilityElement()
+            .accessibilityLabel("Making video")
+            .accessibilityValue("\(Int(progress * 100)) percent")
+            Text(label)
+                .monospacedDigit()
+            Button("Cancel") { model.cancelExport() }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityHint("Stops making the video and deletes the unfinished file")
+        }
     }
 
     private var footer: some View {
@@ -164,6 +203,14 @@ struct ContentView: View {
         }
     }
 
-    /// Placeholder: S2V-005 replaces this with the save dialog and the export.
-    private func makeVideo() {}
+    /// Asks where to save, then makes the video there (SPEC section 6).
+    private func makeVideo() {
+        guard model.canMakeVideo else { return }
+        SavePanel.ask(name: model.defaultSaveName ?? "Video.mp4", folder: model.lastSaveFolder) { destination in
+            Task {
+                await model.makeVideo(to: destination)
+                SavePanel.remember(model.lastSaveFolder)
+            }
+        }
+    }
 }
