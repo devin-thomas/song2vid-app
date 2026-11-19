@@ -70,8 +70,11 @@ struct DropOutcomeTests {
         let outcome = await handler().handle([dropped("new.mp3", .audio), dropped("new.jpg", .image)], slots: slots, isExporting: false)
         guard case .confirm(let dialog) = outcome else { Issue.record("expected a dialog, got \(outcome)"); return }
         #expect(dialog.detail == """
-            Song now: old.mp3, 3:05. Dropped: new.mp3, 1:02.
-            Image now: old.jpg, 4000×3000 pixels. Dropped: new.jpg, 1920×1080 pixels.
+            Song now: old.mp3, 3:05
+            Dropped: new.mp3, 1:02
+
+            Image now: old.jpg, 4000×3000 pixels
+            Dropped: new.jpg, 1920×1080 pixels
             """)
     }
 

@@ -31,7 +31,7 @@ public struct DropSlots: Equatable, Sendable {
 public struct ReplaceDialog: Equatable, Sendable {
     /// "Replace the current song?", "Replace the current image?" or "Replace the current song and image?"
     public let title: String
-    /// What is there now and what was dropped, one line each.
+    /// What is there now and what was dropped, one line each, with a blank line between a song's pair and an image's pair.
     public let detail: String
     /// The button that uses the dropped file.
     public let replaceButton = "Replace"
@@ -71,9 +71,12 @@ public struct DropHandler: Sendable {
         self.inspector = inspector
     }
 
+    /// The message for a drop that arrives while a video is being made (SPEC section 4a).
+    public static let waitMessage = "Wait for the current video to finish."
+
     /// Why a drop can't be used, judged from the items' types alone. Also decides whether the window highlights.
     public static func rejection(for files: [DroppedFile], isExporting: Bool) -> String? {
-        if isExporting { return "Wait for the current video to finish." }
+        if isExporting { return waitMessage }
         if files.isEmpty { return "Drop a song or an image." }
         if files.contains(where: { $0.kind == .folder }) { return "Song2Vid can't use folders. Drop a song or an image." }
         if files.count > 2 { return "Drop no more than two files: one song, one image, or one of each." }
@@ -105,7 +108,7 @@ public struct DropHandler: Sendable {
         if let droppedAudio {
             ifReplaced.audio = droppedAudio
             if let current = slots.audio {
-                questions.append(("song", "Song now: \(current.summary). Dropped: \(droppedAudio.summary)."))
+                questions.append(("song", "Song now: \(current.summary)\nDropped: \(droppedAudio.summary)"))
             } else {
                 ifKept.audio = droppedAudio
             }
@@ -113,7 +116,7 @@ public struct DropHandler: Sendable {
         if let droppedImage {
             ifReplaced.image = droppedImage
             if let current = slots.image {
-                questions.append(("image", "Image now: \(current.summary). Dropped: \(droppedImage.summary)."))
+                questions.append(("image", "Image now: \(current.summary)\nDropped: \(droppedImage.summary)"))
             } else {
                 ifKept.image = droppedImage
             }
@@ -121,7 +124,7 @@ public struct DropHandler: Sendable {
         if questions.isEmpty { return .apply(ifReplaced, notice: notice) }
         return .confirm(ReplaceDialog(
             title: "Replace the current \(questions.map(\.noun).joined(separator: " and "))?",
-            detail: questions.map(\.detail).joined(separator: "\n"),
+            detail: questions.map(\.detail).joined(separator: "\n\n"),
             ifReplaced: ifReplaced,
             ifKept: ifKept,
             notice: notice

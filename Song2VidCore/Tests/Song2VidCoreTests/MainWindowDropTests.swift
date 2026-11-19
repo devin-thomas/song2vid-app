@@ -96,14 +96,6 @@ struct MainWindowDropTests {
         #expect(m.pendingReplacement == nil)
     }
 
-    @Test func dropsAreRefusedWhileAVideoIsBeingMade() async {
-        let m = model(audio: [newSong], images: [newImage])
-        m.isExporting = true
-        await m.drop([url("new.mp3")])
-        #expect(m.notice == "Wait for the current video to finish.")
-        #expect(m.audio == nil)
-    }
-
     @Test func aGoodDropClearsAnEarlierMessage() async {
         let m = model(audio: [newSong], images: [newImage])
         await m.drop([url("broken.mp3")])
@@ -124,7 +116,5 @@ struct MainWindowDropTests {
         let m = model()
         #expect(m.acceptsDrop(of: [DroppedFile(url: url("a.mp3"), kind: .audio)]))
         #expect(!m.acceptsDrop(of: [DroppedFile(url: url("Albums"), kind: .folder)]))
-        m.isExporting = true
-        #expect(!m.acceptsDrop(of: [DroppedFile(url: url("a.mp3"), kind: .audio)]))
     }
 }

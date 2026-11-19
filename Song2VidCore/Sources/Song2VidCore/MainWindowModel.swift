@@ -6,6 +6,15 @@ public enum CropNudge: Sendable {
     case left, right, up, down
 }
 
+/// Where Make Video stands.
+public enum ExportState: Equatable, Sendable {
+    case idle
+    /// A video is being made; `progress` is a fraction from 0 to 1.
+    case making(progress: Double)
+    /// The last video was saved at this URL.
+    case saved(URL)
+}
+
 /// Everything the main window shows and changes (SPEC section 4), kept free of any view code so it can be tested.
 @MainActor
 @Observable
@@ -16,8 +25,10 @@ public final class MainWindowModel {
     public private(set) var previewImage: PreviewImage?
     /// A short message about the last choice that didn't work; cleared by the next one that does.
     public private(set) var notice: String?
-    /// True while a video is being made; drops are refused then (SPEC section 4a). The export sets it.
-    public var isExporting = false
+    /// Where Make Video stands: idle, making (with progress), or saved (SPEC section 6).
+    public private(set) var exportState: ExportState = .idle
+    /// The folder of the last video saved, where the next save dialog starts. Nil until one is saved.
+    public private(set) var lastSaveFolder: URL?
     /// The Replace / Keep Current question waiting for an answer, if a drop needs one.
     public private(set) var pendingReplacement: ReplaceDialog?
 
@@ -32,20 +43,29 @@ public final class MainWindowModel {
     public private(set) var cropPosition: CropPosition = .center
 
     @ObservationIgnored private let inspector: any MediaInspecting
+    @ObservationIgnored private let exporter: any VideoExporting
+    @ObservationIgnored private var exportTask: Task<ExportOutcome, Never>?
     /// Files stay readable (sandbox access) for as long as they are the current choice, so the export can read them.
     @ObservationIgnored private var heldAudioAccess: URL?
     @ObservationIgnored private var heldImageAccess: URL?
     /// Dropped files opened for reading until the drop is settled.
     @ObservationIgnored private var dropAccess: [URL] = []
 
-    public init(inspector: any MediaInspecting = SystemMediaInspector()) {
+    public init(
+        inspector: any MediaInspecting = SystemMediaInspector(),
+        exporter: any VideoExporting = SystemVideoExporter(),
+        lastSaveFolder: URL? = nil
+    ) {
         self.inspector = inspector
+        self.exporter = exporter
+        self.lastSaveFolder = lastSaveFolder
     }
 
     // MARK: Choosing files
 
     /// Reads the song at `url` and makes it the current one. If it can't be read, the current one stays.
     public func chooseAudio(at url: URL) async {
+        guard !isExporting else { return }
         let access = url.startAccessingSecurityScopedResource()
         do {
             audio = try await inspector.inspectAudio(at: url)
@@ -60,6 +80,7 @@ public final class MainWindowModel {
     /// Reads the image at `url` and makes it the current one. If it can't be read, the current one stays.
     /// A new image puts the Crop back at the center.
     public func chooseImage(at url: URL) async {
+        guard !isExporting else { return }
         let access = url.startAccessingSecurityScopedResource()
         do {
             let loaded = try await inspector.inspectImage(at: url)
@@ -200,7 +221,85 @@ public final class MainWindowModel {
 
     /// Make Video is available only when both files are loaded and a frame can be made.
     public var canMakeVideo: Bool {
-        audio != nil && frame != nil
+        audio != nil && frame != nil && !isExporting
+    }
+
+    // MARK: Making the video (SPEC section 6)
+
+    /// True while a video is being made; drops are refused then (SPEC section 4a).
+    public var isExporting: Bool {
+        if case .making = exportState { return true }
+        return false
+    }
+
+    /// True while every control except Cancel is disabled.
+    public var controlsLocked: Bool { isExporting }
+
+    /// The save dialog's default name: the song's name with `.mp4`.
+    public var defaultSaveName: String? {
+        audio.map { $0.url.deletingPathExtension().lastPathComponent + ".mp4" }
+    }
+
+    /// The fraction done while a video is being made.
+    public var progressFraction: Double? {
+        if case .making(let progress) = exportState { return progress }
+        return nil
+    }
+
+    /// "Making video… 42%" while a video is being made.
+    public var progressLabel: String? {
+        progressFraction.map { "Making video… \(Int(($0 * 100).rounded(.down)))%" }
+    }
+
+    /// "Video saved." once a video is done, until the next one starts.
+    public var savedVideoMessage: String? {
+        savedVideoURL == nil ? nil : "Video saved."
+    }
+
+    /// Where the last video was saved, for Show in Finder.
+    public var savedVideoURL: URL? {
+        if case .saved(let url) = exportState { return url }
+        return nil
+    }
+
+    /// Makes the video at `destination`, which the person chose in the save dialog. Returns when it has finished,
+    /// failed or been cancelled. A failure shows as `notice`; a cancel shows nothing and leaves no file.
+    public func makeVideo(to destination: URL) async {
+        guard canMakeVideo, let audio, let image, let frame else { return }
+        exportState = .making(progress: 0)
+        notice = nil
+        let request = ExportRequest(audioURL: audio.url, imageURL: image.url, frame: frame, destinationURL: destination)
+        let exporter = exporter
+        let task = Task { [weak self] in
+            await exporter.export(request) { fraction in
+                Task { @MainActor in self?.reportProgress(fraction) }
+            }
+        }
+        exportTask = task
+        let outcome = await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+        exportTask = nil
+        // A drop refused during the export said "wait"; the wait is over.
+        if notice == DropHandler.waitMessage { notice = nil }
+        switch outcome {
+        case .completed(let url):
+            lastSaveFolder = url.deletingLastPathComponent()
+            exportState = .saved(url)
+        case .cancelled:
+            exportState = .idle
+        case .failed(let error):
+            exportState = .idle
+            notice = error.message
+        }
+    }
+
+    /// The Cancel button: stops the video being made and removes the half-written file.
+    public func cancelExport() {
+        exportTask?.cancel()
+    }
+
+    private func reportProgress(_ fraction: Double) {
+        guard case .making(let current) = exportState else { return }
+        exportState = .making(progress: min(1, max(current, fraction)))
     }
 
     // MARK: Crop
@@ -216,6 +315,7 @@ public final class MainWindowModel {
 
     /// True when dragging or the arrow keys can change what part of the image is kept.
     public var canAdjustCrop: Bool {
+        if isExporting { return false }
         let overflow = cropOverflow
         return overflow.horizontal > 0 || overflow.vertical > 0
     }
@@ -223,6 +323,7 @@ public final class MainWindowModel {
     /// Moves the image by (`dx`, `dy`) frame pixels from where `start` had it, as a drag does.
     /// The image can't be dragged past an edge, and doesn't move on an axis where it has nothing to crop.
     public func dragCrop(from start: CropPosition, byFramePixels dx: Double, _ dy: Double) {
+        guard !isExporting else { return }
         let overflow = cropOverflow
         // Dragging the image right shows more of its left side, so the position falls.
         cropPosition = CropPosition(
@@ -233,6 +334,7 @@ public final class MainWindowModel {
 
     /// An arrow-key press: the image moves one step in that direction.
     public func nudgeCrop(_ direction: CropNudge, large: Bool = false) {
+        guard !isExporting else { return }
         let step = large ? 0.25 : 0.05
         let overflow = cropOverflow
         var horizontal = cropPosition.horizontal
@@ -249,6 +351,7 @@ public final class MainWindowModel {
 
     /// "Reset to Center".
     public func resetCropToCenter() {
+        guard !isExporting else { return }
         cropPosition = .center
     }
 
