@@ -1,6 +1,6 @@
 # Song2Vid v1 build
 
-State: **working** · Phase: Build: tickets in progress (4 of 9 done) · Updated: 2026-11-19T00:18:04Z
+State: **working** · Phase: Build: tickets in progress (5 of 9 done) · Updated: 2026-11-19T00:25:37Z
 Repository: devin-thomas/song2vid-app · Branch: build/v1
 
 ## Action required
@@ -9,7 +9,7 @@ No action required from you right now.
 
 ## Current activity
 
-Two Sonnet implementers are building S2V-003 (video export engine) and S2V-004 (main window and live preview) in parallel worktrees. The coordinator will verify each one when it reports back.
+S2V-003 (video export) is still being built. S2V-008 (drag and drop with the replace dialog) has just been dispatched. The coordinator verifies each one when it reports back.
 
 ## Milestones
 
@@ -18,8 +18,8 @@ Two Sonnet implementers are building S2V-003 (video export engine) and S2V-004 (
 - [complete] S2V-009 App icon (preview reviewed)
 - [complete] S2V-002 Frame size and placement rules (45 tests; hand-checked)
 - [in_progress] S2V-003 Video export
-- [in_progress] S2V-004 Main window and live preview
-- [pending] S2V-008 Drag and drop with replace dialog (after S2V-004)
+- [complete] S2V-004 Main window and live preview (81 tests; screenshots reviewed)
+- [in_progress] S2V-008 Drag and drop with replace dialog
 - [pending] S2V-005 Make Video flow (after S2V-003, S2V-004 and S2V-008)
 - [pending] S2V-006 v1.0.0 release on GitHub
 - [pending] S2V-007 Download page live on pages.dev (ends with the owner's own download test)
@@ -54,9 +54,8 @@ None.
 ## Next up
 
 1. Verify S2V-003: tests, export timing, and a real ffprobe check
-2. Verify S2V-004: screenshots of each Frame Shape, and the crop drag
-3. Merge both, then dispatch S2V-008 (drag and drop)
-4. Dispatch S2V-005 (Make Video flow) once S2V-008 lands
+2. Verify S2V-008: drop rules and the Replace / Keep Current dialog
+3. Dispatch S2V-005 (Make Video flow) once S2V-003 and S2V-008 are merged
 
 ## Activity
 
@@ -67,11 +66,12 @@ None.
 - 2026-11-19: S2V-009 icon and S2V-002 frame math verified and merged into build/v1
 - 2026-11-19: S2V-003 and S2V-004 dispatched in parallel
 - 2026-11-19: Build dashboard started on localhost
+- 2026-11-19: S2V-004 main window verified from screenshots and merged; S2V-008 dispatched
 
 ## Walk-away snapshot
 
-- Last verified good state: build/v1 passes scripts/check.sh (45 core tests, universal ad-hoc-signed build)
-- Unfinished: S2V-003 and S2V-004 are being built on their own branches
+- Last verified good state: build/v1 passes scripts/check.sh (81 core tests, universal ad-hoc-signed build)
+- Unfinished: S2V-003 and S2V-008 are being built on their own branches
 - Next safe step: Verify each branch with scripts/check.sh, then merge it into build/v1
 - Touched: song2vid-app repo (build/v1, ticket branches); private progress repo
 - Expected processes: This dashboard's local server on localhost:4173
@@ -80,6 +80,6 @@ None.
 ## Delivery and persistence
 
 - Mode: localhost (http://localhost:4173/)
-- Last endpoint check: 2026-11-19T00:18:04Z: task ID and timestamp verified on localhost:4173 (loopback only)
+- Last endpoint check: 2026-11-19T00:25:37Z: task ID and timestamp verified on localhost:4173 (loopback only)
 - Persistence: Committed to build/v1 at each checkpoint
 - Limitations: Localhost only: viewable on this Mac, not on the phone.
