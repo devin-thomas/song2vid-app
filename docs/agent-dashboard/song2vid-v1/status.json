@@ -1,21 +1,28 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T01:19:20Z",
-  "state": "working",
-  "phase": "Review fixes (7 of 9 tickets done; page built, not deployed)",
+  "updated_at": "2026-11-19T01:57:35Z",
+  "state": "waiting",
+  "phase": "Deploy: the release is live; the download page is waiting on the owner",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
     "mode": "localhost",
     "preferred_local_port": 4173,
     "url": "http://localhost:4173/",
-    "last_verified": "2026-11-19T01:19:20Z: task ID and timestamp verified on localhost:4173 (loopback only)",
+    "last_verified": "2026-11-19T01:57:35Z: task ID and timestamp verified on localhost:4173 (loopback only)",
     "persistence": "Committed to build/v1 at each checkpoint",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
-  "action_required": [],
-  "current_activity": "One Sonnet fixer is addressing the code review: a crash on 96 kHz audio, replace-in-sandbox proof, the 0% progress stall, an atomic replace, and the safety-scan gaps.",
+  "action_required": [
+    {
+      "need": "Choose how to host the download page, and approve deleting a stray Worker",
+      "reason": "Wrangler's 'pages project create' made a Cloudflare Worker named song2vid instead of a Pages project. Because it ran from the stock-example folder, it published that folder's stock-ticker page at song2vid's workers.dev address. stock-example itself is unchanged.",
+      "action": "Reply: (1) delete the stray song2vid Worker? (2) host the page on song2vid.pages.dev, using Wrangler's opt-out flag for classic Pages, or on Workers?",
+      "default": "Nothing is deleted or deployed until you answer."
+    }
+  ],
+  "current_activity": "Waiting for the owner to choose how to host the download page.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -59,7 +66,8 @@
     },
     {
       "name": "S2V-006 v1.0.0 release on GitHub",
-      "status": "pending"
+      "status": "complete",
+      "note": "v1.0.0 published; 1.5 MB; anonymous download verified"
     },
     {
       "name": "S2V-007 Download page live on pages.dev",
@@ -68,14 +76,23 @@
     },
     {
       "name": "Code review, merge build/v1 to main",
-      "status": "in_progress"
+      "status": "complete",
+      "note": "fixes verified; main = build/v1"
     },
     {
       "name": "Final progress save (Starter Pack)",
       "status": "pending"
     }
   ],
-  "blockers": [],
+  "blockers": [
+    {
+      "cause": "Hosting choice and deletion approval needed from the owner.",
+      "impact": "The download page is not live yet.",
+      "owner": "Owner",
+      "recovery": "After the answer, delete the stray Worker if approved, deploy site/ from a folder with no Wrangler config, then verify the live URL.",
+      "independent_work": "Wiki and ledger updates."
+    }
+  ],
   "warnings": [
     {
       "label": "No action needed",
@@ -154,11 +171,10 @@
     }
   ],
   "next_up": [
-    "Verify the review fixes, including a 96 kHz export and replace-in-sandbox",
-    "Merge build/v1 into main",
-    "Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)",
-    "Deploy the download page to song2vid.pages.dev and verify it live",
-    "Owner downloads from the live page and makes a video"
+    "Delete the stray song2vid Worker (with approval)",
+    "Deploy site/ to the chosen host and verify the live page and download button",
+    "Owner downloads from the live page, opens the app and makes a video",
+    "Final progress save"
   ],
   "activity": [
     {
@@ -208,14 +224,22 @@
     {
       "time": "2026-11-19",
       "event": "Code review: 2 must-fix, 5 should-fix, 14 nits. Fixer dispatched."
+    },
+    {
+      "time": "2026-11-19",
+      "event": "v1.0.0 released and verified anonymously (sha256 matches, universal, signature valid)"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "Deploy attempt created a stray Worker serving the stock-ticker page; paused for the owner"
     }
   ],
   "walk_away": {
-    "last_good": "build/v1 passes scripts/check.sh (142 core + 22 integration tests); the app makes correct videos end to end",
-    "unfinished": "Code review (read-only) and the download page branch",
-    "next_safe_step": "Verify each branch with scripts/check.sh, then merge it into build/v1",
+    "last_good": "v1.0.0 is on GitHub Releases; main and build/v1 are at 6c0436e and all checks pass",
+    "unfinished": "The download page is not deployed. A stray Worker named song2vid exists on Cloudflare.",
+    "next_safe_step": "Wait for the owner, then run wrangler from the repo folder only, never from stock-example.",
     "touched": "song2vid-app repo (build/v1, ticket branches); private progress repo",
     "processes": "This dashboard's local server on localhost:4173",
-    "input_needed": "None right now"
+    "input_needed": "Hosting choice, and approval to delete the stray Worker"
   }
 }

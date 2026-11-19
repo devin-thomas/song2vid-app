@@ -1,15 +1,15 @@
 # Song2Vid v1 build
 
-State: **working** · Phase: Review fixes (7 of 9 tickets done; page built, not deployed) · Updated: 2026-11-19T01:19:20Z
+State: **waiting** · Phase: Deploy: the release is live; the download page is waiting on the owner · Updated: 2026-11-19T01:57:35Z
 Repository: devin-thomas/song2vid-app · Branch: build/v1
 
 ## Action required
 
-No action required from you right now.
+- **Choose how to host the download page, and approve deleting a stray Worker**: Wrangler's 'pages project create' made a Cloudflare Worker named song2vid instead of a Pages project. Because it ran from the stock-example folder, it published that folder's stock-ticker page at song2vid's workers.dev address. stock-example itself is unchanged. Smallest action: Reply: (1) delete the stray song2vid Worker? (2) host the page on song2vid.pages.dev, using Wrangler's opt-out flag for classic Pages, or on Workers?
 
 ## Current activity
 
-One Sonnet fixer is addressing the code review: a crash on 96 kHz audio, replace-in-sandbox proof, the 0% progress stall, an atomic replace, and the safety-scan gaps.
+Waiting for the owner to choose how to host the download page.
 
 ## Milestones
 
@@ -21,14 +21,14 @@ One Sonnet fixer is addressing the code review: a crash on 96 kHz audio, replace
 - [complete] S2V-004 Main window and live preview (81 tests; screenshots reviewed)
 - [complete] S2V-008 Drag and drop with replace dialog (123 tests; real drags tested)
 - [complete] S2V-005 Make Video flow (5 real videos checked with ffprobe)
-- [pending] S2V-006 v1.0.0 release on GitHub
+- [complete] S2V-006 v1.0.0 release on GitHub (v1.0.0 published; 1.5 MB; anonymous download verified)
 - [in_progress] S2V-007 Download page live on pages.dev (page built and reviewed; deploy after release)
-- [in_progress] Code review, merge build/v1 to main
+- [complete] Code review, merge build/v1 to main (fixes verified; main = build/v1)
 - [pending] Final progress save (Starter Pack)
 
 ## Blockers
 
-None.
+- Hosting choice and deletion approval needed from the owner. Impact: The download page is not live yet. Owner: Owner. Recovery: After the answer, delete the stray Worker if approved, deploy site/ from a folder with no Wrangler config, then verify the live URL.
 
 ## Warnings
 
@@ -54,11 +54,10 @@ None.
 
 ## Next up
 
-1. Verify the review fixes, including a 96 kHz export and replace-in-sandbox
-2. Merge build/v1 into main
-3. Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)
-4. Deploy the download page to song2vid.pages.dev and verify it live
-5. Owner downloads from the live page and makes a video
+1. Delete the stray song2vid Worker (with approval)
+2. Deploy site/ to the chosen host and verify the live page and download button
+3. Owner downloads from the live page, opens the app and makes a video
+4. Final progress save
 
 ## Activity
 
@@ -74,19 +73,21 @@ None.
 - 2026-11-19: S2V-003 export engine verified and merged (2:24 song at 2160p in about 7 s); S2V-005 dispatched
 - 2026-11-19: S2V-005 verified: all five real videos probed and fully decoded; merged. Code review and page build started.
 - 2026-11-19: Code review: 2 must-fix, 5 should-fix, 14 nits. Fixer dispatched.
+- 2026-11-19: v1.0.0 released and verified anonymously (sha256 matches, universal, signature valid)
+- 2026-11-19: Deploy attempt created a stray Worker serving the stock-ticker page; paused for the owner
 
 ## Walk-away snapshot
 
-- Last verified good state: build/v1 passes scripts/check.sh (142 core + 22 integration tests); the app makes correct videos end to end
-- Unfinished: Code review (read-only) and the download page branch
-- Next safe step: Verify each branch with scripts/check.sh, then merge it into build/v1
+- Last verified good state: v1.0.0 is on GitHub Releases; main and build/v1 are at 6c0436e and all checks pass
+- Unfinished: The download page is not deployed. A stray Worker named song2vid exists on Cloudflare.
+- Next safe step: Wait for the owner, then run wrangler from the repo folder only, never from stock-example.
 - Touched: song2vid-app repo (build/v1, ticket branches); private progress repo
 - Expected processes: This dashboard's local server on localhost:4173
-- Input needed: None right now
+- Input needed: Hosting choice, and approval to delete the stray Worker
 
 ## Delivery and persistence
 
 - Mode: localhost (http://localhost:4173/)
-- Last endpoint check: 2026-11-19T01:19:20Z: task ID and timestamp verified on localhost:4173 (loopback only)
+- Last endpoint check: 2026-11-19T01:57:35Z: task ID and timestamp verified on localhost:4173 (loopback only)
 - Persistence: Committed to build/v1 at each checkpoint
 - Limitations: Localhost only: viewable on this Mac, not on the phone.
