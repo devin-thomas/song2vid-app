@@ -124,7 +124,8 @@ private final class ExportSession: @unchecked Sendable {
         let folder = request.destinationURL.deletingLastPathComponent()
         // Beside the destination when the folder is writable (so the final move stays on one volume). A sandboxed
         // app may only write the chosen file itself, so the work is done in the temporary folder instead.
-        let partialFolder = FileManager.default.isWritableFile(atPath: folder.path) ? folder : FileManager.default.temporaryDirectory
+        let partialFolder = request.scratchFolder
+            ?? (FileManager.default.isWritableFile(atPath: folder.path) ? folder : FileManager.default.temporaryDirectory)
         partialURL = partialFolder.appendingPathComponent(".\(UUID().uuidString).song2vid-partial")
 
         guard let writer = try? AVAssetWriter(outputURL: partialURL, fileType: .mp4) else {
@@ -260,18 +261,61 @@ private final class ExportSession: @unchecked Sendable {
             return
         }
         do {
-            if FileManager.default.fileExists(atPath: request.destinationURL.path) {
-                _ = try FileManager.default.replaceItemAt(request.destinationURL, withItemAt: partialURL)
-            } else {
-                try FileManager.default.moveItem(at: partialURL, to: request.destinationURL)
-            }
+            try moveIntoPlace()
         } catch {
             lock.lock(); isCommitting = false; lock.unlock()
             finish(.failed(classify(error, default: .cannotSaveToFolder)))
             return
         }
+        // An overwrite in place copies the video, so the finished file and the backup are still in the work folder.
+        removePartialFiles()
         progress(1)
         finish(.completed(request.destinationURL))
+    }
+
+    /// Puts the finished video at the destination. If this fails, the destination is as it was before: a file that was
+    /// there is intact, and a half-copied one is not left behind (SPEC section 6.5).
+    private func moveIntoPlace() throws {
+        let manager = FileManager.default
+        let destination = request.destinationURL
+        guard manager.fileExists(atPath: destination.path) else {
+            do {
+                try manager.moveItem(at: partialURL, to: destination)
+            } catch {
+                // Moving to another volume copies, and a copy that fails partway can leave its start behind.
+                try? manager.removeItem(at: destination)
+                throw error
+            }
+            return
+        }
+        // The swap is all or nothing, but it needs to work beside the destination and on its volume. It can't
+        // in a sandboxed app (which may write only the chosen file) or when the video was built on another volume.
+        do {
+            _ = try manager.replaceItemAt(destination, withItemAt: partialURL)
+            return
+        } catch {}
+        // Instead, the file is written over in place, after keeping a copy of what it held to put back if that fails.
+        let backup = URL(fileURLWithPath: partialURL.path + ".previous")
+        try manager.copyItem(at: destination, to: backup)
+        do {
+            try Self.copyContents(of: partialURL, over: destination)
+        } catch {
+            try? Self.copyContents(of: backup, over: destination)
+            throw error
+        }
+    }
+
+    /// Replaces the contents of `destination` with those of `source`, keeping the file itself.
+    private static func copyContents(of source: URL, over destination: URL) throws {
+        let reader = try FileHandle(forReadingFrom: source)
+        defer { try? reader.close() }
+        let writer = try FileHandle(forWritingTo: destination)
+        defer { try? writer.close() }
+        try writer.truncate(atOffset: 0)
+        while let chunk = try reader.read(upToCount: 1 << 20), !chunk.isEmpty {
+            try writer.write(contentsOf: chunk)
+        }
+        try writer.synchronize()
     }
 
     /// Ends the export once. Anything but a completed file is torn down and the partial file removed.

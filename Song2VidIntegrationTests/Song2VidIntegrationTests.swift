@@ -13,18 +13,26 @@ struct VideoExportTests {
         let root: URL
         var inputs: URL { root.appendingPathComponent("inputs", isDirectory: true) }
         var outputs: URL { root.appendingPathComponent("outputs", isDirectory: true) }
+        /// A folder to build the video in, as the sandboxed app does with the temporary folder.
+        var scratch: URL { root.appendingPathComponent("scratch", isDirectory: true) }
         var destination: URL { outputs.appendingPathComponent("out.mp4") }
 
         init() throws {
             root = try TestMedia.makeFolder()
             try FileManager.default.createDirectory(at: inputs, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: outputs, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         }
 
         func remove() {
             // A read-only folder from a test can't be deleted until it is made writable again.
             try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: outputs.path)
             try? FileManager.default.removeItem(at: root)
+        }
+
+        /// What is in the scratch folder, hidden files included.
+        func scratchNames() throws -> [String] {
+            try FileManager.default.contentsOfDirectory(atPath: scratch.path).sorted()
         }
 
         /// What is in the output folder, hidden files included.
@@ -43,7 +51,8 @@ struct VideoExportTests {
         shape: FrameShape = .sixteenByNine,
         resolution: Resolution = .p480,
         imageSize: PixelSize = VideoExportTests.imageSize,
-        destination: URL? = nil
+        destination: URL? = nil,
+        scratchFolder: URL? = nil
     ) throws -> ExportRequest {
         let audioURL = try audio ?? TestMedia.writeTone(to: workspace.inputs.appendingPathComponent("tone.wav"))
         let imageURL = try image ?? TestMedia.writeImage(
@@ -51,7 +60,8 @@ struct VideoExportTests {
         )
         let frame = try OutputFrame(imageSize: imageSize, frameShape: shape, resolution: resolution)
         return ExportRequest(
-            audioURL: audioURL, imageURL: imageURL, frame: frame, destinationURL: destination ?? workspace.destination
+            audioURL: audioURL, imageURL: imageURL, frame: frame, destinationURL: destination ?? workspace.destination,
+            scratchFolder: scratchFolder
         )
     }
 
@@ -392,6 +402,136 @@ struct VideoExportTests {
         #expect(try workspace.outputNames() == ["out.mp4"])
     }
 
+    // MARK: Building in another folder (the sandboxed app's path, SPEC section 6.1 and 6.5)
+
+    // A sandboxed app may write only the file the person chose, not its folder, so the video is built in the
+    // temporary folder and moved into place. The tests ask for that path by naming a scratch folder. What only
+    // the real sandboxed app can show (that the move is allowed) is checked by hand.
+
+    @Test func aVideoBuiltInAnotherFolderEndsUpAtTheDestinationAndLeavesNothingBehind() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, scratchFolder: workspace.scratch), progress: { _ in }
+        )
+
+        #expect(outcome == .completed(workspace.destination))
+        #expect(try await Inspection(workspace.destination).videoSize == CGSize(width: 854, height: 480))
+        #expect(try workspace.outputNames() == ["out.mp4"])
+        #expect(try workspace.scratchNames() == [])
+    }
+
+    @Test func aVideoBuiltInAnotherFolderReplacesAnExistingFile() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        try Data("old".utf8).write(to: workspace.destination)
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, scratchFolder: workspace.scratch), progress: { _ in }
+        )
+
+        #expect(outcome == .completed(workspace.destination))
+        #expect(try await Inspection(workspace.destination).videoSize == CGSize(width: 854, height: 480))
+        #expect(try workspace.outputNames() == ["out.mp4"])
+        #expect(try workspace.scratchNames() == [])
+    }
+
+    @Test func cancellingAVideoBuiltInAnotherFolderLeavesNothingAnywhere() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        let existing = Data("the person's earlier video".utf8)
+        try existing.write(to: workspace.destination)
+        let job = try request(workspace, resolution: .p2160, scratchFolder: workspace.scratch)
+        let box = TaskBox()
+
+        let task = Task { await VideoExporter.export(job, progress: { _ in box.cancel() }) }
+        box.set(task)
+        let outcome = await task.value
+
+        #expect(outcome == .cancelled)
+        #expect(try Data(contentsOf: workspace.destination) == existing)
+        #expect(try workspace.outputNames() == ["out.mp4"])
+        #expect(try workspace.scratchNames() == [])
+    }
+
+    @Test func aFailureWhileBuildingInAnotherFolderLeavesNothingAnywhere() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        // The scratch disk is the full one, so the video can't even be built.
+        let disk = try TinyDisk()
+        defer { disk.detach() }
+        let audio = try TestMedia.writeTone(to: workspace.inputs.appendingPathComponent("long.wav"), seconds: 150)
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, audio: audio, scratchFolder: disk.mountPoint), progress: { _ in }
+        )
+
+        #expect(outcome == .failed(.diskFull))
+        #expect(try workspace.outputNames() == [])
+        #expect(try disk.visibleNames() == [])
+    }
+
+    @Test func aVideoBuiltOnOneVolumeReplacesAFileOnAnotherVolume() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        // The system's swap-in-place can't cross volumes, so the file is written over instead.
+        let disk = try TinyDisk()
+        defer { disk.detach() }
+        let destination = disk.mountPoint.appendingPathComponent("out.mp4")
+        try Data("old".utf8).write(to: destination)
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, destination: destination, scratchFolder: workspace.scratch), progress: { _ in }
+        )
+
+        #expect(outcome == .completed(destination))
+        #expect(try await Inspection(destination).videoSize == CGSize(width: 854, height: 480))
+        #expect(try disk.visibleNames() == ["out.mp4"])
+        #expect(try workspace.scratchNames() == [])
+    }
+
+    @Test func aMoveThatRunsOutOfSpaceDoesNotLeaveAHalfWrittenVideo() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        // The video is built on the Mac's disk and then moved to a disk that is too small for it, so the
+        // move fails partway through (SPEC section 6.5: the half-written file is deleted).
+        let disk = try TinyDisk()
+        defer { disk.detach() }
+        let audio = try TestMedia.writeTone(to: workspace.inputs.appendingPathComponent("long.wav"), seconds: 150)
+        let destination = disk.mountPoint.appendingPathComponent("out.mp4")
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, audio: audio, destination: destination, scratchFolder: workspace.scratch),
+            progress: { _ in }
+        )
+
+        #expect(outcome == .failed(.diskFull))
+        #expect(try disk.visibleNames() == [])
+        #expect(try workspace.scratchNames() == [])
+    }
+
+    @Test func aMoveThatRunsOutOfSpaceKeepsTheFileItWasToReplace() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        let disk = try TinyDisk()
+        defer { disk.detach() }
+        let audio = try TestMedia.writeTone(to: workspace.inputs.appendingPathComponent("long.wav"), seconds: 150)
+        let destination = disk.mountPoint.appendingPathComponent("out.mp4")
+        let existing = Data("the person's earlier video".utf8)
+        try existing.write(to: destination)
+
+        let outcome = await VideoExporter.export(
+            try request(workspace, audio: audio, destination: destination, scratchFolder: workspace.scratch),
+            progress: { _ in }
+        )
+
+        #expect(outcome == .failed(.diskFull))
+        #expect(try Data(contentsOf: destination) == existing)
+        #expect(try disk.visibleNames() == ["out.mp4"])
+        #expect(try workspace.scratchNames() == [])
+    }
+
     // MARK: Errors (SPEC section 6.5 and 7)
 
     @Test func unreadableAudioGivesTheSection7Message() async throws {
@@ -488,8 +628,7 @@ struct VideoExportTests {
 
         #expect(outcome == .failed(.diskFull))
         #expect(ExportError.diskFull.message == "Not enough disk space")
-        let left = try FileManager.default.contentsOfDirectory(atPath: disk.mountPoint.path).filter { $0 != ".fseventsd" }
-        #expect(left == [])
+        #expect(try disk.visibleNames() == [])
     }
 }
 
@@ -600,6 +739,11 @@ struct TinyDisk {
         let line = try #require(output.split(separator: "\n").first { $0.contains("/Volumes/") })
         let path = try #require(line.range(of: "/Volumes/").map { String(line[$0.lowerBound...]) })
         mountPoint = URL(fileURLWithPath: path.trimmingCharacters(in: .whitespaces), isDirectory: true)
+    }
+
+    /// What is on the disk, apart from the folder macOS adds by itself.
+    func visibleNames() throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: mountPoint.path).filter { $0 != ".fseventsd" }.sorted()
     }
 
     func detach() {
