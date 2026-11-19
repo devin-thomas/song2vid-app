@@ -13,5 +13,7 @@ Dated notes kept by the coordinating agent (chief-of-staff workflow, see ADR-010
 
 ## Recurring problems
 
+- [Verification gaps](verification-gaps.md): what the coordinator's checks missed, and the lessons.
+
 - [Public repo safety](public-repo-safety.md): what must never be committed, and the guardrails.
 - [CI did not run on push](ci-push-trigger.md): the GitHub Actions push trigger issue found in S2V-001.
