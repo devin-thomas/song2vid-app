@@ -290,7 +290,7 @@ struct VideoExportTests {
     @Test func cropKeepsTheChosenPartOfTheImage() async throws {
         let workspace = try Workspace()
         defer { workspace.remove() }
-        // 600x400 filling 480x480 is 720x480 and 240 pixels are cut off the width. Kept at the far left
+        // 600x400 filling 480x480 is 720x480 and 240 pixels of the width are discarded. Kept at the far left
         // (position 0), the image's left 480 of 720 shows: red to x = 360, then blue.
         let frame = try OutputFrame(
             imageSize: Self.imageSize, frameShape: .oneByOne, resolution: .p480,

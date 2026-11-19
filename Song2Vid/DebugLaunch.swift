@@ -21,19 +21,13 @@ enum DebugLaunch {
             await model.chooseImage(at: URL(fileURLWithPath: path))
         }
         if let name = defaults.string(forKey: "S2VShape"),
-           let shape = FrameShape.allCases.first(where: { $0.debugName == name }) {
+           let shape = FrameShape.allCases.first(where: { $0.title == name }) {
             model.frameShape = shape
         }
         if let name = defaults.string(forKey: "S2VResolution"),
-           let resolution = Resolution.allCases.first(where: { String($0.shortSide) + "p" == name }) {
+           let resolution = Resolution.allCases.first(where: { $0.title == name }) {
             model.resolution = resolution
         }
-    }
-}
-
-private extension FrameShape {
-    var debugName: String {
-        self == .original ? "Original" : title
     }
 }
 #endif

@@ -26,7 +26,7 @@ Implemented. Implementation commit: a9d29a8. Drop logic is `DropHandler` in Song
 
 Decisions on points the SPEC leaves open:
 - One dialog covers every filled slot the drop touches. A dropped file for an empty slot is filled whatever the answer.
-- The dialog detail names what is there and what was dropped, one line per slot.
+- The dialog detail names what is there and what was dropped: "Song now: …" then "Dropped song: …", and the same for the image, with a blank line between the two slots.
 - Esc on NSAlert is routed to Keep Current with a key monitor, since SwiftUI alerts cannot make one button both default and Esc.
 - Rejection checks run in this order: exporting, folder, more than two files, unsupported type, two of one kind. Any of them rejects the whole drop.
 - An unreadable dropped file (type fine, contents bad) never replaces anything. If its partner is readable, the partner is still used and the "can't read" message stays shown; if both are unreadable, both messages show.

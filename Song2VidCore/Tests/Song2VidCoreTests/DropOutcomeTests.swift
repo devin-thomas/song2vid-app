@@ -54,6 +54,10 @@ struct DropOutcomeTests {
         #expect(dialog.ifReplaced == DropSlots(audio: newSong, image: oldImage))
         #expect(dialog.ifKept == slots)
         #expect(dialog.notice == nil)
+        #expect(dialog.detail == """
+            Song now: old.mp3, 3:05
+            Dropped song: new.mp3, 1:02
+            """)
     }
 
     @Test func anImageOnAFilledImageSlotAsksToReplaceTheImage() async {
@@ -63,6 +67,10 @@ struct DropOutcomeTests {
         #expect(dialog.title == "Replace the current image?")
         #expect(dialog.ifReplaced == DropSlots(audio: oldSong, image: newImage))
         #expect(dialog.ifKept == slots)
+        #expect(dialog.detail == """
+            Image now: old.jpg, 4000×3000 pixels
+            Dropped image: new.jpg, 1920×1080 pixels
+            """)
     }
 
     @Test func theDialogNamesWhatIsThereAndWhatWasDropped() async {
@@ -71,10 +79,10 @@ struct DropOutcomeTests {
         guard case .confirm(let dialog) = outcome else { Issue.record("expected a dialog, got \(outcome)"); return }
         #expect(dialog.detail == """
             Song now: old.mp3, 3:05
-            Dropped: new.mp3, 1:02
+            Dropped song: new.mp3, 1:02
 
             Image now: old.jpg, 4000×3000 pixels
-            Dropped: new.jpg, 1920×1080 pixels
+            Dropped image: new.jpg, 1920×1080 pixels
             """)
     }
 

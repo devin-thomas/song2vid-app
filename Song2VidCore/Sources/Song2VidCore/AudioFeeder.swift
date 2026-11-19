@@ -20,6 +20,8 @@ extension AudioInfo {
         }
         var frames: Int64 = 0
         while true {
+            // Called from an export, this lets Cancel take effect now instead of after the whole song is read.
+            if Task.isCancelled { throw .unreadableAudio }
             do {
                 try file.read(into: buffer, frameCount: AudioFeeder.chunkFrames)
             } catch {

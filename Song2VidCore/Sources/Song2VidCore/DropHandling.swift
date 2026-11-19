@@ -108,7 +108,7 @@ public struct DropHandler: Sendable {
         if let droppedAudio {
             ifReplaced.audio = droppedAudio
             if let current = slots.audio {
-                questions.append(("song", "Song now: \(current.summary)\nDropped: \(droppedAudio.summary)"))
+                questions.append(("song", "Song now: \(current.summary)\nDropped song: \(droppedAudio.summary)"))
             } else {
                 ifKept.audio = droppedAudio
             }
@@ -116,7 +116,7 @@ public struct DropHandler: Sendable {
         if let droppedImage {
             ifReplaced.image = droppedImage
             if let current = slots.image {
-                questions.append(("image", "Image now: \(current.summary)\nDropped: \(droppedImage.summary)"))
+                questions.append(("image", "Image now: \(current.summary)\nDropped image: \(droppedImage.summary)"))
             } else {
                 ifKept.image = droppedImage
             }
