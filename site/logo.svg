@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 100 824 824" width="512" height="512">
+  <!-- Song2Vid app icon: a music note whose flag is a play triangle (a song becoming a video).
+       Original artwork, drawn for this project. Canvas follows the macOS icon grid:
+       an 824 px rounded square centred on a 1024 px canvas. -->
+  <defs>
+    <linearGradient id="bg" x1="150" y1="100" x2="880" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F3CF0"/>
+      <stop offset="0.55" stop-color="#9B2FE0"/>
+      <stop offset="1" stop-color="#F2408F"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="290" x2="0" y2="770" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE3F1"/>
+    </linearGradient>
+  </defs>
+  <rect id="shape" x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)"/>
+  <!-- film frame behind the note -->
+  <rect x="236" y="274" width="552" height="476" rx="92" fill="#FFFFFF" fill-opacity="0.16"/>
+  <!-- the glyph: one note head and stem whose flag is a play triangle, with a soft shadow -->
+  <g transform="translate(-6 -30)">
+    <g fill="#2A0F6B" fill-opacity="0.26" stroke="#2A0F6B" stroke-opacity="0.26" stroke-width="26" stroke-linejoin="round" transform="translate(0 20)">
+      <ellipse cx="402" cy="684" rx="112" ry="88" transform="rotate(-22 402 684)" stroke="none"/>
+      <path d="M487 694 V347 L757 446 L551 535 V694 Z"/>
+    </g>
+    <g fill="url(#fg)" stroke="url(#fg)" stroke-width="26" stroke-linejoin="round">
+      <ellipse cx="402" cy="684" rx="112" ry="88" transform="rotate(-22 402 684)" stroke="none"/>
+      <path d="M487 694 V347 L757 446 L551 535 V694 Z"/>
+    </g>
+  </g>
+</svg>

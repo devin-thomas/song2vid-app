@@ -1,6 +1,6 @@
 # S2V-009 - App icon and brand mark
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: S2V-001
 
 ## Goal
