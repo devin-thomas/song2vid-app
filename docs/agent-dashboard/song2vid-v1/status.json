@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T02:59:32Z",
-  "state": "waiting",
-  "phase": "Deploy: the download page is live; waiting on the owner report",
+  "updated_at": "2026-11-19T15:27:09Z",
+  "state": "complete",
+  "phase": "Done: v1.0.0 released and the download page is live",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
@@ -14,15 +14,8 @@
     "persistence": "Committed to build/v1 at each checkpoint",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
-  "action_required": [
-    {
-      "need": "Try the app from the live page",
-      "reason": "The last S2V-007 check and the Starter Pack live-deployment step need the owner's own report.",
-      "action": "Open https://song2vid.pages.dev on this Mac, click Download for Mac, unzip, move Song2Vid to Applications, open it (System Settings, Privacy & Security, Open Anyway if blocked), make one video and play it. Then reply with what happened.",
-      "default": "Nothing else is waiting on this; the final progress save follows your report."
-    }
-  ],
-  "current_activity": "Waiting for the owner to download from the live page and make a video.",
+  "action_required": [],
+  "current_activity": "Finished. Nothing running except this dashboard server.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -71,8 +64,8 @@
     },
     {
       "name": "S2V-007 Download page live on pages.dev",
-      "status": "in_progress",
-      "note": "live at song2vid.pages.dev; download verified; owner report pending"
+      "status": "complete",
+      "note": "live; owner downloaded, opened and made a video"
     },
     {
       "name": "Code review, merge build/v1 to main",
@@ -81,7 +74,8 @@
     },
     {
       "name": "Final progress save (Starter Pack)",
-      "status": "pending"
+      "status": "complete",
+      "note": "progress record saved and verified on the remote"
     }
   ],
   "blockers": [
@@ -187,10 +181,9 @@
     }
   ],
   "next_up": [
-    "Owner downloads from the live page, opens the app and makes a video",
-    "Resolve S2V-007 and record the owner report",
-    "Starter Pack: mark quick-build and live-deployment complete",
-    "Final progress save"
+    "Optional: v1.0.1 without the debugging permission, keeping the sandbox",
+    "Optional: test on an Intel Mac",
+    "Optional: retro on the S2V-004 verification gap"
   ],
   "activity": [
     {
@@ -252,14 +245,18 @@
     {
       "time": "2026-11-19",
       "event": "Stray Worker deleted with approval; classic Pages project created; site deployed and verified at song2vid.pages.dev"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "Owner report: downloaded from the live page, made and played a video. S2V-007 resolved; Starter Pack Phase 2 saved"
     }
   ],
   "walk_away": {
-    "last_good": "v1.0.0 on GitHub Releases; song2vid.pages.dev serves the page and its download is verified",
-    "unfinished": "Owner report for S2V-007; Starter Pack progress updates",
-    "next_safe_step": "Wait for the owner report, then resolve S2V-007 and save progress",
-    "touched": "song2vid-app repo (build/v1); Cloudflare Pages project song2vid; private progress repo",
+    "last_good": "v1.0.0 released; song2vid.pages.dev live; owner report recorded",
+    "unfinished": "None required",
+    "next_safe_step": "Optional follow-ups only",
+    "touched": "song2vid-app repo (main, build/v1); Cloudflare Pages project song2vid; private progress repo",
     "processes": "This dashboard's local server on localhost:4173",
-    "input_needed": "Owner report from the live page"
+    "input_needed": "None"
   }
 }

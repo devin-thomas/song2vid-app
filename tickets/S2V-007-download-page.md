@@ -1,6 +1,6 @@
 # S2V-007 - Download page live on Cloudflare Pages
 
-Status: ready-for-human
+Status: resolved
 Blocked by: S2V-006
 
 ## Goal
@@ -26,3 +26,4 @@ S2V-006.
 ## Comments
 
 - 2026-11-19: Deployed to Cloudflare Pages as the `song2vid` project; https://song2vid.pages.dev serves `site/` byte-for-byte. Checked by the coordinator: HTTP 200 with the CSP from `site/_headers`; the Download for Mac link resolves to the v1.0.0 release zip (sha256 matches the release); icons load; no horizontal scroll at 375 px. Waiting on the last criterion, the owner report.
+- 2026-11-19: Owner report: downloaded from https://song2vid.pages.dev on the owner's Mac (macOS 27.2, Apple silicon), opened the app, made a video and played it. All criteria met. Resolved.

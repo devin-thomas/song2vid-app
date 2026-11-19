@@ -1,15 +1,15 @@
 # Song2Vid v1 build
 
-State: **waiting** · Phase: Deploy: the download page is live; waiting on the owner report · Updated: 2026-11-19T02:59:32Z
+State: **complete** · Phase: Done: v1.0.0 released and the download page is live · Updated: 2026-11-19T15:27:09Z
 Repository: devin-thomas/song2vid-app · Branch: build/v1
 
 ## Action required
 
-- **Try the app from the live page**: The last S2V-007 check and the Starter Pack live-deployment step need the owner's own report. Smallest action: Open https://song2vid.pages.dev on this Mac, click Download for Mac, unzip, move Song2Vid to Applications, open it (System Settings, Privacy & Security, Open Anyway if blocked), make one video and play it. Then reply with what happened.
+No action required from you right now.
 
 ## Current activity
 
-Waiting for the owner to download from the live page and make a video.
+Finished. Nothing running except this dashboard server.
 
 ## Milestones
 
@@ -22,9 +22,9 @@ Waiting for the owner to download from the live page and make a video.
 - [complete] S2V-008 Drag and drop with replace dialog (123 tests; real drags tested)
 - [complete] S2V-005 Make Video flow (5 real videos checked with ffprobe)
 - [complete] S2V-006 v1.0.0 release on GitHub (v1.0.0 published; 1.5 MB; anonymous download verified)
-- [in_progress] S2V-007 Download page live on pages.dev (live at song2vid.pages.dev; download verified; owner report pending)
+- [complete] S2V-007 Download page live on pages.dev (live; owner downloaded, opened and made a video)
 - [complete] Code review, merge build/v1 to main (fixes verified; main = build/v1)
-- [pending] Final progress save (Starter Pack)
+- [complete] Final progress save (Starter Pack) (progress record saved and verified on the remote)
 
 ## Blockers
 
@@ -57,10 +57,9 @@ Waiting for the owner to download from the live page and make a video.
 
 ## Next up
 
-1. Owner downloads from the live page, opens the app and makes a video
-2. Resolve S2V-007 and record the owner report
-3. Starter Pack: mark quick-build and live-deployment complete
-4. Final progress save
+1. Optional: v1.0.1 without the debugging permission, keeping the sandbox
+2. Optional: test on an Intel Mac
+3. Optional: retro on the S2V-004 verification gap
 
 ## Activity
 
@@ -79,15 +78,16 @@ Waiting for the owner to download from the live page and make a video.
 - 2026-11-19: v1.0.0 released and verified anonymously (sha256 matches, universal, signature valid)
 - 2026-11-19: Deploy attempt created a stray Worker serving the stock-ticker page; paused for the owner
 - 2026-11-19: Stray Worker deleted with approval; classic Pages project created; site deployed and verified at song2vid.pages.dev
+- 2026-11-19: Owner report: downloaded from the live page, made and played a video. S2V-007 resolved; Starter Pack Phase 2 saved
 
 ## Walk-away snapshot
 
-- Last verified good state: v1.0.0 on GitHub Releases; song2vid.pages.dev serves the page and its download is verified
-- Unfinished: Owner report for S2V-007; Starter Pack progress updates
-- Next safe step: Wait for the owner report, then resolve S2V-007 and save progress
-- Touched: song2vid-app repo (build/v1); Cloudflare Pages project song2vid; private progress repo
+- Last verified good state: v1.0.0 released; song2vid.pages.dev live; owner report recorded
+- Unfinished: None required
+- Next safe step: Optional follow-ups only
+- Touched: song2vid-app repo (main, build/v1); Cloudflare Pages project song2vid; private progress repo
 - Expected processes: This dashboard's local server on localhost:4173
-- Input needed: Owner report from the live page
+- Input needed: None
 
 ## Delivery and persistence
 
