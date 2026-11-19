@@ -1,21 +1,21 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T00:51:59Z",
+  "updated_at": "2026-11-19T01:13:27Z",
   "state": "working",
-  "phase": "Build: tickets in progress (7 of 9 done)",
+  "phase": "Review: code review, and the download page in parallel (7 of 9 tickets done)",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
     "mode": "localhost",
     "preferred_local_port": 4173,
     "url": "http://localhost:4173/",
-    "last_verified": "2026-11-19T00:51:59Z: task ID and timestamp verified on localhost:4173 (loopback only)",
+    "last_verified": "2026-11-19T01:13:27Z: task ID and timestamp verified on localhost:4173 (loopback only)",
     "persistence": "Committed to build/v1 at each checkpoint",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "S2V-005 (Make Video flow) is being built. It wires export into the window, refuses drops during export, and tidies the dialog text. The implementer will make one real video per Frame Shape for the coordinator to check with ffprobe.",
+  "current_activity": "A Sonnet reviewer is running the two-axis code review (standards and spec) on build/v1. Meanwhile another Sonnet implementer is building the download page, without deploying it.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -54,7 +54,8 @@
     },
     {
       "name": "S2V-005 Make Video flow",
-      "status": "in_progress"
+      "status": "complete",
+      "note": "5 real videos checked with ffprobe"
     },
     {
       "name": "S2V-006 v1.0.0 release on GitHub",
@@ -62,12 +63,12 @@
     },
     {
       "name": "S2V-007 Download page live on pages.dev",
-      "status": "pending",
-      "note": "ends with the owner's own download test"
+      "status": "in_progress",
+      "note": "page being built; deploy after release"
     },
     {
       "name": "Code review, merge build/v1 to main",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "name": "Final progress save (Starter Pack)",
@@ -81,8 +82,8 @@
       "text": "GitHub Actions runs only when started by hand (ADR-011). All checks run on the owner's Mac before each merge."
     },
     {
-      "label": "Agent handling",
-      "text": "Refusing a drop during export is only unit-tested until S2V-005 wires up the export state."
+      "label": "No action needed",
+      "text": "An implementer left a macOS Finder permission prompt open on screen during testing. It is safe to dismiss with Don't Allow."
     }
   ],
   "decisions": [
@@ -146,10 +147,11 @@
     }
   ],
   "next_up": [
-    "Verify S2V-005: ffprobe every real output, plus the cancel and error paths",
+    "Read the review; dispatch one fixer for the must-fix and should-fix items",
+    "Merge build/v1 into main",
     "Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)",
-    "Dispatch S2V-007 (download page on pages.dev)",
-    "Code review of build/v1, then merge to main"
+    "Deploy the download page to song2vid.pages.dev and verify it live",
+    "Owner downloads from the live page and makes a video"
   ],
   "activity": [
     {
@@ -191,11 +193,15 @@
     {
       "time": "2026-11-19",
       "event": "S2V-003 export engine verified and merged (2:24 song at 2160p in about 7 s); S2V-005 dispatched"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "S2V-005 verified: all five real videos probed and fully decoded; merged. Code review and page build started."
     }
   ],
   "walk_away": {
-    "last_good": "build/v1 passes scripts/check.sh (123 core + 22 integration tests, universal ad-hoc-signed build)",
-    "unfinished": "S2V-005 is being built on its own branch",
+    "last_good": "build/v1 passes scripts/check.sh (142 core + 22 integration tests); the app makes correct videos end to end",
+    "unfinished": "Code review (read-only) and the download page branch",
     "next_safe_step": "Verify each branch with scripts/check.sh, then merge it into build/v1",
     "touched": "song2vid-app repo (build/v1, ticket branches); private progress repo",
     "processes": "This dashboard's local server on localhost:4173",
