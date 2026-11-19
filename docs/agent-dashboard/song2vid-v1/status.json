@@ -1,0 +1,191 @@
+{
+  "task_id": "song2vid-v1",
+  "title": "Song2Vid v1 build",
+  "updated_at": "2026-11-19T00:18:04Z",
+  "state": "working",
+  "phase": "Build: tickets in progress (4 of 9 done)",
+  "repository": "devin-thomas/song2vid-app",
+  "branch": "build/v1",
+  "delivery": {
+    "mode": "localhost",
+    "preferred_local_port": 4173,
+    "url": "http://localhost:4173/",
+    "last_verified": "2026-11-19T00:18:04Z: task ID and timestamp verified on localhost:4173 (loopback only)",
+    "persistence": "Committed to build/v1 at each checkpoint",
+    "limitations": "Localhost only: viewable on this Mac, not on the phone."
+  },
+  "action_required": [],
+  "current_activity": "Two Sonnet implementers are building S2V-003 (video export engine) and S2V-004 (main window and live preview) in parallel worktrees. The coordinator will verify each one when it reports back.",
+  "milestones": [
+    {
+      "name": "Plan approved (Grill to Build)",
+      "status": "complete",
+      "note": "2026-11-18"
+    },
+    {
+      "name": "S2V-001 Public repo and app skeleton",
+      "status": "complete",
+      "note": "verified on a fresh clone"
+    },
+    {
+      "name": "S2V-009 App icon",
+      "status": "complete",
+      "note": "preview reviewed"
+    },
+    {
+      "name": "S2V-002 Frame size and placement rules",
+      "status": "complete",
+      "note": "45 tests; hand-checked"
+    },
+    {
+      "name": "S2V-003 Video export",
+      "status": "in_progress"
+    },
+    {
+      "name": "S2V-004 Main window and live preview",
+      "status": "in_progress"
+    },
+    {
+      "name": "S2V-008 Drag and drop with replace dialog",
+      "status": "pending",
+      "note": "after S2V-004"
+    },
+    {
+      "name": "S2V-005 Make Video flow",
+      "status": "pending",
+      "note": "after S2V-003, S2V-004 and S2V-008"
+    },
+    {
+      "name": "S2V-006 v1.0.0 release on GitHub",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-007 Download page live on pages.dev",
+      "status": "pending",
+      "note": "ends with the owner's own download test"
+    },
+    {
+      "name": "Code review, merge build/v1 to main",
+      "status": "pending"
+    },
+    {
+      "name": "Final progress save (Starter Pack)",
+      "status": "pending"
+    }
+  ],
+  "blockers": [],
+  "warnings": [
+    {
+      "label": "No action needed",
+      "text": "GitHub Actions runs only when started by hand (ADR-011). All checks run on the owner's Mac before each merge."
+    },
+    {
+      "label": "Monitoring",
+      "text": "The 2160p export speed for a full-length song is not yet measured. S2V-003 reports it."
+    }
+  ],
+  "decisions": [
+    {
+      "time": "2026-11-18",
+      "decision": "Native macOS app with SwiftUI and AVFoundation",
+      "rationale": "Small download, no bundled FFmpeg (ADR-001).",
+      "reversibility": "costly to reverse",
+      "status": "final"
+    },
+    {
+      "time": "2026-11-18",
+      "decision": "Public repo with public plan, wiki and skills",
+      "rationale": "A demonstration of building with AI using the Starter Pack (ADR-003, ADR-004).",
+      "reversibility": "one-way once pushed",
+      "status": "final"
+    },
+    {
+      "time": "2026-11-18",
+      "decision": "Chief-of-staff workflow: Sonnet builds, Opus verifies and writes docs",
+      "rationale": "The owner's choice (ADR-010).",
+      "reversibility": "reversible",
+      "status": "final"
+    },
+    {
+      "time": "2026-11-19",
+      "decision": "Test on the owner's Mac; CI by hand only",
+      "rationale": "Hosted Mac runners used up the account's allowance before (ADR-011).",
+      "reversibility": "reversible",
+      "status": "final"
+    },
+    {
+      "time": "2026-11-19",
+      "decision": "The owner's sample media is never committed",
+      "rationale": "Personal images and possibly non-redistributable music (ADR-012).",
+      "reversibility": "n/a",
+      "status": "final"
+    }
+  ],
+  "outputs": [
+    {
+      "label": "Repository (public)",
+      "link": "https://github.com/devin-thomas/song2vid-app/tree/build/v1"
+    },
+    {
+      "label": "SPEC.md",
+      "link": "https://github.com/devin-thomas/song2vid-app/blob/build/v1/SPEC.md"
+    },
+    {
+      "label": "Tickets",
+      "link": "https://github.com/devin-thomas/song2vid-app/tree/build/v1/tickets"
+    },
+    {
+      "label": "Wiki: ticket log",
+      "link": "https://github.com/devin-thomas/song2vid-app/blob/build/v1/docs/wiki/ticket-log.md",
+      "note": "verification evidence per ticket"
+    },
+    {
+      "label": "Icon preview",
+      "link": "https://github.com/devin-thomas/song2vid-app/blob/build/v1/design/preview.png"
+    }
+  ],
+  "next_up": [
+    "Verify S2V-003: tests, export timing, and a real ffprobe check",
+    "Verify S2V-004: screenshots of each Frame Shape, and the crop drag",
+    "Merge both, then dispatch S2V-008 (drag and drop)",
+    "Dispatch S2V-005 (Make Video flow) once S2V-008 lands"
+  ],
+  "activity": [
+    {
+      "time": "2026-11-18",
+      "event": "Plan approved, with drag and drop and an app icon added"
+    },
+    {
+      "time": "2026-11-18",
+      "event": "Chief-of-staff skills installed in the repo"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "S2V-001 verified: public repo, check script, commit guard"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "CI switched to manual-only, at the owner's request"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "S2V-009 icon and S2V-002 frame math verified and merged into build/v1"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "S2V-003 and S2V-004 dispatched in parallel"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "Build dashboard started on localhost"
+    }
+  ],
+  "walk_away": {
+    "last_good": "build/v1 passes scripts/check.sh (45 core tests, universal ad-hoc-signed build)",
+    "unfinished": "S2V-003 and S2V-004 are being built on their own branches",
+    "next_safe_step": "Verify each branch with scripts/check.sh, then merge it into build/v1",
+    "touched": "song2vid-app repo (build/v1, ticket branches); private progress repo",
+    "processes": "This dashboard's local server on localhost:4173",
+    "input_needed": "None right now"
+  }
+}

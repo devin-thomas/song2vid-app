@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="dashboard-task-id" content="song2vid-v1">
+<meta name="dashboard-updated-at" content="2026-11-19T00:18:04Z">
+<title>Song2Vid build dashboard</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f7f6fb;--card:#fff;--fg:#1d1b26;--muted:#6b6880;--line:#e4e1ee;--accent:#7c3aed;--alarm:#b42318;--alarmbg:#fdecea;--warn:#8a5a00;--warnbg:#fff6e0;--ok:#127a3d}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14121b;--card:#1d1a27;--fg:#ece9f5;--muted:#a19db5;--line:#2e2a3c;--accent:#b794f6;--alarm:#ff8a80;--alarmbg:#3a1a1a;--warn:#ffcf70;--warnbg:#3a2e12;--ok:#6fdc9a}}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:960px;margin:0 auto;padding:16px} header h1{margin:0;font-size:1.4rem} .meta{color:var(--muted);font-size:.9rem}
+.state{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:600}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0} h2{font-size:1rem;margin:0 0 8px}
+ul,ol{margin:0;padding-left:20px} li{margin:4px 0} .quiet{color:var(--muted)} a{color:var(--accent)}
+#action{border:2px solid var(--alarm);background:var(--alarmbg)} #action.none{border:1px solid var(--line);background:var(--card)}
+.warn{color:var(--warn);background:var(--warnbg);padding:0 6px;border-radius:4px;font-weight:600}
+.ms.complete{color:var(--ok);font-weight:600} .ms.in_progress{color:var(--accent);font-weight:600} .ms.blocked{color:var(--alarm);font-weight:600}
+dl{margin:0} dt{font-weight:600} dd{margin:0 0 6px} .grid{display:grid;gap:0 12px;grid-template-columns:1fr}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}} #fresh{font-size:.85rem}
+</style></head><body><main>
+<header><h1>Song2Vid v1 build</h1>
+<p><span class=state>⚙️ working</span> · Phase: Build: tickets in progress (4 of 9 done)</p>
+<p class=meta>Updated 2026-11-19T00:18:04Z · devin-thomas/song2vid-app · branch build/v1 · <span id=fresh>live check pending</span></p></header>
+<section id=action class="none"><h2>Action required</h2><ul><li class=quiet>No action required from you right now.</li></ul></section>
+<section><h2>Current activity</h2><p style="margin:0">Two Sonnet implementers are building S2V-003 (video export engine) and S2V-004 (main window and live preview) in parallel worktrees. The coordinator will verify each one when it reports back.</p></section>
+<div class=grid><section><h2>Milestones</h2><ul><li><span class='ms complete'>● Complete</span> Plan approved (Grill to Build) <span class=quiet>· 2026-11-18</span></li><li><span class='ms complete'>● Complete</span> S2V-001 Public repo and app skeleton <span class=quiet>· verified on a fresh clone</span></li><li><span class='ms complete'>● Complete</span> S2V-009 App icon <span class=quiet>· preview reviewed</span></li><li><span class='ms complete'>● Complete</span> S2V-002 Frame size and placement rules <span class=quiet>· 45 tests; hand-checked</span></li><li><span class='ms in_progress'>◐ In progress</span> S2V-003 Video export</li><li><span class='ms in_progress'>◐ In progress</span> S2V-004 Main window and live preview</li><li><span class='ms pending'>○ Pending</span> S2V-008 Drag and drop with replace dialog <span class=quiet>· after S2V-004</span></li><li><span class='ms pending'>○ Pending</span> S2V-005 Make Video flow <span class=quiet>· after S2V-003, S2V-004 and S2V-008</span></li><li><span class='ms pending'>○ Pending</span> S2V-006 v1.0.0 release on GitHub</li><li><span class='ms pending'>○ Pending</span> S2V-007 Download page live on pages.dev <span class=quiet>· ends with the owner&#x27;s own download test</span></li><li><span class='ms pending'>○ Pending</span> Code review, merge build/v1 to main</li><li><span class='ms pending'>○ Pending</span> Final progress save (Starter Pack)</li></ul></section><section><h2>Next up</h2><ol><li>Verify S2V-003: tests, export timing, and a real ffprobe check</li><li>Verify S2V-004: screenshots of each Frame Shape, and the crop drag</li><li>Merge both, then dispatch S2V-008 (drag and drop)</li><li>Dispatch S2V-005 (Make Video flow) once S2V-008 lands</li></ol></section></div>
+<div class=grid><section><h2>Blockers</h2><ul><li class=quiet>None.</li></ul></section><section><h2>Warnings</h2><ul><li><span class=warn>⚠️ No action needed</span> GitHub Actions runs only when started by hand (ADR-011). All checks run on the owner&#x27;s Mac before each merge.</li><li><span class=warn>⚠️ Monitoring</span> The 2160p export speed for a full-length song is not yet measured. S2V-003 reports it.</li></ul></section></div>
+<section><h2>Decisions</h2><ul><li><strong>Native macOS app with SwiftUI and AVFoundation</strong> <span class=quiet>(2026-11-18 · final · costly to reverse)</span><br>Small download, no bundled FFmpeg (ADR-001).</li><li><strong>Public repo with public plan, wiki and skills</strong> <span class=quiet>(2026-11-18 · final · one-way once pushed)</span><br>A demonstration of building with AI using the Starter Pack (ADR-003, ADR-004).</li><li><strong>Chief-of-staff workflow: Sonnet builds, Opus verifies and writes docs</strong> <span class=quiet>(2026-11-18 · final · reversible)</span><br>The owner&#x27;s choice (ADR-010).</li><li><strong>Test on the owner&#x27;s Mac; CI by hand only</strong> <span class=quiet>(2026-11-19 · final · reversible)</span><br>Hosted Mac runners used up the account&#x27;s allowance before (ADR-011).</li><li><strong>The owner&#x27;s sample media is never committed</strong> <span class=quiet>(2026-11-19 · final · n/a)</span><br>Personal images and possibly non-redistributable music (ADR-012).</li></ul></section>
+<section><h2>Outputs</h2><ul><li><a href='https://github.com/devin-thomas/song2vid-app/tree/build/v1'>Repository (public)</a></li><li><a href='https://github.com/devin-thomas/song2vid-app/blob/build/v1/SPEC.md'>SPEC.md</a></li><li><a href='https://github.com/devin-thomas/song2vid-app/tree/build/v1/tickets'>Tickets</a></li><li><a href='https://github.com/devin-thomas/song2vid-app/blob/build/v1/docs/wiki/ticket-log.md'>Wiki: ticket log</a> <span class=quiet>· verification evidence per ticket</span></li><li><a href='https://github.com/devin-thomas/song2vid-app/blob/build/v1/design/preview.png'>Icon preview</a></li></ul></section>
+<section><h2>Activity</h2><ul><li><span class=quiet>2026-11-19</span> Build dashboard started on localhost</li><li><span class=quiet>2026-11-19</span> S2V-003 and S2V-004 dispatched in parallel</li><li><span class=quiet>2026-11-19</span> S2V-009 icon and S2V-002 frame math verified and merged into build/v1</li><li><span class=quiet>2026-11-19</span> CI switched to manual-only, at the owner&#x27;s request</li><li><span class=quiet>2026-11-19</span> S2V-001 verified: public repo, check script, commit guard</li><li><span class=quiet>2026-11-18</span> Chief-of-staff skills installed in the repo</li><li><span class=quiet>2026-11-18</span> Plan approved, with drag and drop and an app icon added</li></ul></section>
+<div class=grid><section><h2>Walk-away snapshot</h2><dl><dt>Last verified good state</dt><dd>build/v1 passes scripts/check.sh (45 core tests, universal ad-hoc-signed build)</dd><dt>Unfinished</dt><dd>S2V-003 and S2V-004 are being built on their own branches</dd><dt>Next safe step</dt><dd>Verify each branch with scripts/check.sh, then merge it into build/v1</dd><dt>Touched</dt><dd>song2vid-app repo (build/v1, ticket branches); private progress repo</dd><dt>Expected processes</dt><dd>This dashboard&#x27;s local server on localhost:4173</dd><dt>Input needed</dt><dd>None right now</dd></dl></section><section><h2>Delivery and persistence</h2><dl><dt>Mode</dt><dd>localhost · http://localhost:4173/</dd><dt>Last endpoint check</dt><dd>2026-11-19T00:18:04Z: task ID and timestamp verified on localhost:4173 (loopback only)</dd><dt>Persistence</dt><dd>Committed to build/v1 at each checkpoint</dd><dt>Limitations</dt><dd>Localhost only: viewable on this Mac, not on the phone.</dd></dl></section></div>
+</main>
+<script>
+const shown = document.querySelector('meta[name="dashboard-updated-at"]').content;
+const f = document.getElementById('fresh');
+async function check(){
+  try {
+    const r = await fetch('status.json?ts=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (j.updated_at !== shown) { location.replace(location.pathname + '?ts=' + Date.now()); return; }
+    f.textContent = 'live, checked ' + new Date().toLocaleTimeString();
+  } catch (err) { f.textContent = 'could not refresh (' + err.message + '): this view may be stale'; }
+}
+if (location.protocol.startsWith('http')) { check(); setInterval(check, 15000); } else { f.textContent = 'offline snapshot'; }
+</script></body></html>
