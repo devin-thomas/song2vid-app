@@ -67,7 +67,10 @@ Choosing a file with a button replaces the current one, since that is a delibera
 3. If `s ≥ 0.99` (less than 1% too big), the image is not scaled. The excess is trimmed equally from both edges of the side or sides that are too big.
 4. If `s < 0.99`, the image is scaled to `floor(W·s) × floor(H·s)`, keeping its shape.
 5. **Even sizes:** an odd width or height loses one pixel, from the right or bottom edge.
-6. Images smaller than 16×16 are rejected with a message.
+6. Images with either side under 16 pixels are rejected with a message.
+7. When an odd number of pixels is trimmed in rule 3, the extra pixel comes off the right or bottom edge.
+
+The crop position is stored as two fractions from 0 to 1 (0.5, 0.5 is centered), so it survives a Resolution change. Positions past an edge are clamped.
 
 ## 6. Making the video
 
