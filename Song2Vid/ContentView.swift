@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @State private var model = MainWindowModel()
     @State private var picking: FileKind?
+    @State private var dropHighlighted = false
 
     private enum FileKind {
         case audio, image
@@ -42,6 +43,14 @@ struct ContentView: View {
                 case .audio: await model.chooseAudio(at: url)
                 case .image: await model.chooseImage(at: url)
                 }
+            }
+        }
+        .overlay { if dropHighlighted { DropHighlight() } }
+        .onDrop(of: [.fileURL], delegate: WindowDropDelegate(model: model, highlighted: $dropHighlighted))
+        .onChange(of: model.pendingReplacement) { _, dialog in
+            guard let dialog else { return }
+            ReplaceAlert.present(dialog) { replace in
+                Task { await model.answerReplacement(replace: replace) }
             }
         }
         #if DEBUG
