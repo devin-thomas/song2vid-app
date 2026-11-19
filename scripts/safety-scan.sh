@@ -47,6 +47,11 @@ failures=0
 fail() { echo "safety-scan: $1" >&2; failures=$((failures + 1)); }
 
 denylist=""
+# Default: a list kept inside .git (never committed), so the hook checks it without any setup.
+if [[ -z "${S2V_DENYLIST:-}" ]]; then
+  default_list="$(git rev-parse --git-common-dir 2>/dev/null)/info/s2v-denylist"
+  [[ -f "$default_list" ]] && S2V_DENYLIST="$default_list"
+fi
 if [[ -n "${S2V_DENYLIST:-}" ]]; then
   [[ -f "$S2V_DENYLIST" ]] || { echo "safety-scan: S2V_DENYLIST names a file that does not exist" >&2; exit 1; }
   grep -vE '^[[:space:]]*(#|$)' "$S2V_DENYLIST" > "$work/denylist" || true
