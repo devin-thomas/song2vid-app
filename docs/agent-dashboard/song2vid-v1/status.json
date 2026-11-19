@@ -1,21 +1,21 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T00:38:48Z",
+  "updated_at": "2026-11-19T00:51:59Z",
   "state": "working",
-  "phase": "Build: tickets in progress (6 of 9 done)",
+  "phase": "Build: tickets in progress (7 of 9 done)",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
     "mode": "localhost",
     "preferred_local_port": 4173,
     "url": "http://localhost:4173/",
-    "last_verified": "2026-11-19T00:38:48Z: task ID and timestamp verified on localhost:4173 (loopback only)",
+    "last_verified": "2026-11-19T00:51:59Z: task ID and timestamp verified on localhost:4173 (loopback only)",
     "persistence": "Committed to build/v1 at each checkpoint",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "Waiting on S2V-003 (video export engine), the last ticket before the Make Video flow (S2V-005) can start.",
+  "current_activity": "S2V-005 (Make Video flow) is being built. It wires export into the window, refuses drops during export, and tidies the dialog text. The implementer will make one real video per Frame Shape for the coordinator to check with ffprobe.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -39,7 +39,8 @@
     },
     {
       "name": "S2V-003 Video export",
-      "status": "in_progress"
+      "status": "complete",
+      "note": "22 integration tests; 2160p in about 7 s"
     },
     {
       "name": "S2V-004 Main window and live preview",
@@ -53,8 +54,7 @@
     },
     {
       "name": "S2V-005 Make Video flow",
-      "status": "pending",
-      "note": "after S2V-003, S2V-004 and S2V-008"
+      "status": "in_progress"
     },
     {
       "name": "S2V-006 v1.0.0 release on GitHub",
@@ -79,10 +79,6 @@
     {
       "label": "No action needed",
       "text": "GitHub Actions runs only when started by hand (ADR-011). All checks run on the owner's Mac before each merge."
-    },
-    {
-      "label": "Monitoring",
-      "text": "The 2160p export speed for a full-length song is not yet measured. S2V-003 reports it."
     },
     {
       "label": "Agent handling",
@@ -150,9 +146,10 @@
     }
   ],
   "next_up": [
-    "Verify S2V-003: tests, export timing, and a real ffprobe check",
-    "Dispatch S2V-005 (Make Video flow), including wiring the export state into drop handling",
-    "Tidy the drop dialog text during the final code review"
+    "Verify S2V-005: ffprobe every real output, plus the cancel and error paths",
+    "Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)",
+    "Dispatch S2V-007 (download page on pages.dev)",
+    "Code review of build/v1, then merge to main"
   ],
   "activity": [
     {
@@ -190,11 +187,15 @@
     {
       "time": "2026-11-19",
       "event": "S2V-008 drag and drop verified and merged"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "S2V-003 export engine verified and merged (2:24 song at 2160p in about 7 s); S2V-005 dispatched"
     }
   ],
   "walk_away": {
-    "last_good": "build/v1 passes scripts/check.sh (123 core tests, universal ad-hoc-signed build)",
-    "unfinished": "S2V-003 is being built on its own branch",
+    "last_good": "build/v1 passes scripts/check.sh (123 core + 22 integration tests, universal ad-hoc-signed build)",
+    "unfinished": "S2V-005 is being built on its own branch",
     "next_safe_step": "Verify each branch with scripts/check.sh, then merge it into build/v1",
     "touched": "song2vid-app repo (build/v1, ticket branches); private progress repo",
     "processes": "This dashboard's local server on localhost:4173",
