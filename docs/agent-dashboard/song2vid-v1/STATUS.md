@@ -1,6 +1,6 @@
 # Song2Vid v1 build
 
-State: **working** · Phase: Review: code review, and the download page in parallel (7 of 9 tickets done) · Updated: 2026-11-19T01:13:27Z
+State: **working** · Phase: Review fixes (7 of 9 tickets done; page built, not deployed) · Updated: 2026-11-19T01:19:20Z
 Repository: devin-thomas/song2vid-app · Branch: build/v1
 
 ## Action required
@@ -9,7 +9,7 @@ No action required from you right now.
 
 ## Current activity
 
-A Sonnet reviewer is running the two-axis code review (standards and spec) on build/v1. Meanwhile another Sonnet implementer is building the download page, without deploying it.
+One Sonnet fixer is addressing the code review: a crash on 96 kHz audio, replace-in-sandbox proof, the 0% progress stall, an atomic replace, and the safety-scan gaps.
 
 ## Milestones
 
@@ -22,7 +22,7 @@ A Sonnet reviewer is running the two-axis code review (standards and spec) on bu
 - [complete] S2V-008 Drag and drop with replace dialog (123 tests; real drags tested)
 - [complete] S2V-005 Make Video flow (5 real videos checked with ffprobe)
 - [pending] S2V-006 v1.0.0 release on GitHub
-- [in_progress] S2V-007 Download page live on pages.dev (page being built; deploy after release)
+- [in_progress] S2V-007 Download page live on pages.dev (page built and reviewed; deploy after release)
 - [in_progress] Code review, merge build/v1 to main
 - [pending] Final progress save (Starter Pack)
 
@@ -42,6 +42,7 @@ None.
 - 2026-11-18: Chief-of-staff workflow: Sonnet builds, Opus verifies and writes docs (final; reversible). The owner's choice (ADR-010).
 - 2026-11-19: Test on the owner's Mac; CI by hand only (final; reversible). Hosted Mac runners used up the account's allowance before (ADR-011).
 - 2026-11-19: The owner's sample media is never committed (final; n/a). Personal images and possibly non-redistributable music (ADR-012).
+- 2026-11-19: Audio above 48 kHz is converted to 48 kHz (final; reversible). The AAC encoder rejects higher rates at 256 kbps; this was found by the code review (SPEC §6.3).
 
 ## Outputs
 
@@ -53,7 +54,7 @@ None.
 
 ## Next up
 
-1. Read the review; dispatch one fixer for the must-fix and should-fix items
+1. Verify the review fixes, including a 96 kHz export and replace-in-sandbox
 2. Merge build/v1 into main
 3. Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)
 4. Deploy the download page to song2vid.pages.dev and verify it live
@@ -72,6 +73,7 @@ None.
 - 2026-11-19: S2V-008 drag and drop verified and merged
 - 2026-11-19: S2V-003 export engine verified and merged (2:24 song at 2160p in about 7 s); S2V-005 dispatched
 - 2026-11-19: S2V-005 verified: all five real videos probed and fully decoded; merged. Code review and page build started.
+- 2026-11-19: Code review: 2 must-fix, 5 should-fix, 14 nits. Fixer dispatched.
 
 ## Walk-away snapshot
 
@@ -85,6 +87,6 @@ None.
 ## Delivery and persistence
 
 - Mode: localhost (http://localhost:4173/)
-- Last endpoint check: 2026-11-19T01:13:27Z: task ID and timestamp verified on localhost:4173 (loopback only)
+- Last endpoint check: 2026-11-19T01:19:20Z: task ID and timestamp verified on localhost:4173 (loopback only)
 - Persistence: Committed to build/v1 at each checkpoint
 - Limitations: Localhost only: viewable on this Mac, not on the phone.
