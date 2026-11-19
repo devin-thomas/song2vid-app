@@ -121,7 +121,7 @@ struct ContentView: View {
                     Text(label)
                         .monospacedDigit()
                 } else {
-                    Text("Output size follows the image")
+                    Text("Output follows the image")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -146,8 +146,8 @@ struct ContentView: View {
                 Label(notice, systemImage: "xmark.octagon")
                     .foregroundStyle(.red)
             }
-            if let progress = model.progressFraction, let label = model.progressLabel {
-                progressRow(progress, label: label)
+            if let label = model.progressLabel {
+                progressRow(model.progressFraction, label: label)
             }
             if let saved = model.savedVideoMessage, let url = model.savedVideoURL {
                 HStack {
@@ -162,20 +162,28 @@ struct ContentView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func progressRow(_ progress: Double, label: String) -> some View {
+    /// `progress` is nil while the video is still being prepared, which shows a bar that just moves.
+    private func progressRow(_ progress: Double?, label: String) -> some View {
         HStack(spacing: 12) {
-            // Drawn by hand: the system ProgressView's fill did not follow the value while the encoder was busy.
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.quaternary)
-                    Capsule().fill(Color.accentColor)
-                        .frame(width: max(8, proxy.size.width * progress))
+            if let progress {
+                // Drawn by hand: the system ProgressView's fill did not follow the value while the encoder was busy.
+                // At 0% the capsule is empty.
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.quaternary)
+                        Capsule().fill(Color.accentColor)
+                            .frame(width: proxy.size.width * progress)
+                    }
                 }
+                .frame(height: 8)
+                .accessibilityElement()
+                .accessibilityLabel("Making video")
+                .accessibilityValue("\(Int(progress * 100)) percent")
+            } else {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .accessibilityLabel("Preparing the video")
             }
-            .frame(height: 8)
-            .accessibilityElement()
-            .accessibilityLabel("Making video")
-            .accessibilityValue("\(Int(progress * 100)) percent")
             Text(label)
                 .monospacedDigit()
             Button("Cancel") { model.cancelExport() }

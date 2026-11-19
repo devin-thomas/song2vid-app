@@ -8,12 +8,17 @@ public struct ExportRequest: Sendable {
     public var frame: OutputFrame
     /// Where the MP4 goes. An existing file there is replaced, but only once the new video is complete.
     public var destinationURL: URL
+    /// The folder to build the video in before moving it to the destination. Nil means beside the destination
+    /// when its folder can be written to, and the temporary folder otherwise (a sandboxed app may write only the
+    /// file the person chose, not its folder).
+    public var scratchFolder: URL?
 
-    public init(audioURL: URL, imageURL: URL, frame: OutputFrame, destinationURL: URL) {
+    public init(audioURL: URL, imageURL: URL, frame: OutputFrame, destinationURL: URL, scratchFolder: URL? = nil) {
         self.audioURL = audioURL
         self.imageURL = imageURL
         self.frame = frame
         self.destinationURL = destinationURL
+        self.scratchFolder = scratchFolder
     }
 }
 

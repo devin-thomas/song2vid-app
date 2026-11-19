@@ -38,7 +38,9 @@ git config core.hooksPath .githooks
 scripts/check.sh
 ```
 
-The first command enables the pre-commit hook, which blocks secrets and personal paths. The second builds the app, runs all tests and runs the safety scan.
+The first command enables the commit hooks, which block secrets, personal paths and co-author lines in files and commit messages. The second builds the app, runs all tests and runs the safety scan on the files and on this branch's commit messages.
+
+To also keep the names of real sample media out of the repo, list them one per line in a file outside the repo and set `S2V_DENYLIST` to its path before committing or running the check.
 
 ## Licence
 

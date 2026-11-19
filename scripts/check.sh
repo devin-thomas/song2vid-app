@@ -5,6 +5,14 @@ cd "$(git rev-parse --show-toplevel)"
 
 echo "== Public-safety scan"
 scripts/safety-scan.sh
+# The commit messages on this branch, when main is there to compare with (a one-commit checkout has no main).
+if base=$(git merge-base origin/main HEAD 2>/dev/null) && [[ -n "$base" ]]; then
+  scripts/safety-scan.sh --log "$base..HEAD"
+fi
+case "$(git config core.hooksPath || true)" in
+  *.githooks) ;;
+  *) echo "check: warning: the commit hooks are not on here. Run: git config core.hooksPath .githooks" >&2 ;;
+esac
 
 echo "== Swift package tests (Song2VidCore)"
 (cd Song2VidCore && swift test)

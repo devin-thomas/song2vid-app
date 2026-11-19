@@ -17,6 +17,8 @@ A downloadable app zip on GitHub Releases.
 - The release asset downloads anonymously.
 - After a fresh download and unzip, the app is universal (`lipo -info`), its signature is valid (`codesign --verify`), and it opens on this Mac after the first-open step.
 
+- In the sandboxed release build, saving over an existing MP4 through the real save panel works on the internal disk and on an external volume, and a 96 kHz source makes a 48 kHz AAC track (these were checked on the review-fixes build; repeat on the release build).
+
 ## Dependencies
 
 S2V-005, S2V-009.

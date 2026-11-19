@@ -188,6 +188,27 @@ struct MainWindowExportInProgressTests {
         await running.value
     }
 
+    @Test func untilTheFirstProgressArrivesTheWindowSaysPreparing() async {
+        let m = await readyModel(exporter: FakeExporter(.waitForCancel(progress: [])))
+        let running = Task { await m.makeVideo(to: destination) }
+        #expect(await eventually { m.isExporting })
+        #expect(m.isPreparing)
+        #expect(m.progressFraction == nil)
+        #expect(m.progressLabel == "Preparing…")
+        m.cancelExport()
+        await running.value
+        #expect(!m.isPreparing)
+        #expect(m.progressLabel == nil)
+    }
+
+    @Test func oncePreparingIsOverTheWindowShowsThePercentage() async {
+        let (m, running) = await busyWindow()
+        #expect(!m.isPreparing)
+        #expect(m.progressLabel == "Making video… 25%")
+        m.cancelExport()
+        await running.value
+    }
+
     @Test func progressNeverGoesBackwards() async {
         let m = await readyModel(exporter: FakeExporter(.waitForCancel(progress: [0.6, 0.4])))
         let running = Task { await m.makeVideo(to: destination) }

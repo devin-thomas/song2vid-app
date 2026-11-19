@@ -100,16 +100,16 @@ public struct OutputFrame: Equatable, Sendable {
         resolution: Resolution,
         cropPosition: CropPosition = .center
     ) throws {
-        let p = resolution.shortSide
+        let shortSide = resolution.shortSide
         switch frameShape {
         case .sixteenByNine:
-            self = Self.fitWithBars(imageSize, in: PixelSize(width: Self.evenCeil(p * 16, dividedBy: 9), height: p))
+            self = Self.fitWithBars(imageSize, in: PixelSize(width: Self.evenCeil(shortSide * 16, dividedBy: 9), height: shortSide))
         case .nineBySixteen:
-            self = Self.fitWithBars(imageSize, in: PixelSize(width: p, height: Self.evenCeil(p * 16, dividedBy: 9)))
+            self = Self.fitWithBars(imageSize, in: PixelSize(width: shortSide, height: Self.evenCeil(shortSide * 16, dividedBy: 9)))
         case .oneByOne:
-            self = Self.crop(imageSize, in: PixelSize(width: p, height: p), at: cropPosition)
+            self = Self.crop(imageSize, in: PixelSize(width: shortSide, height: shortSide), at: cropPosition)
         case .fourByThree:
-            self = Self.crop(imageSize, in: PixelSize(width: p * 4 / 3, height: p), at: cropPosition)
+            self = Self.crop(imageSize, in: PixelSize(width: shortSide * 4 / 3, height: shortSide), at: cropPosition)
         case .original:
             self = try Self.original(imageSize)
         }
@@ -157,18 +157,18 @@ public struct OutputFrame: Equatable, Sendable {
         let isPortrait = image.height > image.width
         let limit = isPortrait ? PixelSize(width: 2160, height: 3840) : PixelSize(width: 3840, height: 2160)
 
-        // s = min(1, limit.width / width, limit.height / height), kept as the fraction num/den.
-        var num = 1
-        var den = 1
-        if limit.width * den < image.width * num { num = limit.width; den = image.width }
-        if limit.height * den < image.height * num { num = limit.height; den = image.height }
+        // s = min(1, limit.width / width, limit.height / height), kept as the fraction scaleNumerator/scaleDenominator.
+        var scaleNumerator = 1
+        var scaleDenominator = 1
+        if limit.width * scaleDenominator < image.width * scaleNumerator { scaleNumerator = limit.width; scaleDenominator = image.width }
+        if limit.height * scaleDenominator < image.height * scaleNumerator { scaleNumerator = limit.height; scaleDenominator = image.height }
 
         var frame: PixelSize
         var placement: ImagePlacement
-        if num == den {
+        if scaleNumerator == scaleDenominator {
             frame = image
             placement = ImagePlacement(x: 0, y: 0, width: Double(image.width), height: Double(image.height))
-        } else if num * 100 >= den * 99 {
+        } else if scaleNumerator * 100 >= scaleDenominator * 99 {
             // Under 1% too big: trim the excess equally from both edges, the odd pixel from the far edge.
             frame = PixelSize(width: min(image.width, limit.width), height: min(image.height, limit.height))
             placement = ImagePlacement(
@@ -178,7 +178,7 @@ public struct OutputFrame: Equatable, Sendable {
                 height: Double(image.height)
             )
         } else {
-            let scaled = PixelSize(width: image.width * num / den, height: image.height * num / den)
+            let scaled = PixelSize(width: image.width * scaleNumerator / scaleDenominator, height: image.height * scaleNumerator / scaleDenominator)
             frame = scaled
             placement = ImagePlacement(x: 0, y: 0, width: Double(scaled.width), height: Double(scaled.height))
         }

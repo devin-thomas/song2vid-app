@@ -20,6 +20,8 @@ extension AudioInfo {
         }
         var frames: Int64 = 0
         while true {
+            // Called from an export, this lets Cancel take effect now instead of after the whole song is read.
+            if Task.isCancelled { throw .unreadableAudio }
             do {
                 try file.read(into: buffer, frameCount: AudioFeeder.chunkFrames)
             } catch {
@@ -46,16 +48,10 @@ private func openAudio(at url: URL) throws(ExportError) -> AVAudioFile {
     return file
 }
 
-/// Decodes the audio and hands it to the writer as sample buffers, in the sample rate and channel count the
-/// AAC track will have. Used from one queue at a time.
+/// Decodes the audio and hands it to the writer as sample buffers, converted to the sample rate and channel count
+/// of the `AudioTarget` (higher rates are resampled, extra channels mixed down). Used from one queue at a time.
 final class AudioFeeder: @unchecked Sendable {
     static let chunkFrames: AVAudioFrameCount = 16_384
-
-    /// The sample rate and channel count AAC will be written with: the source's, kept within what the AAC
-    /// encoder supports (8 to 96 kHz, mono or stereo).
-    static func outputFormat(for info: AudioInfo) -> (sampleRate: Double, channels: Int) {
-        (min(96_000, max(8_000, info.sampleRate)), min(2, info.channelCount))
-    }
 
     private let file: AVAudioFile
     private let converter: AVAudioConverter
@@ -67,9 +63,8 @@ final class AudioFeeder: @unchecked Sendable {
     private var finished = false
     private var readFailed = false
 
-    init(url: URL, info: AudioInfo) throws(ExportError) {
+    init(url: URL, target: AudioTarget) throws(ExportError) {
         file = try openAudio(at: url)
-        let target = Self.outputFormat(for: info)
         let layout = AVAudioChannelLayout(layoutTag: target.channels == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo)
         var description = AudioStreamBasicDescription(
             mSampleRate: target.sampleRate,

@@ -240,15 +240,23 @@ public final class MainWindowModel {
         audio.map { $0.url.deletingPathExtension().lastPathComponent + ".mp4" }
     }
 
-    /// The fraction done while a video is being made.
+    /// True from the moment Make Video starts until the first progress arrives: the song and image are being
+    /// read and encoded, which can take a few seconds, and there is no percentage to show yet.
+    public var isPreparing: Bool {
+        if case .making(let progress) = exportState { return progress == 0 }
+        return false
+    }
+
+    /// The fraction done while a video is being made; nil while it is still being prepared.
     public var progressFraction: Double? {
-        if case .making(let progress) = exportState { return progress }
+        if case .making(let progress) = exportState, progress > 0 { return progress }
         return nil
     }
 
-    /// "Making video… 42%" while a video is being made.
+    /// "Preparing…" at first, then "Making video… 42%" while a video is being made.
     public var progressLabel: String? {
-        progressFraction.map { "Making video… \(Int(($0 * 100).rounded(.down)))%" }
+        if isPreparing { return "Preparing…" }
+        return progressFraction.map { "Making video… \(Int(($0 * 100).rounded(.down)))%" }
     }
 
     /// "Video saved." once a video is done, until the next one starts.
@@ -327,8 +335,8 @@ public final class MainWindowModel {
         let overflow = cropOverflow
         // Dragging the image right shows more of its left side, so the position falls.
         cropPosition = CropPosition(
-            horizontal: overflow.horizontal > 0 ? Self.tidy(start.horizontal - dx / overflow.horizontal) : cropPosition.horizontal,
-            vertical: overflow.vertical > 0 ? Self.tidy(start.vertical - dy / overflow.vertical) : cropPosition.vertical
+            horizontal: overflow.horizontal > 0 ? Self.roundedToMillionths(start.horizontal - dx / overflow.horizontal) : cropPosition.horizontal,
+            vertical: overflow.vertical > 0 ? Self.roundedToMillionths(start.vertical - dy / overflow.vertical) : cropPosition.vertical
         )
     }
 
@@ -346,7 +354,7 @@ public final class MainWindowModel {
         case .down where overflow.vertical > 0: vertical -= step
         default: return
         }
-        cropPosition = CropPosition(horizontal: Self.tidy(horizontal), vertical: Self.tidy(vertical))
+        cropPosition = CropPosition(horizontal: Self.roundedToMillionths(horizontal), vertical: Self.roundedToMillionths(vertical))
     }
 
     /// "Reset to Center".
@@ -364,8 +372,8 @@ public final class MainWindowModel {
         return "Crop position: \(Int((cropPosition.horizontal * 100).rounded()))% across"
     }
 
-    /// Rounds away floating-point dust so repeated steps land on tidy values.
-    private static func tidy(_ value: Double) -> Double {
+    /// Rounds to six decimal places, which removes floating-point dust so repeated steps land on exact values.
+    private static func roundedToMillionths(_ value: Double) -> Double {
         (value * 1_000_000).rounded() / 1_000_000
     }
 }
