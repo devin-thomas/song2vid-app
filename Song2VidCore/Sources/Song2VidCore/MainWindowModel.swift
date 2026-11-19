@@ -16,6 +16,10 @@ public final class MainWindowModel {
     public private(set) var previewImage: PreviewImage?
     /// A short message about the last choice that didn't work; cleared by the next one that does.
     public private(set) var notice: String?
+    /// True while a video is being made; drops are refused then (SPEC section 4a). The export sets it.
+    public var isExporting = false
+    /// The Replace / Keep Current question waiting for an answer, if a drop needs one.
+    public private(set) var pendingReplacement: ReplaceDialog?
 
     /// Changing the Frame Shape moves the Crop back to the center.
     public var frameShape: FrameShape = .sixteenByNine {
@@ -31,6 +35,8 @@ public final class MainWindowModel {
     /// Files stay readable (sandbox access) for as long as they are the current choice, so the export can read them.
     @ObservationIgnored private var heldAudioAccess: URL?
     @ObservationIgnored private var heldImageAccess: URL?
+    /// Dropped files opened for reading until the drop is settled.
+    @ObservationIgnored private var dropAccess: [URL] = []
 
     public init(inspector: any MediaInspecting = SystemMediaInspector()) {
         self.inspector = inspector
@@ -69,6 +75,65 @@ public final class MainWindowModel {
         }
     }
 
+    // MARK: Dropping files (SPEC section 4a)
+
+    /// True if a drop of these items could be used. The window highlights only then.
+    public func acceptsDrop(of files: [DroppedFile]) -> Bool {
+        DropHandler.rejection(for: files, isExporting: isExporting) == nil
+    }
+
+    /// Carries out a drop: fills empty slots, asks before replacing, or refuses with a message.
+    public func drop(_ urls: [URL]) async {
+        releaseDropAccess()
+        pendingReplacement = nil
+        dropAccess = urls.filter { $0.startAccessingSecurityScopedResource() }
+        let files = urls.map { DroppedFile(url: $0, kind: DropFileKind.of($0)) }
+        let outcome = await DropHandler(inspector: inspector)
+            .handle(files, slots: DropSlots(audio: audio, image: image), isExporting: isExporting)
+        switch outcome {
+        case .rejected(let message):
+            notice = message
+            releaseDropAccess()
+        case .apply(let slots, let message):
+            await use(slots)
+            notice = message
+        case .confirm(let dialog):
+            pendingReplacement = dialog
+        }
+    }
+
+    /// The person's answer to the Replace / Keep Current question.
+    public func answerReplacement(replace: Bool) async {
+        guard let dialog = pendingReplacement else { return }
+        pendingReplacement = nil
+        await use(replace ? dialog.ifReplaced : dialog.ifKept)
+        notice = dialog.notice
+    }
+
+    /// Makes `slots` the current song and image, keeping the dropped files readable if they are now in use.
+    private func use(_ slots: DropSlots) async {
+        if slots.audio != audio {
+            audio = slots.audio
+            let access = slots.audio.flatMap { new in dropAccess.first { $0 == new.url } }
+            if let access { dropAccess.removeAll { $0 == access } }
+            Self.swapAccess(&heldAudioAccess, to: access)
+        }
+        if slots.image != image {
+            image = slots.image
+            previewImage = if let new = slots.image { await inspector.previewImage(at: new.url) } else { nil }
+            cropPosition = .center
+            let access = slots.image.flatMap { new in dropAccess.first { $0 == new.url } }
+            if let access { dropAccess.removeAll { $0 == access } }
+            Self.swapAccess(&heldImageAccess, to: access)
+        }
+        releaseDropAccess()
+    }
+
+    private func releaseDropAccess() {
+        for url in dropAccess { url.stopAccessingSecurityScopedResource() }
+        dropAccess = []
+    }
+
     private static func swapAccess(_ held: inout URL?, to new: URL?) {
         held?.stopAccessingSecurityScopedResource()
         held = new
@@ -78,15 +143,12 @@ public final class MainWindowModel {
 
     /// "name, m:ss" once a song is chosen.
     public var audioSummary: String? {
-        guard let audio else { return nil }
-        let seconds = Int(audio.duration.rounded())
-        return "\(audio.name), \(seconds / 60):\(String(format: "%02d", seconds % 60))"
+        audio?.summary
     }
 
     /// "name, W×H pixels" once an image is chosen.
     public var imageSummary: String? {
-        guard let image else { return nil }
-        return "\(image.name), \(image.size.width)×\(image.size.height) pixels"
+        image?.summary
     }
 
     /// The output frame and image placement for the current choices; nil without an image or when the frame can't be made.

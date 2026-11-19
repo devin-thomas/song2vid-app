@@ -24,10 +24,8 @@ extension Resolution {
     }
 }
 
-/// The file types the choosers open (SPEC section 7).
+/// The file types the choosers open (SPEC section 7). Drops use the same lists.
 enum ChoosableTypes {
-    static let audio: [UTType] = [.mp3, .mpeg4Audio, .wav, .aiff]
-        + ["flac", "caf"].compactMap { UTType(filenameExtension: $0) }
-
-    static let image: [UTType] = [.jpeg, .png, .heic, .tiff, .webP, .gif, .bmp]
+    static let audio: [UTType] = SupportedTypes.audio
+    static let image: [UTType] = SupportedTypes.image
 }
