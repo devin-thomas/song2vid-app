@@ -1,21 +1,21 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T01:13:27Z",
+  "updated_at": "2026-11-19T01:19:20Z",
   "state": "working",
-  "phase": "Review: code review, and the download page in parallel (7 of 9 tickets done)",
+  "phase": "Review fixes (7 of 9 tickets done; page built, not deployed)",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
     "mode": "localhost",
     "preferred_local_port": 4173,
     "url": "http://localhost:4173/",
-    "last_verified": "2026-11-19T01:13:27Z: task ID and timestamp verified on localhost:4173 (loopback only)",
+    "last_verified": "2026-11-19T01:19:20Z: task ID and timestamp verified on localhost:4173 (loopback only)",
     "persistence": "Committed to build/v1 at each checkpoint",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "A Sonnet reviewer is running the two-axis code review (standards and spec) on build/v1. Meanwhile another Sonnet implementer is building the download page, without deploying it.",
+  "current_activity": "One Sonnet fixer is addressing the code review: a crash on 96 kHz audio, replace-in-sandbox proof, the 0% progress stall, an atomic replace, and the safety-scan gaps.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -64,7 +64,7 @@
     {
       "name": "S2V-007 Download page live on pages.dev",
       "status": "in_progress",
-      "note": "page being built; deploy after release"
+      "note": "page built and reviewed; deploy after release"
     },
     {
       "name": "Code review, merge build/v1 to main",
@@ -121,6 +121,13 @@
       "rationale": "Personal images and possibly non-redistributable music (ADR-012).",
       "reversibility": "n/a",
       "status": "final"
+    },
+    {
+      "time": "2026-11-19",
+      "decision": "Audio above 48 kHz is converted to 48 kHz",
+      "rationale": "The AAC encoder rejects higher rates at 256 kbps; this was found by the code review (SPEC \u00a76.3).",
+      "reversibility": "reversible",
+      "status": "final"
     }
   ],
   "outputs": [
@@ -147,7 +154,7 @@
     }
   ],
   "next_up": [
-    "Read the review; dispatch one fixer for the must-fix and should-fix items",
+    "Verify the review fixes, including a 96 kHz export and replace-in-sandbox",
     "Merge build/v1 into main",
     "Dispatch S2V-006 (v1.0.0 release zip on GitHub Releases)",
     "Deploy the download page to song2vid.pages.dev and verify it live",
@@ -197,6 +204,10 @@
     {
       "time": "2026-11-19",
       "event": "S2V-005 verified: all five real videos probed and fully decoded; merged. Code review and page build started."
+    },
+    {
+      "time": "2026-11-19",
+      "event": "Code review: 2 must-fix, 5 should-fix, 14 nits. Fixer dispatched."
     }
   ],
   "walk_away": {
