@@ -1,0 +1,6 @@
+#!/bin/bash
+# Enabled with: git config core.hooksPath .githooks
+# Runs the public-safety patterns over the commit message (paths, emails, tokens, co-author lines, sample-media names).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+exec scripts/safety-scan.sh --message "$1"
