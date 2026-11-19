@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 100 824 824" width="64" height="64">
+  <!-- Small-size variant of icon.svg for 16, 32 and 64 px: less margin, no film frame or shadow,
+       a larger and heavier glyph, so the note and play triangle survive at tiny sizes. -->
+  <defs>
+    <linearGradient id="bg" x1="150" y1="100" x2="880" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F3CF0"/>
+      <stop offset="0.55" stop-color="#9B2FE0"/>
+      <stop offset="1" stop-color="#F2408F"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <g transform="translate(512 512) scale(1.32) translate(-512 -512) translate(-6 -26)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="34" stroke-linejoin="round">
+    <ellipse cx="402" cy="684" rx="116" ry="92" transform="rotate(-22 402 684)" stroke="none"/>
+    <path d="M487 694 V347 L757 446 L551 535 V694 Z"/>
+  </g>
+</svg>

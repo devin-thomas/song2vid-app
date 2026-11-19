@@ -1,6 +1,6 @@
 # S2V-009 - App icon and brand mark
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: S2V-001
 
 ## Goal
@@ -20,3 +20,7 @@ Song2Vid has an original icon that shows a song becoming a video, at every size 
 ## Dependencies
 
 S2V-001.
+
+## Comments
+
+- Resolved in d7b4615 on branch ticket/S2V-009. Rebuild every output with `design/build-icons.sh` (sources: `design/icon.svg`, `design/icon-small.svg`). Preview sheet: `design/preview.png`. scripts/check.sh passed; the built app carries `CFBundleIconName` AppIcon with all ten sizes in Assets.car and an AppIcon.icns.
