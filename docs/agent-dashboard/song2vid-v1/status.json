@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1",
   "title": "Song2Vid v1 build",
-  "updated_at": "2026-11-19T01:57:35Z",
+  "updated_at": "2026-11-19T02:59:32Z",
   "state": "waiting",
-  "phase": "Deploy: the release is live; the download page is waiting on the owner",
+  "phase": "Deploy: the download page is live; waiting on the owner report",
   "repository": "devin-thomas/song2vid-app",
   "branch": "build/v1",
   "delivery": {
@@ -16,13 +16,13 @@
   },
   "action_required": [
     {
-      "need": "Choose how to host the download page, and approve deleting a stray Worker",
-      "reason": "Wrangler's 'pages project create' made a Cloudflare Worker named song2vid instead of a Pages project. Because it ran from the stock-example folder, it published that folder's stock-ticker page at song2vid's workers.dev address. stock-example itself is unchanged.",
-      "action": "Reply: (1) delete the stray song2vid Worker? (2) host the page on song2vid.pages.dev, using Wrangler's opt-out flag for classic Pages, or on Workers?",
-      "default": "Nothing is deleted or deployed until you answer."
+      "need": "Try the app from the live page",
+      "reason": "The last S2V-007 check and the Starter Pack live-deployment step need the owner's own report.",
+      "action": "Open https://song2vid.pages.dev on this Mac, click Download for Mac, unzip, move Song2Vid to Applications, open it (System Settings, Privacy & Security, Open Anyway if blocked), make one video and play it. Then reply with what happened.",
+      "default": "Nothing else is waiting on this; the final progress save follows your report."
     }
   ],
-  "current_activity": "Waiting for the owner to choose how to host the download page.",
+  "current_activity": "Waiting for the owner to download from the live page and make a video.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build)",
@@ -72,7 +72,7 @@
     {
       "name": "S2V-007 Download page live on pages.dev",
       "status": "in_progress",
-      "note": "page built and reviewed; deploy after release"
+      "note": "live at song2vid.pages.dev; download verified; owner report pending"
     },
     {
       "name": "Code review, merge build/v1 to main",
@@ -142,12 +142,28 @@
     {
       "time": "2026-11-19",
       "decision": "Audio above 48 kHz is converted to 48 kHz",
-      "rationale": "The AAC encoder rejects higher rates at 256 kbps; this was found by the code review (SPEC \u00a76.3).",
+      "rationale": "The AAC encoder rejects higher rates at 256 kbps; this was found by the code review (SPEC §6.3).",
       "reversibility": "reversible",
       "status": "final"
+    },
+    {
+      "decision": "Host the page on classic Cloudflare Pages (song2vid.pages.dev); delete the stray Worker",
+      "rationale": "Matches ADR-002 and SPEC section 8; owner approved",
+      "time": "2026-11-19",
+      "status": "final",
+      "reversibility": "yes"
     }
   ],
   "outputs": [
+    {
+      "label": "Download page (live)",
+      "link": "https://song2vid.pages.dev",
+      "note": "Cloudflare Pages; download checksum verified"
+    },
+    {
+      "label": "Release v1.0.0",
+      "link": "https://github.com/devin-thomas/song2vid-app/releases/tag/v1.0.0"
+    },
     {
       "label": "Repository (public)",
       "link": "https://github.com/devin-thomas/song2vid-app/tree/build/v1"
@@ -171,9 +187,9 @@
     }
   ],
   "next_up": [
-    "Delete the stray song2vid Worker (with approval)",
-    "Deploy site/ to the chosen host and verify the live page and download button",
     "Owner downloads from the live page, opens the app and makes a video",
+    "Resolve S2V-007 and record the owner report",
+    "Starter Pack: mark quick-build and live-deployment complete",
     "Final progress save"
   ],
   "activity": [
@@ -232,14 +248,18 @@
     {
       "time": "2026-11-19",
       "event": "Deploy attempt created a stray Worker serving the stock-ticker page; paused for the owner"
+    },
+    {
+      "time": "2026-11-19",
+      "event": "Stray Worker deleted with approval; classic Pages project created; site deployed and verified at song2vid.pages.dev"
     }
   ],
   "walk_away": {
-    "last_good": "v1.0.0 is on GitHub Releases; main and build/v1 are at 6c0436e and all checks pass",
-    "unfinished": "The download page is not deployed. A stray Worker named song2vid exists on Cloudflare.",
-    "next_safe_step": "Wait for the owner, then run wrangler from the repo folder only, never from stock-example.",
-    "touched": "song2vid-app repo (build/v1, ticket branches); private progress repo",
+    "last_good": "v1.0.0 on GitHub Releases; song2vid.pages.dev serves the page and its download is verified",
+    "unfinished": "Owner report for S2V-007; Starter Pack progress updates",
+    "next_safe_step": "Wait for the owner report, then resolve S2V-007 and save progress",
+    "touched": "song2vid-app repo (build/v1); Cloudflare Pages project song2vid; private progress repo",
     "processes": "This dashboard's local server on localhost:4173",
-    "input_needed": "Hosting choice, and approval to delete the stray Worker"
+    "input_needed": "Owner report from the live page"
   }
 }
