@@ -76,7 +76,7 @@ The crop position is stored as two fractions from 0 to 1 (0.5, 0.5 is centered),
 
 1. Clicking Make Video opens a standard macOS save dialog. The default name is the audio file's name with `.mp4`. The default folder is the folder of the last save, or Movies. macOS asks before replacing an existing file.
 2. A progress bar shows the percentage done, with a Cancel button. The other controls are disabled while it runs.
-3. The output is MP4: H.264 video at 30 frames per second, with the still frame for the whole song. Audio is AAC at 256 kbps, keeping the source sample rate (stereo or mono as in the source). The video's length equals the audio's length.
+3. The output is MP4: H.264 video at 30 frames per second, with the still frame for the whole song. Audio is AAC at 256 kbps, keeping the source sample rate up to 48 kHz. Higher rates (for example 88.2 or 96 kHz) are converted to 48 kHz, because the AAC encoder can't take them. Channels stay as in the source (stereo or mono); sources with more than two channels are mixed down to stereo. The video's length equals the audio's length.
 4. On success: "Video saved." with a "Show in Finder" button. The controls unlock, so the person can make another video straight away.
 5. **On Cancel or failure:** the half-written file is deleted. On failure, a plain message names the step that failed ("Couldn't read the audio file", "Couldn't save to that folder", "Not enough disk space").
 
@@ -119,7 +119,7 @@ The crop position is stored as two fractions from 0 to 1 (0.5, 0.5 is centered),
 
 ## 11. Testing
 
-- **Agreed test seams** (approved with the plan, 2026-11-18): (1) frame calculation: inputs are image size, Frame Shape, Resolution and crop position; outputs are frame size and image placement; (2) drop handling: inputs are the current slots and the dropped files; outputs are the new slots, the dialog to show, or the rejection message; (3) video export: inputs are files and placement; output is an MP4 file or an error. Tests go only at these seams, plus the manual checks below.
+- **Agreed test seams** (approved with the plan, 2026-11-18): (1) frame calculation: inputs are image size, Frame Shape, Resolution and crop position; outputs are frame size and image placement; (2) drop handling: inputs are the current slots and the dropped files; outputs are the new slots, the dialog to show, or the rejection message; (3) video export: inputs are files and placement; output is an MP4 file or an error. (4) added by the coordinator on 2026-11-19 for S2V-004 and later: the main window model's public behavior. A fake exporter there stands in for AVFoundation, a system boundary. Tests go only at these seams, plus the manual checks below.
 - **Unit tests:** every cell of the section 5 table; the Original rules (exact, under 1% trim, over 1% scale, odd sizes, too small, portrait limit); the Crop limits; the Fit with bars placement; every case in section 4a.
 - **Integration tests:** generate a 3-second tone and a test image, then export each Frame Shape at 480p and one at 2160p. Check the MP4's pixel size, the length (±0.1 s), that both tracks are present, and that Cancel removes the file.
 - **Manual checks:**
