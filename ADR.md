@@ -99,3 +99,23 @@
 **Rationale:** The owner wants the implementation done by subagents and the coordinator limited to verifying and writing docs. A repo-local install keeps these skills out of other projects.
 
 **Consequences:** The tickets stay in `tickets/`, which `docs/agents/issue-tracker.md` points to. ADRs stay in `ADR.md`. Each ticket is built on its own branch and merged into the integration branch `build/v1`, which merges into `main` after review.
+
+## ADR-011 - Test on the owner's Mac, CI by hand only
+
+**Status:** Accepted
+
+**Decision:** The gate for every change is `scripts/check.sh` run on the owner's Mac, plus the pre-commit hook. The GitHub Actions `check` workflow runs only when started by hand (`workflow_dispatch`).
+
+**Rationale:** Hosted macOS runners have used up the owner's Actions allowance before. The owner's Mac is fast and is the real target hardware. Push-triggered runs were not starting anyway (docs/wiki/ci-push-trigger.md).
+
+**Consequences:** Verification happens locally before each merge. A manual CI run can still be started for a public-repo check, which is free for public repositories.
+
+## ADR-012 - Owner's sample media stays out of the repo
+
+**Status:** Accepted
+
+**Decision:** Real songs and images for manual testing come from a folder on the owner's Mac outside this repo, and are never committed. Automated tests generate their own media.
+
+**Rationale:** The samples include personal pictures and music that may not be redistributable, and this repo is public.
+
+**Consequences:** Local test scripts read the sample folder path from an environment variable or argument. The repo contains no sample file names or paths.

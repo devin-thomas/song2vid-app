@@ -1,11 +1,8 @@
 name: check
 
+# Manual only (ADR-011): the gate is scripts/check.sh on the owner's Mac.
 on:
   workflow_dispatch:
-  push:
-    branches: ['**']
-  pull_request:
-    branches: ['**']
 
 permissions:
   contents: read

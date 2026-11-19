@@ -23,3 +23,6 @@ xcuserdata/
 
 # Local test media
 TestMedia/
+
+# Agent worktrees
+.claude/worktrees/

@@ -6,3 +6,5 @@
 - On 2026-11-18, the owner made drag and drop "non-negotiable", with a Replace / Keep Current dialog before anything is replaced. Source: SPEC.md §4a.
 - On 2026-11-18, the owner asked for this wiki to be public in `docs/wiki/`, because the repo is meant to teach others how to plan and build this way.
 - On 2026-11-18, the owner confirmed the purpose of the whole repo: a public demonstration of building with AI using the Grill to Build planning process and the Starter Pack. The plan files, `docs/`, this wiki and `.claude/skills/` stay public on purpose, so someone can see the full setup, or start from this point and find the chief-of-staff skill and everything it depends on. The README should show a newcomer how to do this.
+- On 2026-11-19, the owner asked that code be tested on their Mac rather than on GitHub-hosted Mac runners, because those have used up the account's Actions allowance before. Exceptions are fine when free (public repo). See ADR-011.
+- On 2026-11-19, the owner provided real songs and images on their Mac for testing. They stay out of the public repo (ADR-012).
