@@ -1,6 +1,6 @@
 # S2V-004 - Main window and live preview
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: S2V-002
 
 ## Goal
