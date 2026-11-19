@@ -6,3 +6,4 @@
 - Branches, as of 2026-11-18: ticket work merges into `build/v1`, and `build/v1` merges into `main` after a code review.
 - Implementer notes (build commands, gotchas) are kept outside the repo, so private machine details never become public. Durable lessons are summarised here instead.
 - Plan from the chief-of-staff skill: a `retro` on about one in five subagent sessions, starting with any that went wrong.
+- On 2026-11-19, the owner started a long-horizon dashboard (Starter Pack `long-horizon-dashboard` skill) at `docs/agent-dashboard/song2vid-v1/`. `status.json` is the source; run `python3 docs/agent-dashboard/render.py docs/agent-dashboard/song2vid-v1` to regenerate `STATUS.md` and `index.html`. It is served locally on port 4173 and updated by the coordinator at each ticket checkpoint. The safety scan rejects IP literals, so the committed files say `localhost`.
