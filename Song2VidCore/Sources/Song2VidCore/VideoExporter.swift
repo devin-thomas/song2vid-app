@@ -23,13 +23,15 @@ public enum VideoExporter {
         if Task.isCancelled { return .cancelled }
 
         let audio: AudioInfo
+        let target: AudioTarget
         let feeder: AudioFeeder
         let encoded: EncodedStill
         // One video frame per 1/30 s, enough to cover the whole audio.
         var frameCount = 1
         do {
             audio = try AudioInfo.read(from: request.audioURL)
-            feeder = try AudioFeeder(url: request.audioURL, info: audio)
+            target = try AudioTarget(for: audio)
+            feeder = try AudioFeeder(url: request.audioURL, target: target)
             frameCount = max(1, Int((audio.duration * Double(framesPerSecond)).rounded(.up)))
             if Task.isCancelled { return .cancelled }
             let decoded = try decodeImage(at: request.imageURL)
@@ -52,7 +54,15 @@ public enum VideoExporter {
         }
         guard canWrite(to: request.destinationURL) else { return .failed(.cannotSaveToFolder) }
 
-        let session = ExportSession(request: request, feeder: feeder, audio: audio, encoded: encoded, frameCount: frameCount, progress: progress)
+        let session: ExportSession
+        do {
+            session = try ExportSession(
+                request: request, feeder: feeder, target: target, audio: audio, encoded: encoded,
+                frameCount: frameCount, progress: progress
+            )
+        } catch {
+            return .failed(error)
+        }
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 session.start(continuation)
@@ -85,7 +95,7 @@ private final class ExportSession: @unchecked Sendable {
     /// The video is written beside the destination under a hidden name, then moved into place, so a
     /// cancelled or failed export leaves nothing (and never damages a file the person agreed to replace).
     private let partialURL: URL
-    private let writer: AVAssetWriter?
+    private let writer: AVAssetWriter
     private let feeder: AudioFeeder
     private let audioInput: AVAssetWriterInput
     private let videoInput: AVAssetWriterInput
@@ -101,9 +111,9 @@ private final class ExportSession: @unchecked Sendable {
     private let frameCount: Int
 
     init(
-        request: ExportRequest, feeder: AudioFeeder, audio: AudioInfo, encoded: EncodedStill, frameCount: Int,
-        progress: @escaping @Sendable (Double) -> Void
-    ) {
+        request: ExportRequest, feeder: AudioFeeder, target: AudioTarget, audio: AudioInfo, encoded: EncodedStill,
+        frameCount: Int, progress: @escaping @Sendable (Double) -> Void
+    ) throws(ExportError) {
         self.request = request
         self.feeder = feeder
         self.audio = audio
@@ -117,14 +127,18 @@ private final class ExportSession: @unchecked Sendable {
         let partialFolder = FileManager.default.isWritableFile(atPath: folder.path) ? folder : FileManager.default.temporaryDirectory
         partialURL = partialFolder.appendingPathComponent(".\(UUID().uuidString).song2vid-partial")
 
-        let target = AudioFeeder.outputFormat(for: audio)
-        audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: target.sampleRate,
-            AVNumberOfChannelsKey: target.channels,
-            AVEncoderBitRateKey: 256_000,
-            AVEncoderBitRateStrategyKey: AVAudioBitRateStrategy_Constant,
-        ])
+        guard let writer = try? AVAssetWriter(outputURL: partialURL, fileType: .mp4) else {
+            throw .cannotSaveToFolder
+        }
+        writer.shouldOptimizeForNetworkUse = true
+        self.writer = writer
+
+        // The writer raises an Objective-C exception, which nothing can catch, if it is handed settings its
+        // encoder can't use. It is asked first, so an unexpected configuration becomes an error instead.
+        guard writer.canApply(outputSettings: target.outputSettings, forMediaType: .audio) else {
+            throw .encodingFailed
+        }
+        audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: target.outputSettings)
         audioInput.expectsMediaDataInRealTime = false
 
         // The frames are already H.264, so the writer only packages them.
@@ -132,14 +146,6 @@ private final class ExportSession: @unchecked Sendable {
             mediaType: .video, outputSettings: nil, sourceFormatHint: encoded.formatDescription
         )
         videoInput.expectsMediaDataInRealTime = false
-
-        // A failure to create the writer is reported from `start`.
-        var createdWriter: AVAssetWriter?
-        if let writer = try? AVAssetWriter(outputURL: partialURL, fileType: .mp4) {
-            writer.shouldOptimizeForNetworkUse = true
-            createdWriter = writer
-        }
-        writer = createdWriter
     }
 
     // MARK: Starting and ending
@@ -151,7 +157,6 @@ private final class ExportSession: @unchecked Sendable {
         lock.unlock()
         if ready { deliver(); return }
 
-        guard let writer else { finish(.failed(.cannotSaveToFolder)); return }
         guard writer.canAdd(audioInput), writer.canAdd(videoInput) else { finish(.failed(.encodingFailed)); return }
         writer.add(videoInput)
         writer.add(audioInput)
@@ -169,7 +174,6 @@ private final class ExportSession: @unchecked Sendable {
 
     /// Appends decoded audio while the writer wants more.
     private func pumpAudio() {
-        guard let writer else { return }
         while audioInput.isReadyForMoreMediaData {
             if isEnded { return }
             let next: CMSampleBuffer?
@@ -193,7 +197,6 @@ private final class ExportSession: @unchecked Sendable {
 
     /// Appends the encoded group again at each frame time while the writer wants more.
     private func pumpVideo() {
-        guard let writer else { return }
         while videoInput.isReadyForMoreMediaData {
             if isEnded { return }
             if nextFrame == frameCount {
@@ -243,7 +246,7 @@ private final class ExportSession: @unchecked Sendable {
         let allDone = unfinishedInputs == 0 && !isFinished
         if allDone { isCommitting = true }
         lock.unlock()
-        guard allDone, let writer else { return }
+        guard allDone else { return }
 
         writer.endSession(atSourceTime: CMTime(seconds: audio.duration, preferredTimescale: 48_000))
         writer.finishWriting { [self] in writerFinished() }
@@ -251,9 +254,9 @@ private final class ExportSession: @unchecked Sendable {
 
     /// The file is closed. Move it into place, replacing what was there.
     private func writerFinished() {
-        guard let writer, writer.status == .completed else {
+        guard writer.status == .completed else {
             lock.lock(); isCommitting = false; lock.unlock()
-            finish(.failed(classify(writer?.error, default: .encodingFailed)))
+            finish(.failed(classify(writer.error, default: .encodingFailed)))
             return
         }
         do {
@@ -289,7 +292,7 @@ private final class ExportSession: @unchecked Sendable {
         DispatchQueue.global().async { [self] in
             audioQueue.sync {}
             videoQueue.sync {
-                if let writer, writer.status == .writing || writer.status == .unknown { writer.cancelWriting() }
+                if writer.status == .writing || writer.status == .unknown { writer.cancelWriting() }
                 removePartialFiles()
             }
             deliver()

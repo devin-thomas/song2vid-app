@@ -49,7 +49,8 @@ enum TestMedia {
         }
     }
 
-    /// A sine tone, written in the given format.
+    /// A sine tone, written in the given format. More than two channels get a standard surround layout
+    /// (3 is front left, right and centre; 6 is 5.1), because macOS needs one to mix them down.
     @discardableResult
     static func writeTone(
         to url: URL,
@@ -58,7 +59,20 @@ enum TestMedia {
         channels: Int = 2,
         kind: AudioKind = .wav
     ) throws -> URL {
-        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: AVAudioChannelCount(channels)))
+        var settings = kind.settings(sampleRate: sampleRate, channels: channels)
+        let format: AVAudioFormat
+        if channels > 2 {
+            let tag: AudioChannelLayoutTag = switch channels {
+            case 3: kAudioChannelLayoutTag_MPEG_3_0_A
+            case 6: kAudioChannelLayoutTag_MPEG_5_1_A
+            default: kAudioChannelLayoutTag_DiscreteInOrder | UInt32(channels)
+            }
+            let layout = try #require(AVAudioChannelLayout(layoutTag: tag))
+            format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, interleaved: false, channelLayout: layout)
+            settings[AVChannelLayoutKey] = Data(bytes: layout.layout, count: MemoryLayout<AudioChannelLayout>.size)
+        } else {
+            format = try #require(AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: AVAudioChannelCount(channels)))
+        }
         let frames = AVAudioFrameCount((seconds * sampleRate).rounded())
         let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames))
         buffer.frameLength = frames
@@ -69,10 +83,7 @@ enum TestMedia {
             }
         }
         let file = try AVAudioFile(
-            forWriting: url,
-            settings: kind.settings(sampleRate: sampleRate, channels: channels),
-            commonFormat: .pcmFormatFloat32,
-            interleaved: false
+            forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false
         )
         try file.write(from: buffer)
         return url

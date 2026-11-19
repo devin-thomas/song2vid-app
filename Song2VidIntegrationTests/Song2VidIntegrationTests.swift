@@ -114,20 +114,51 @@ struct VideoExportTests {
 
     // MARK: Audio (SPEC section 6.3 and 7)
 
+    /// What goes in, and what SPEC section 6.3 says comes out: the source's sample rate up to 48 kHz and
+    /// its channels up to two. Higher rates become 48 kHz, and more channels become stereo.
     struct AudioCase: Sendable, CustomTestStringConvertible {
         let kind: TestMedia.AudioKind
         let sampleRate: Double
         let channels: Int
-        var testDescription: String { "\(kind.rawValue) \(Int(sampleRate)) Hz, \(channels) channel(s)" }
+        let expectedRate: Double
+        let expectedChannels: Int
+
+        init(_ kind: TestMedia.AudioKind, _ sampleRate: Double, _ channels: Int, expectedRate: Double? = nil, expectedChannels: Int? = nil) {
+            self.kind = kind
+            self.sampleRate = sampleRate
+            self.channels = channels
+            self.expectedRate = expectedRate ?? sampleRate
+            self.expectedChannels = expectedChannels ?? min(channels, 2)
+        }
+
+        var testDescription: String {
+            "\(kind.rawValue) \(Int(sampleRate)) Hz, \(channels) channel(s) becomes \(Int(expectedRate)) Hz, \(expectedChannels)"
+        }
     }
 
     static let audioCases: [AudioCase] = [
-        AudioCase(kind: .wav, sampleRate: 44_100, channels: 2),
-        AudioCase(kind: .wav, sampleRate: 48_000, channels: 1),
-        AudioCase(kind: .aiff, sampleRate: 44_100, channels: 2),
-        AudioCase(kind: .caf, sampleRate: 48_000, channels: 2),
-        AudioCase(kind: .aac, sampleRate: 44_100, channels: 2),
-        AudioCase(kind: .alac, sampleRate: 44_100, channels: 2),
+        AudioCase(.wav, 44_100, 2),
+        AudioCase(.wav, 48_000, 1),
+        AudioCase(.wav, 8_000, 1),
+        AudioCase(.wav, 22_050, 2),
+        AudioCase(.aiff, 44_100, 2),
+        AudioCase(.caf, 48_000, 2),
+        AudioCase(.aac, 44_100, 2),
+        AudioCase(.alac, 44_100, 2),
+        // Above 48 kHz the AAC encoder can't take the rate (SPEC section 6.3).
+        AudioCase(.wav, 96_000, 2, expectedRate: 48_000),
+        AudioCase(.wav, 96_000, 1, expectedRate: 48_000),
+        AudioCase(.aiff, 88_200, 2, expectedRate: 48_000),
+        AudioCase(.caf, 64_000, 2, expectedRate: 48_000),
+        // AAC has only a fixed list of rates, so an unusual one goes to the next rate up, or down to 48 kHz.
+        AudioCase(.wav, 37_800, 2, expectedRate: 44_100),
+        AudioCase(.wav, 10_000, 1, expectedRate: 11_025),
+        AudioCase(.wav, 50_000, 2, expectedRate: 48_000),
+        // More than two channels are mixed down to stereo.
+        AudioCase(.caf, 48_000, 6),
+        AudioCase(.caf, 44_100, 3),
+        AudioCase(.caf, 96_000, 6, expectedRate: 48_000),
+        AudioCase(.caf, 48_000, 8),
     ]
 
     @Test(arguments: audioCases)
@@ -143,10 +174,26 @@ struct VideoExportTests {
 
         #expect(outcome == .completed(workspace.destination))
         let video = try await Inspection(workspace.destination)
-        #expect(video.sampleRate == testCase.sampleRate)
-        #expect(video.channels == testCase.channels)
+        #expect(video.sampleRate == testCase.expectedRate)
+        #expect(video.channels == testCase.expectedChannels)
+        #expect(video.audioCodec == kAudioFormatMPEG4AAC)
         #expect(abs(video.audioDuration - 3) <= 0.1)
         #expect(abs(video.videoDuration - 3) <= 0.1)
+        #expect(try workspace.outputNames() == ["out.mp4"])
+    }
+
+    @Test func aHighSampleRateSourceStillGetsAudioAt256KilobitsPerSecond() async throws {
+        let workspace = try Workspace()
+        defer { workspace.remove() }
+        let audio = try TestMedia.writeTone(
+            to: workspace.inputs.appendingPathComponent("hires.wav"), sampleRate: 96_000, channels: 2
+        )
+
+        let outcome = await VideoExporter.export(try request(workspace, audio: audio), progress: { _ in })
+
+        #expect(outcome == .completed(workspace.destination))
+        let video = try await Inspection(workspace.destination)
+        #expect(abs(Double(video.audioBitRate) - 256_000) < 256_000 * 0.05)
     }
 
     @Test func writesStereoAudioAt256KilobitsPerSecond() async throws {
