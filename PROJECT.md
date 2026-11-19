@@ -4,7 +4,7 @@
 
 Song2Vid is a Mac desktop app. You give it one audio file and one image file, pick a **Frame Shape** and **Resolution**, and it makes a video: the image stays on screen for the whole song. A small download page on Cloudflare Pages (`*.pages.dev`) lets other people download the app and read short instructions.
 
-The project is also a public teaching example: the plan files in this repo show how a project like this is planned with Grill to Build, so others can follow the same process.
+The project is also a public demonstration of building with AI using the Starter Pack and the Grill to Build planning process. The plan files, `docs/agents/`, the wiki in `docs/wiki/`, and the agent skills in `.claude/skills/` are public on purpose, so someone can see the whole setup or start from this point themselves.
 
 ## Who it is for
 
