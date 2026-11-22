@@ -5,3 +5,6 @@
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Cross-Origin-Opener-Policy: same-origin
+
+/agent.md
+  Content-Type: text/markdown; charset=utf-8
