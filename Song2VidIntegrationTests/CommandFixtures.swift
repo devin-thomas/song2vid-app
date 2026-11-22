@@ -33,6 +33,25 @@ struct CommandWorkspace {
         return path(name)
     }
 
+    /// A silent 48 kHz stereo WAV of the given length that takes the command several seconds to encode, for tests that
+    /// need a run still going when they act. Only the header is written: the rest of the file is a hole, which reads as
+    /// zeros (silence) and takes no disk space.
+    @discardableResult
+    func longSong(_ name: String = "long.wav", seconds: Int = 3600) throws -> String {
+        let rate = 48_000, channels = 2
+        let dataBytes = seconds * rate * channels * 2
+        func le<T: FixedWidthInteger>(_ value: T) -> [UInt8] { withUnsafeBytes(of: value.littleEndian) { Array($0) } }
+        var header = Array("RIFF".utf8) + le(UInt32(36 + dataBytes)) + Array("WAVEfmt ".utf8)
+        header += le(UInt32(16)) + le(UInt16(1)) + le(UInt16(channels)) + le(UInt32(rate))
+        header += le(UInt32(rate * channels * 2)) + le(UInt16(channels * 2)) + le(UInt16(16))
+        header += Array("data".utf8) + le(UInt32(dataBytes))
+        try Data(header).write(to: url(name))
+        let handle = try FileHandle(forWritingTo: url(name))
+        defer { try? handle.close() }
+        try handle.truncate(atOffset: UInt64(header.count + dataBytes))
+        return path(name)
+    }
+
     /// A file that is not media at all.
     @discardableResult
     func notMedia(_ name: String) throws -> String {

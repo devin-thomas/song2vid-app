@@ -43,4 +43,40 @@ enum CommandProcess {
             stderr: String(decoding: errData, as: UTF8.self)
         )
     }
+
+    /// A command that is running, so a test can watch the folder and send it a signal before it ends.
+    final class Running {
+        private let process = Process()
+        private let out = Pipe()
+        private let err = Pipe()
+
+        init(_ arguments: [String], environment: [String: String]? = nil, currentDirectory: URL? = nil) throws {
+            process.executableURL = CommandProcess.executableURL
+            process.arguments = arguments
+            if let environment { process.environment = environment }
+            if let currentDirectory { process.currentDirectoryURL = currentDirectory }
+            process.standardOutput = out
+            process.standardError = err
+            process.standardInput = FileHandle.nullDevice
+            try process.run()
+        }
+
+        var isRunning: Bool { process.isRunning }
+
+        /// Sends Ctrl-C (SIGINT) or SIGTERM to the command.
+        func send(_ signal: Int32) { kill(process.processIdentifier, signal) }
+
+        /// Waits for the command to end and returns what it wrote. The tests' commands write only a few lines,
+        /// so the pipes can't fill while the test is not reading.
+        func finish() -> Result {
+            let outData = out.fileHandleForReading.readDataToEndOfFile()
+            let errData = err.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            return Result(
+                status: process.terminationStatus,
+                stdout: String(decoding: outData, as: UTF8.self),
+                stderr: String(decoding: errData, as: UTF8.self)
+            )
+        }
+    }
 }

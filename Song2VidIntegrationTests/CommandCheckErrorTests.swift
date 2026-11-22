@@ -83,7 +83,7 @@ struct CommandCheckErrorTests {
     static let usageText = "Unknown option. Run 'song2vid check --help'.\n"
 
     @Test("An unknown option is a usage error that does not echo it", arguments: [
-        "--zzz-typed-text", "-Q", "-jj", "-hj", "--", "-", "-o", "-S", "-u",
+        "--zzz-typed-text", "-Q", "-jj", "-hj", "--", "-", "-S", "-u",
     ])
     func unknownOption(option: String) throws {
         let workspace = try CommandWorkspace()
@@ -120,7 +120,7 @@ struct CommandCheckErrorTests {
     }
 
     @Test("Options that belong to other commands or to no command don't apply to check", arguments: [
-        "--version", "-v", "--repo", "-R",
+        "--version", "-v", "--repo", "-R", "-o", "--out", "-s", "-n", "-q", "--overwrite",
     ])
     func optionsThatDoNotApply(option: String) throws {
         let workspace = try CommandWorkspace()

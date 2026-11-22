@@ -16,6 +16,22 @@ extension FrameShape {
     }
 }
 
+extension FrameShape {
+    /// The shape for a name on the command line, or nil. Names are exact: `ORIGINAL` is not `original`.
+    init?(commandName: String) {
+        guard let shape = Self.allCases.first(where: { $0.commandName == commandName }) else { return nil }
+        self = shape
+    }
+}
+
+extension Resolution {
+    /// The resolution for a name on the command line, or nil.
+    init?(commandName: String) {
+        guard let resolution = Self.allCases.first(where: { $0.commandName == commandName }) else { return nil }
+        self = resolution
+    }
+}
+
 extension Resolution {
     /// The name on the command line and in JSON: `480p`, `1080p` or `2160p`.
     var commandName: String { "\(shortSide)p" }

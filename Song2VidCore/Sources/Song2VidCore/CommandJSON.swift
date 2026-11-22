@@ -25,6 +25,9 @@ enum JSONKey: String, CaseIterable, Sendable {
     case error
     case code
     case message
+    case output
+    case bytes
+    case dryRun = "dry_run"
 }
 
 /// A JSON value. Objects keep their keys in the order given, so the output is the same every run.

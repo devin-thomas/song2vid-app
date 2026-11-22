@@ -110,12 +110,12 @@ struct CheckReport: Sendable {
         return lines.joined(separator: "\n") + "\n"
     }
 
-    private static func seconds(_ value: Double) -> String {
+    static func seconds(_ value: Double) -> String {
         JSONValue.seconds(value).text
     }
 
     /// `2:24`, or `1:02:03` for an hour or more.
-    private static func clock(_ duration: Double) -> String {
+    static func clock(_ duration: Double) -> String {
         let total = Int(duration.rounded())
         let hours = total / 3600, minutes = total % 3600 / 60, seconds = total % 60
         return hours > 0

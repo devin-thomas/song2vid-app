@@ -1,6 +1,6 @@
 # S2V-012 - `song2vid make`
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: S2V-011
 
 ## Goal
@@ -25,3 +25,14 @@ Make a video from the command line with the same results as the app (SPEC §14.2
 ## Dependencies
 
 S2V-011.
+
+## Comments
+
+Built on `ticket/S2V-012`, from `build/v2` at the S2V-011 merge. `make` adds a case and rows to the option table (`-o -s -r -c -w -n -q`, and `-j` and `-h` now also apply to `make`), then runs the app's own export (`VideoExporting`, `ExportRequest`, `OutputFrame`); no frame or export logic is copied. The command line is turned into a `MakeOptions` value first, so every usage rule of SPEC 14.2 is found before a file is looked at, then the files, the size for Original and the output are checked, and only then does the export start.
+
+The export writes to a hidden temporary file in the output folder. The final name is touched once, at the end: with `--overwrite` by an atomic rename over the old file, without it by a rename that fails if the name is taken (a file that appeared during the run gives 4 and the new video is deleted). Ctrl-C and SIGTERM are read through dispatch signal sources with the default action ignored, so the export is cancelled, its files are deleted and the command exits 130.
+
+All system-framework work runs with fd 1 and 2 pointed at /dev/null. The command keeps private copies of the real streams in a `CommandChannel`, which the progress handler receives with each event, so S2V-013 only adds rendering. A test proves the channel writes reach the real stderr while other writes do not.
+
+Seam 5 tests run the built command as a separate process, including a run long enough to send it Ctrl-C and to plant a file at the output mid-run. The choices the spec left open are in the implementer notes.
+
