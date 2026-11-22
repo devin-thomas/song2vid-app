@@ -9,3 +9,11 @@
 - Fit with bars using a blurred copy of the image instead of black.
 - Apple signing and notarization, so there is no warning on first open.
 - Windows version.
+
+## From Phase 3 discovery (2026-11-21)
+
+- A `--progress-file` option that keeps the latest progress in a file.
+- `--update` that downloads, verifies and replaces the app.
+- A separate command download or a Homebrew tap.
+- Claude Code and Codex in the Agent Handoff.
+- A menu item in the app that installs the command link.

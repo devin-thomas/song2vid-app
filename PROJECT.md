@@ -35,7 +35,7 @@ The owner, plus anyone who finds the download page. The app is not signed with a
 - Commits show the owner's own name and GitHub account, not Claude or a bot (ADR-007).
 - Public-from-day-one rules (ADR-003).
 
-## Phase 3: make Song2Vid usable by agents (discovery open)
+## Phase 3: make Song2Vid usable by agents (version 1.1)
 
 Started 2026-11-21. Goal: an agent can make a Song2Vid video for someone, and people can hand that job to the agent they already use. This is the Starter Pack Phase 3 **agent-cli** level, extending this Phase 2 build.
 
@@ -49,6 +49,10 @@ Agreed so far (round 1):
 - **Docs page:** a human documentation page on the download site (`song2vid.pages.dev/docs`) for people who use the command directly.
 - **Commands (first version):** `song2vid check` (read-only: song length, image size, and the output size for each Frame Shape) and `song2vid make`. Options also include `--help`, `--version`, `--skill` (prints the agent skill), `--repo` (prints the source repo link) and `--update` if it is easy. **Every option has a one-letter short form.**
 - **Progress is always visible (ADR-018).** Nobody should wait on something that seems stalled. In a terminal (headed), a live progress bar with stage, percent, elapsed time and time left; a moving indicator while the percent is not known yet. Headless (agents, scripts), the same progress is available in machine-readable form while the run is going, so an agent can check on it mid-run. Everything the command does works headless.
+- **Headless progress:** with `--json`, `make` prints one JSON line of progress about every half second, then a final result line, so an agent running it in the background can read the newest line at any time (ADR-019). A progress file is not offered.
+- **`--update`** only reports whether a newer release exists and links the download page. The person replaces the app themselves, because a new copy needs Open Anyway again (ADR-020).
+- **Short options:** `-h` help, `-v` version, `-s` shape, `-r` resolution, `-c` crop, `-o` out, `-w` overwrite, `-n` dry-run, `-j` json, `-q` quiet, `-S` skill, `-R` repo, `-u` update.
+- **Other command defaults** (stated by the coordinator, not objected to): Ctrl-C cancels, deletes the partial file and exits 130; results go to stdout, progress and errors to stderr; colour and the animated bar appear only in a real terminal, honour `NO_COLOR`, and `-q` turns them off; `make` checks every input before it starts encoding; each command has its own `--help`, and a mistyped option gets a suggestion.
 - **Test media:** test videos are made from the owner's sample files outside the repo (ADR-012); they are never committed.
 - **Workflow:** same as Phase 2: Grill to Build, the chief-of-staff workflow with Sonnet builders, commits as `devin`, tests on this Mac.
 - **Phase 3 proof:** a new Claude Code session that has never seen the project runs the installed command, makes a video, and hits one deliberate failure; the owner confirms. This is separate from the handoff's agent list.
@@ -60,17 +64,13 @@ Agreed so far (round 1):
 
 ## Open questions
 
-Phase 3, round 3:
-
-8. How an agent reads progress during a headless run.
-9. What `--update` does.
-10. The one-letter short forms.
+None. Phase 3 round 3 answers: JSON Lines progress (a), `--update` reports only (a), and the recommended short options.
 
 ## Discovery progress
 
 - Workflow: Grill to Build (default).
 - Phase 2: 3 of 5 rounds, 10 of 20 questions. Discovery closed; plan approved 2026-11-18.
-- Phase 3: 2 of 5 rounds, 7 of 20 questions. Discovery open.
+- Phase 3: 3 of 5 rounds, 10 of 20 questions. Discovery closed 2026-11-21. SPEC Part 2 and tickets S2V-010 to S2V-018 written; waiting for the owner's go-ahead to build.
 - **Plan approved 2026-11-18**, with changes: drag and drop (with the replace dialog) and an app icon were added.
 - **Build workflow:** the owner asked for Matt Pocock's `chief-of-staff` skill, installed in this repo under `.claude/skills/`. Opus coordinates, verifies and writes the docs. Sonnet subagents on high reasoning build each ticket.
 

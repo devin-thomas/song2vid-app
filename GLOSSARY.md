@@ -20,3 +20,9 @@ _Avoid_: agent docs, llms file
 
 **Agent Handoff**: The control on the download page that gives a short prompt, pointing at the Agent Guide, to copy into a named agent.
 _Avoid_: agent button, prompt widget
+
+**Headed**: A run of the `song2vid` command whose error output is an interactive terminal, so it can draw a live progress bar.
+_Avoid_: interactive mode, TTY mode
+
+**Headless**: A run of the `song2vid` command whose output goes to a program, an agent or a file rather than a terminal.
+_Avoid_: batch mode, non-interactive

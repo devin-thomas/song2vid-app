@@ -178,4 +178,24 @@
 
 **Rationale:** The owner's rule: people should never feel they are waiting on something that isn't happening, and agents need to check on long runs.
 
-**Consequences:** Progress is part of the command's tested behavior, not decoration. The headless format is decided in round 3.
+**Consequences:** Progress is part of the command's tested behavior, not decoration. The headless format is ADR-019.
+
+## ADR-019 - Headless progress is JSON Lines on stdout
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** With `--json`, `make` writes one JSON object per line to stdout: progress lines about every half second, then exactly one result or error line.
+
+**Rationale:** An agent that runs the command in the background can read the newest line at any time, with no extra files or commands. It works the same in every agent harness.
+
+**Consequences:** stdout carries only JSON lines under `--json`. Rejected: a `--progress-file` option (parked in Ideas), and both together.
+
+## ADR-020 - `--update` reports, the person installs
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** `song2vid --update` checks GitHub for the latest release and says whether it is newer, with the download page link. It does not download or replace anything.
+
+**Rationale:** Replacing the app means approving it again with Open Anyway, which only the person can do. A read-only check is easy, safe and has no destructive path.
+
+**Consequences:** It is the only part of the command that uses the network. Rejected: downloading, verifying and replacing the app after a confirmation.

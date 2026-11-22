@@ -16,7 +16,7 @@ A person with a song and a picture gets a video file they can upload anywhere. T
 
 - Native macOS app: Swift, SwiftUI, AVFoundation (ADR-001). macOS 14 or later. Universal build (Apple silicon and Intel).
 - Ad-hoc signed and not notarized (ADR-005). Distributed as a `.zip` on GitHub Releases (ADR-008).
-- Download page: one static HTML page with inline CSS on Cloudflare Pages (ADR-002). No JavaScript framework, no analytics, no cookies, no third-party requests.
+- Download page: one static HTML page with inline CSS on Cloudflare Pages (ADR-002). No JavaScript framework, no analytics, no cookies, no third-party requests. (Version 1.1 adds one small first-party script, a docs page and the Agent Guide: section 16.)
 
 ## 4. Main window
 
@@ -130,4 +130,170 @@ The crop position is stored as two fractions from 0 to 1 (0.5, 0.5 is centered),
 
 - All tickets' acceptance criteria are met and the tests pass.
 - Version 1.0.0 is released on GitHub, and the live page downloads that zip.
+- The repo history shows only the owner as author, and the public-repo checks pass.
+
+---
+
+# Part 2 — Version 1.1: Song2Vid for agents
+
+Agreed in Phase 3 discovery, 2026-11-21 (`PROJECT.md`, ADR-013 to ADR-020). Part 1 still applies unless a section below changes it.
+
+## 13. Objective
+
+An agent can make a Song2Vid video for someone, through the app's window or the `song2vid` command, and a person can hand that job to the chat agent they already use with one short prompt.
+
+Success criteria:
+
+- A new Claude Code session that has never seen this project installs the command from the release, makes a video, and reports one deliberate failure's exit status and error code without inventing anything. The owner confirms the result.
+- A command run never leaves anyone waiting with no sign of progress, headed or headless.
+- Every feature of the command works headless.
+
+## 14. The `song2vid` command
+
+### 14.1 Where it lives
+
+- Built from the same `Song2VidCore` package as the app. It calls the same frame, drop-check and export code; no logic is copied.
+- Shipped inside the app at `Song2Vid.app/Contents/Helpers/song2vid` (not `Contents/MacOS`, where its name would clash with `Song2Vid` on a case-insensitive disk).
+- Signed ad hoc **without** the app sandbox, so it can read files named on the command line (ADR-013). The app itself keeps the sandbox, and version 1.1.0 drops the `get-task-allow` entitlement.
+- Install, for people and agents:
+
+  ```
+  mkdir -p ~/.local/bin
+  ln -sf /Applications/Song2Vid.app/Contents/Helpers/song2vid ~/.local/bin/song2vid
+  ```
+
+  If `~/.local/bin` is not on `PATH`, the Agent Guide and docs page say how to add it for zsh.
+
+### 14.2 Usage
+
+```
+song2vid check <audio> <image> [-j]
+song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-w] [-n] [-j] [-q]
+song2vid -h | -v | -S | -R | -u
+```
+
+| Option | Short | Applies to | Meaning |
+| --- | --- | --- | --- |
+| `--help` | `-h` | all | Help for the command or subcommand it follows. |
+| `--version` | `-v` | none | Prints `song2vid 1.1.0`. |
+| `--skill` | `-S` | none | Prints the agent skill (`skills/song2vid/SKILL.md`, bundled in the app). |
+| `--repo` | `-R` | none | Prints `https://github.com/devin-thomas/song2vid-app`. |
+| `--update` | `-u` | none | Reports whether a newer release exists (14.7). |
+| `--shape` | `-s` | make | `16:9` (default), `9:16`, `1:1`, `4:3`, `original`. |
+| `--resolution` | `-r` | make | `480p`, `1080p` (default), `2160p`. A usage error with `original`. |
+| `--crop` | `-c` | make | Crop position as two fractions, `h,v`, each 0 to 1. Default `0.5,0.5`. A usage error unless the shape is `1:1` or `4:3`. Values outside 0–1 are a usage error, not clamped. |
+| `--out` | `-o` | make | Output file. Default: the audio file's name with `.mp4`, in the current folder. Must end in `.mp4`. |
+| `--overwrite` | `-w` | make | Allows replacing an existing output (ADR-014). |
+| `--dry-run` | `-n` | make | Checks everything and reports what would be made. Writes nothing. |
+| `--json` | `-j` | check, make, `-u` | Machine-readable output (14.5). |
+| `--quiet` | `-q` | make | No progress output. The result and errors still print. |
+
+- Short options can't be combined into one cluster (`-wn` is a usage error), so each letter means one thing.
+- An unknown option or command is a usage error: "Unknown option. Run 'song2vid --help'." The unknown text is **not** echoed. If one known option is within two edits, the message adds "Did you mean --overwrite?" (a known name, so nothing the person typed is echoed).
+- `--help` text has: what the command does, usage, two or three examples, and the exit statuses table.
+
+### 14.3 `check`
+
+Reads both files and reports, without writing anything:
+
+- Audio: file name (no folder), length, sample rate, channels.
+- Image: file name, pixel size after its orientation tag.
+- For every Frame Shape and Resolution: the output size, the placement (Fit with bars or Crop), and whether the image would be enlarged. For Original, one size, or "too small" if a side is under 16 px.
+
+### 14.4 `make`
+
+1. Validates everything first, before encoding: options, both input files (the section 7 rules), the image size for `original`, and the output (ends in `.mp4`, folder exists and is writable, file absent unless `--overwrite`). Any failure stops here with nothing written.
+2. With `--dry-run`, it reports the planned output (name, size, placement, enlarged, song length) and exits 0.
+3. Otherwise it exports with the Part 1 rules (section 6.3), writing to a temporary file in the output folder and moving it into place at the end, so a half-made video never appears under the final name.
+4. `--overwrite` replaces an existing file only at that final step. Without it, if the file appeared during the run, the run fails with exit 4 and the new video is deleted.
+5. **Ctrl-C** (SIGINT) or SIGTERM cancels: the temporary file is deleted, a "Cancelled." line goes to stderr (or a JSON error line with code `cancelled`), and the exit status is 130.
+6. The person's audio and image files are never changed.
+
+### 14.5 Output and progress (ADR-018, ADR-019)
+
+**Streams.** Results go to stdout. Progress, messages and errors go to stderr, except under `--json`, where everything is a JSON line on stdout and stderr is empty.
+
+**Headed** (stderr is a terminal, no `--json`, no `-q`):
+
+- A one-line live display, redrawn at least 10 times a second: the stage, a bar, the percent, elapsed time and time left, for example `Encoding  ████████░░░░░░░░  52%  0:04 elapsed · about 0:04 left`.
+- Stages: `Checking files`, `Preparing`, `Encoding`, `Finishing`. While the percent is not known yet (Checking files, Preparing), a spinner moves instead of the bar, so the display never looks stalled.
+- Time left appears once encoding has run for one second; before that it says "estimating".
+- On finish, the line is replaced by the result. Colour is used only when `NO_COLOR` is unset and `TERM` is not `dumb`.
+
+**Headless, plain** (stderr is not a terminal, no `--json`): a plain line at each stage change and at least every 2 seconds, such as `Encoding 52% (0:04 elapsed, about 0:04 left)`. No control characters.
+
+**Headless, `--json`:** JSON Lines on stdout. Every line has `"api_version": "1"` and a `"type"`.
+
+```json
+{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8}
+{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false}
+{"api_version":"1","type":"error","error":{"code":"output_exists","message":"The output file already exists. Use --overwrite to replace it."}}
+```
+
+- `stage` is `checking`, `preparing`, `encoding` or `finishing`. `percent` and `remaining_seconds` are `null` until known.
+- A progress line is written at each stage change and at least every 0.5 seconds. The last line is always exactly one `result` or `error` line.
+- `check --json` and `--update --json` write a single `result` or `error` line.
+- Every key is from a fixed allowlist, documented on the docs page. Keys change only with a new `api_version`.
+- No output, in any mode, contains a folder path, an environment variable's value, or file contents. File names appear without their folder.
+
+### 14.6 Exit statuses and error codes
+
+| Status | Meaning | Error codes |
+| --- | --- | --- |
+| 0 | Success (including `--dry-run` and `check`). | — |
+| 1 | An input file does not exist. | `audio_not_found`, `image_not_found` |
+| 2 | Usage error. | `usage` |
+| 3 | An input can't be read or isn't usable. | `audio_unreadable`, `image_unreadable`, `image_too_small` |
+| 4 | The output can't be written. | `output_exists`, `output_not_writable`, `output_not_mp4`, `disk_full` |
+| 5 | Making the video failed after it started, or the update check failed. | `export_failed`, `network` |
+| 130 | Cancelled. | `cancelled` |
+
+Human error messages are one line on stderr and use the Part 1 wording where it exists (section 7).
+
+### 14.7 `--update`
+
+- Reads the latest release from the GitHub API for `devin-thomas/song2vid-app`. Sends no data about the person.
+- Prints either "Song2Vid 1.1.0 is up to date." or "Song2Vid 1.2.0 is available (you have 1.1.0). Download it from https://song2vid.pages.dev." With `--json`: `{"api_version":"1","type":"result","command":"update","current":"1.1.0","latest":"1.2.0","update_available":true,"download_page":"https://song2vid.pages.dev"}`.
+- Downloads and replaces nothing (ADR-020). No network: exit 5, code `network`.
+
+## 15. Agent skill and Agent Guide
+
+- Source: `skills/song2vid/SKILL.md`, written with the `writing-for-agents` skill. It is also bundled in the app for `--skill`, and published unchanged as `song2vid.pages.dev/agent.md` (ADR-015), served as `text/markdown; charset=utf-8`.
+- It tells an agent how to make a video for someone by either route, and to pick the one it can do:
+  - **The app's window**, for agents that operate apps: the controls by their VoiceOver labels, in order, and the first-open step.
+  - **The command**, for agents with a terminal: install, `check`, `make`, reading JSON Lines progress from a background run, exit statuses and error codes.
+- Rules it gives the agent: ask the person before `--overwrite`; never change the person's input files; report the real result or error, never a guessed one; the first-open step (Open Anyway) is the person's to do.
+- A copy in the repo and the published page must match; the release check compares them.
+
+## 16. Download site additions
+
+- **Agent Handoff** on the landing page (ADR-016, ADR-017), near the Download button and visible without scrolling at 320 × 667 and 390 × 844:
+  - Agents: **ChatGPT, Claude, Grok Bot, Muse**, each with its authentic mark and its name. None may be dropped. Artwork: ChatGPT, Claude and Grok Bot from the owner's `agent-prompts` set; Muse from LobeHub Icons 1.104.0 (MIT). Credits and licence notices are published beside the artwork (`site/brands/credits.txt`).
+  - Prompt (one resolved payload for preview, clipboard and any link): `Use Song2Vid to make a video from my song and image. Instructions: https://song2vid.pages.dev/agent.md`
+  - An agent picker with a `Copy for {Agent}` button. "Copied" shows only after the clipboard write succeeds; on failure, a dialog shows the full text to copy by hand. Open-in links are offered only for agents whose prompt-link format is verified on the day, each with a copy fallback.
+  - Built with the `agent-prompt` skill's interaction contract: keyboard use, light and dark, reduced motion.
+- **Docs page** at `/docs`, for people using the command directly: install, every command and option with its short form, examples, the progress modes, the JSON keys, exit statuses and error codes, and the app's window route in brief. A check fails if any option in `--help` is missing from the page.
+- The landing page links to `/docs`. It keeps its three steps.
+- Section 3 changes: the site may use one small first-party script for the handoff (no framework, no third-party requests). The CSP allows `script-src 'self'` and nothing else new.
+
+## 17. Release 1.1.0
+
+- One zip on GitHub Releases, as in 1.0.0, containing the app with the command inside. Universal, ad hoc signed, with its SHA-256 in the release notes.
+- The app keeps the sandbox and loses `get-task-allow`; this is checked with `codesign -d --entitlements`.
+- The site deploy publishes `agent.md`, `/docs` and the handoff together with the release.
+
+## 18. Testing (adds to section 11)
+
+- **Seam 5, the command's public behavior:** inputs are arguments, environment and stdin/stdout terminal status; outputs are stdout, stderr, exit status and files written. Tests run the built `song2vid` binary as a separate process.
+- **Automated, with generated media:** `--help`/`--version`/`--repo`/`--skill`; `check` text and JSON; `make` for each shape at 480p; `--dry-run` writes nothing; `--overwrite` refused and allowed; every exit status in 14.6 except `disk_full` and `network`; unknown option not echoed; JSON Lines (every line parses, progress at least every 0.5 s, exactly one final line); plain headless lines; SIGINT gives 130 and leaves no file; a planted fake secret in the environment and the test folder path appear in no output.
+- **Headed progress** is checked by running in a pseudo-terminal and by eye on this Mac (spinner moves during Preparing; bar, percent, elapsed and time left during Encoding).
+- **Owner's sample media** (ADR-012): the coordinator makes one video per Frame Shape with the command, from files in the owner's sample folder passed by path argument, outside the repo. ffprobe checks size, length and both tracks.
+- **Release check:** download the 1.1.0 zip anonymously, unzip into a clean folder, approve with Open Anyway, link the command, and repeat `--version`, `check` and one `make` from a folder outside the repo.
+- **Phase 3 proof:** a new Claude Code session that has never seen this repo runs the installed command: one `check --json`, one `make --json` to a 480p 1:1 video, and one `make` with a missing image. It reports the real values and the failing run's exit status (1) and error code (`image_not_found`). The owner confirms.
+
+## 19. Definition of done (1.1)
+
+- Tickets S2V-010 to S2V-018 meet their acceptance criteria and the tests pass.
+- 1.1.0 is on GitHub Releases, and `song2vid.pages.dev` serves the handoff, `/docs` and `agent.md`.
+- The Phase 3 proof passes and the owner confirms it.
 - The repo history shows only the owner as author, and the public-repo checks pass.
