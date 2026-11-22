@@ -42,7 +42,7 @@ struct CommandGlobalOptionsTests {
     }
 
     @Test("An unknown option is a usage error that does not echo it", arguments: [
-        "--frobnicate", "-Z", "-vh", "--", "-S", "-u",
+        "--frobnicate", "-Z", "-vh", "--", "-U", "-X",
     ])
     func unknownOption(option: String) throws {
         let result = try CommandProcess.run([option])

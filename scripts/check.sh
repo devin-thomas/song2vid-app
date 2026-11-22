@@ -74,5 +74,8 @@ app_version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$a
 cmd_version=$("$command" --version)
 [[ "$cmd_version" == "song2vid $app_version" ]] || { echo "check: command says '$cmd_version' but the app is $app_version" >&2; exit 1; }
 echo "$cmd_version"
+# The skill printed by --skill is the one in the repo, byte for byte (SPEC section 15).
+"$command" --skill | cmp -s - skills/song2vid/SKILL.md || { echo "check: --skill differs from skills/song2vid/SKILL.md" >&2; exit 1; }
+echo "--skill matches skills/song2vid/SKILL.md"
 
 echo "check: all passed"

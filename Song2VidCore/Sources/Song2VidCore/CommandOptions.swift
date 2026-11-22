@@ -36,7 +36,7 @@ enum CommandScope: Hashable, Sendable {
 
 /// The options the command knows.
 enum CommandOption: CaseIterable, Sendable {
-    case help, version, repo, json
+    case help, version, repo, skill, update, json
     case shape, resolution, crop, out, overwrite, dryRun, quiet
 }
 
@@ -53,7 +53,9 @@ struct OptionSpec: Sendable {
         OptionSpec(option: .help, short: "-h", long: "--help", scopes: [.global, .check, .make], takesValue: false),
         OptionSpec(option: .version, short: "-v", long: "--version", scopes: [.global], takesValue: false),
         OptionSpec(option: .repo, short: "-R", long: "--repo", scopes: [.global], takesValue: false),
-        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.check, .make], takesValue: false),
+        OptionSpec(option: .skill, short: "-S", long: "--skill", scopes: [.global], takesValue: false),
+        OptionSpec(option: .update, short: "-u", long: "--update", scopes: [.global], takesValue: false),
+        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.global, .check, .make], takesValue: false),
         OptionSpec(option: .shape, short: "-s", long: "--shape", scopes: [.make], takesValue: true),
         OptionSpec(option: .resolution, short: "-r", long: "--resolution", scopes: [.make], takesValue: true),
         OptionSpec(option: .crop, short: "-c", long: "--crop", scopes: [.make], takesValue: true),
