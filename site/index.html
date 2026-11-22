@@ -24,6 +24,7 @@
     --btn-b: #9b2fe0;
     --btn-c: #c52a86;
     --glow: rgba(155, 47, 224, 0.14);
+    --sel: #efebff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -37,6 +38,7 @@
       --accent-b: #c77bff;
       --accent-c: #ff7ab0;
       --glow: rgba(155, 47, 224, 0.28);
+      --sel: #2e2a4a;
     }
   }
   * { box-sizing: border-box; }
@@ -108,6 +110,54 @@
   }
   li span { min-width: 0; overflow-wrap: anywhere; }
   a { color: var(--link); }
+  [hidden] { display: none !important; }
+
+  .handoff { margin: 0 0 2.5rem; padding: 1rem 1.1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .handoff h2 { margin-bottom: .75rem; font-size: 1.15rem; }
+  .picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: .5rem; }
+  .choice, .copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: 44px;
+    min-width: 0;
+    padding: .5rem .5rem;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .choice[aria-pressed="true"] { border-color: var(--link); background: var(--sel); }
+  .choice:hover { border-color: var(--link); }
+  .mark { flex: none; width: 24px; height: 24px; object-fit: contain; }
+  @media (prefers-color-scheme: dark) { .mark.mono { filter: brightness(0) invert(1); } }
+  html[data-darkreader-scheme="dark"] .mark.mono { filter: brightness(0) invert(1); }
+  .copy { width: 100%; margin-top: .75rem; border-color: var(--link); color: var(--link); }
+  .copy:hover { background: var(--sel); }
+  .choice:focus-visible, .copy:focus-visible, .manual button:focus-visible, .manual textarea:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  .status { min-height: 1.5em; margin: .35rem 0 0; color: var(--muted); font-size: .95rem; }
+  .prompt { margin: .25rem 0 0; padding: .6rem .75rem; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; font-size: .95rem; overflow-wrap: anywhere; }
+  .prompt code { font: .9rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .manual { width: min(32rem, calc(100% - 2rem)); padding: 1.1rem; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 14px; }
+  .manual::backdrop { background: rgba(0, 0, 0, .55); }
+  .manual h2 { font-size: 1.1rem; margin-bottom: .5rem; }
+  .manual p { margin: 0 0 .75rem; color: var(--muted); }
+  .manual textarea { display: block; width: 100%; min-height: 7rem; padding: .6rem .75rem; resize: none; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; font: .9rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .manual button { margin-top: .75rem; width: 100%; min-height: 44px; border: 2px solid var(--link); border-radius: 10px; background: var(--card); color: var(--link); font: inherit; font-weight: 600; cursor: pointer; }
+  @media (prefers-reduced-motion: no-preference) {
+    .choice, .copy { transition: background-color .15s, border-color .15s; }
+  }
+  @media (max-width: 30rem) {
+    main { padding-top: 1.5rem; }
+    .logo { width: 72px; height: 72px; margin-bottom: .75rem; }
+    .lede { font-size: 1.05rem; }
+    .cta { margin: 1.25rem 0 1.5rem; }
+    .handoff { margin-bottom: 1.75rem; padding: .9rem; }
+  }
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
 </style>
 </head>
@@ -124,6 +174,26 @@
     <p class="req">Requires macOS 14 or later</p>
   </div>
 
+  <section class="handoff" id="handoff" aria-labelledby="handoff-title">
+    <h2 id="handoff-title">Or ask your agent to do it</h2>
+    <noscript><p>Paste this into ChatGPT, Claude, Grok Bot or Muse.</p></noscript>
+    <div class="picker" id="agent-picker" role="group" aria-label="Agent picker" hidden>
+      <button class="choice" type="button" data-agent="ChatGPT" aria-pressed="true"><img class="mark mono" src="/brands/chatgpt-original.svg" width="24" height="24" alt="">ChatGPT</button>
+      <button class="choice" type="button" data-agent="Claude" aria-pressed="false"><img class="mark" src="/brands/claude-original.svg" width="24" height="24" alt="">Claude</button>
+      <button class="choice" type="button" data-agent="Grok Bot" aria-pressed="false"><img class="mark mono" src="/brands/grok-bot-original.svg" width="24" height="24" alt="">Grok Bot</button>
+      <button class="choice" type="button" data-agent="Muse" aria-pressed="false"><img class="mark" src="/brands/muse-color.svg" width="24" height="24" alt="">Muse</button>
+    </div>
+    <button class="copy" id="copy-button" type="button" hidden>Copy for ChatGPT</button>
+    <p class="status" id="copy-status" role="status" aria-live="polite"></p>
+    <p class="prompt"><code id="prompt-text">Use Song2Vid to make a video from my song and image. Instructions: https://song2vid.pages.dev/agent.md</code></p>
+    <dialog class="manual" id="manual-dialog" aria-labelledby="manual-title">
+      <h2 id="manual-title">Copy the prompt by hand</h2>
+      <p>Select all, then copy.</p>
+      <textarea id="manual-text" readonly aria-label="Prompt"></textarea>
+      <button type="button" id="manual-close">Close</button>
+    </dialog>
+  </section>
+
   <section aria-labelledby="steps">
     <h2 id="steps">How to get started</h2>
     <ol>
@@ -136,5 +206,6 @@
 <footer>
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a>
 </footer>
+<script src="/handoff.js" defer></script>
 </body>
 </html>
