@@ -158,4 +158,24 @@
 
 **Rationale:** The owner's choice: the people who find the download page use chat agents.
 
-**Consequences:** Each mark must be authentic. Muse has no mark in the agent-prompt skill's set, so its official artwork has to be found. Phase 3's terminal test uses Claude Code separately.
+**Consequences:** Each mark must be authentic, and none may be dropped. ChatGPT, Claude and Grok Bot come from the owner's `agent-prompts` set (Grok Bot from asvg.app, per its credits file). Muse comes from LobeHub Icons 1.104.0 (MIT), which labels it "Muse (Meta)" for muse.ai. Credits and licence notices ship beside the artwork. Phase 3's terminal test uses Claude Code separately.
+
+## ADR-017 - The handoff asks for the outcome, not the method
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** The Agent Handoff prompt only asks the agent to use Song2Vid to make a video from a song and an image, and points at the Agent Guide. It does not tell the agent to use the command, or to coach the person through Terminal.
+
+**Rationale:** The owner's choice. Agents that operate apps and agents with a terminal are different and both are growing; the agent should pick the route it can do. The handoff stays a simple, non-technical step, and technical users read the docs page.
+
+**Consequences:** The Agent Guide describes both the app's window and the command. A separate docs page serves people who use the command directly. This replaces the coordinator's round 2 proposal of a Terminal walkthrough.
+
+## ADR-018 - Progress is always visible, headed or headless
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** The command never leaves anyone waiting without a sign of progress. In a terminal it draws a live progress bar; headless, it reports the same progress in a form an agent can read while the run is going. Every feature works headless.
+
+**Rationale:** The owner's rule: people should never feel they are waiting on something that isn't happening, and agents need to check on long runs.
+
+**Consequences:** Progress is part of the command's tested behavior, not decoration. The headless format is decided in round 3.

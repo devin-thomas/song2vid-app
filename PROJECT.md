@@ -44,7 +44,11 @@ Agreed so far (round 1):
 - **Command:** a `song2vid` command-line tool that calls `Song2VidCore`, with no copied logic. It ships **inside Song2Vid.app** (ADR-013); the person or their agent links it onto the PATH. Release **1.1.0**, which also removes the leftover debugging permission while keeping the app sandbox.
 - **Existing files:** `song2vid make` never replaces an existing output unless `--overwrite` is given, and `--dry-run` reports the output size and placement without writing anything (ADR-014). The person's audio and image files are never changed.
 - **Agent skill:** written with the `writing-for-agents` skill, kept at `skills/song2vid/SKILL.md`, and served publicly as the **Agent Guide** at `song2vid.pages.dev/agent.md` (ADR-015).
-- **Agent Handoff:** on the download page, for **ChatGPT, Claude, Grok Bot and Muse** (Meta's personal agent). Claude Code and Codex are not on it (ADR-016). These four agents run in the cloud and can't run commands on the person's Mac, so what the handoff asks them to do is open (question 5).
+- **Agent Handoff:** on the download page, for **ChatGPT, Claude, Grok Bot and Muse** (Meta's personal agent). Claude Code and Codex are not on it (ADR-016). All four marks are authentic and must be shown; none may be skipped (Muse and Grok Bot artwork sources are in ADR-016). The prompt is simple and non-technical: it asks the agent to use Song2Vid to make a video from a song and an image, and points at the Agent Guide. The agent decides whether to use the app's window or the command (ADR-017).
+- **Agent Guide** covers both routes: the app's window, for agents that operate apps, and the command, for agents with a terminal.
+- **Docs page:** a human documentation page on the download site (`song2vid.pages.dev/docs`) for people who use the command directly.
+- **Commands (first version):** `song2vid check` (read-only: song length, image size, and the output size for each Frame Shape) and `song2vid make`. Options also include `--help`, `--version`, `--skill` (prints the agent skill), `--repo` (prints the source repo link) and `--update` if it is easy. **Every option has a one-letter short form.**
+- **Progress is always visible (ADR-018).** Nobody should wait on something that seems stalled. In a terminal (headed), a live progress bar with stage, percent, elapsed time and time left; a moving indicator while the percent is not known yet. Headless (agents, scripts), the same progress is available in machine-readable form while the run is going, so an agent can check on it mid-run. Everything the command does works headless.
 - **Test media:** test videos are made from the owner's sample files outside the repo (ADR-012); they are never committed.
 - **Workflow:** same as Phase 2: Grill to Build, the chief-of-staff workflow with Sonnet builders, commits as `devin`, tests on this Mac.
 - **Phase 3 proof:** a new Claude Code session that has never seen the project runs the installed command, makes a video, and hits one deliberate failure; the owner confirms. This is separate from the handoff's agent list.
@@ -56,17 +60,17 @@ Agreed so far (round 1):
 
 ## Open questions
 
-Phase 3, round 2:
+Phase 3, round 3:
 
-5. What the Agent Handoff asks a cloud agent (ChatGPT, Claude, Grok Bot, Muse) to do, since it can't run commands on the Mac.
-6. Which commands the first version has.
-7. What the handoff shows for an agent with no authentic logo available.
+8. How an agent reads progress during a headless run.
+9. What `--update` does.
+10. The one-letter short forms.
 
 ## Discovery progress
 
 - Workflow: Grill to Build (default).
 - Phase 2: 3 of 5 rounds, 10 of 20 questions. Discovery closed; plan approved 2026-11-18.
-- Phase 3: 1 of 5 rounds, 4 of 20 questions. Discovery open.
+- Phase 3: 2 of 5 rounds, 7 of 20 questions. Discovery open.
 - **Plan approved 2026-11-18**, with changes: drag and drop (with the replace dialog) and an app icon were added.
 - **Build workflow:** the owner asked for Matt Pocock's `chief-of-staff` skill, installed in this repo under `.claude/skills/`. Opus coordinates, verifies and writes the docs. Sonnet subagents on high reasoning build each ticket.
 
