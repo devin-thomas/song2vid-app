@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T22:09:26Z",
-  "state": "working",
-  "phase": "Preparing S2V-017",
+  "updated_at": "2026-11-22T22:10:41Z",
+  "state": "waiting",
+  "phase": "Waiting for the owner: release and deploy",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -14,8 +14,14 @@
     "persistence": "Committed to build/v2 at checkpoints",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
-  "action_required": [],
-  "current_activity": "S2V-017 preparation: building the release zip and checking real sample-media videos. Releasing and deploying wait for the owner's go-ahead.",
+  "action_required": [
+    {
+      "need": "Go-ahead to release 1.1.0 and deploy the site",
+      "reason": "Publishing a GitHub release and deploying song2vid.pages.dev are public and need your yes (S2V-017).",
+      "action": "Tell the coordinator to go ahead; later, click Open Anyway on the downloaded 1.1.0 app and run the Phase 3 proof (S2V-018)."
+    }
+  ],
+  "current_activity": "Waiting for the owner's go-ahead to publish 1.1.0 and deploy the site.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -59,7 +65,8 @@
     },
     {
       "name": "S2V-017 Release 1.1.0 and deploy",
-      "status": "pending"
+      "status": "in_progress",
+      "note": "zip built and sample videos checked; release and deploy wait for the owner"
     },
     {
       "name": "S2V-018 Phase 3 proof with a real agent",
@@ -108,10 +115,10 @@
     }
   ],
   "next_up": [
-    "Verify S2V-013 (watch the headed bar on this Mac)",
-    "S2V-014 skill, --skill, --update",
-    "S2V-015 docs and agent.md",
-    "S2V-017 release (owner approval, Open Anyway)"
+    "Owner go-ahead: merge to main, tag v1.1.0, publish the release, deploy the site",
+    "Live checks of /agent.md, /docs and the Copy button",
+    "Owner: Open Anyway on the downloaded 1.1.0 app; the coordinator runs the command from Terminal",
+    "S2V-018 Phase 3 proof with a new Claude Code session"
   ],
   "activity": [
     {
@@ -153,6 +160,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-015 built, verified and merged (docs page, agent.md, site checks); S2V-017 preparation started"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "S2V-017 prepared: 1.1.0 zip built and tested, five real-media videos verified; waiting for the owner's go-ahead to release and deploy"
     }
   ],
   "walk_away": {

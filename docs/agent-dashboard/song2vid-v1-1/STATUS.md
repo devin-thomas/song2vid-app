@@ -1,15 +1,15 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **working** · Phase: Preparing S2V-017 · Updated: 2026-11-22T22:09:26Z
+State: **waiting** · Phase: Waiting for the owner: release and deploy · Updated: 2026-11-22T22:10:41Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
 
-No action required from you right now.
+- **Go-ahead to release 1.1.0 and deploy the site**: Publishing a GitHub release and deploying song2vid.pages.dev are public and need your yes (S2V-017). Smallest action: Tell the coordinator to go ahead; later, click Open Anyway on the downloaded 1.1.0 app and run the Phase 3 proof (S2V-018).
 
 ## Current activity
 
-S2V-017 preparation: building the release zip and checking real sample-media videos. Releasing and deploying wait for the owner's go-ahead.
+Waiting for the owner's go-ahead to publish 1.1.0 and deploy the site.
 
 ## Milestones
 
@@ -21,7 +21,7 @@ S2V-017 preparation: building the release zip and checking real sample-media vid
 - [complete] S2V-014 Agent skill, --skill, --update (merged at 53ae196; fresh-agent test passed)
 - [complete] S2V-015 Docs page and Agent Guide (merged at d904c32; checks shown to fail when broken)
 - [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
-- [pending] S2V-017 Release 1.1.0 and deploy
+- [in_progress] S2V-017 Release 1.1.0 and deploy (zip built and sample videos checked; release and deploy wait for the owner)
 - [pending] S2V-018 Phase 3 proof with a real agent
 
 ## Blockers
@@ -46,10 +46,10 @@ None.
 
 ## Next up
 
-1. Verify S2V-013 (watch the headed bar on this Mac)
-2. S2V-014 skill, --skill, --update
-3. S2V-015 docs and agent.md
-4. S2V-017 release (owner approval, Open Anyway)
+1. Owner go-ahead: merge to main, tag v1.1.0, publish the release, deploy the site
+2. Live checks of /agent.md, /docs and the Copy button
+3. Owner: Open Anyway on the downloaded 1.1.0 app; the coordinator runs the command from Terminal
+4. S2V-018 Phase 3 proof with a new Claude Code session
 
 ## Activity
 
@@ -63,6 +63,7 @@ None.
 - 2026-11-22: S2V-013 built, verified (check.sh, process tests for JSON, plain and live progress, real 2160p run) and merged; S2V-014 started
 - 2026-11-22: S2V-014 built, verified and merged (skill, --skill, --update; fresh Sonnet agent made a video from the skill alone); S2V-015 started
 - 2026-11-22: S2V-015 built, verified and merged (docs page, agent.md, site checks); S2V-017 preparation started
+- 2026-11-22: S2V-017 prepared: 1.1.0 zip built and tested, five real-media videos verified; waiting for the owner's go-ahead to release and deploy
 
 ## Walk-away snapshot
 
