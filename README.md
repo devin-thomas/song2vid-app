@@ -42,6 +42,20 @@ The first command enables the commit hooks, which block secrets, personal paths 
 
 To also keep the names of real sample media out of the repo, list them one per line in a file outside the repo and set `S2V_DENYLIST` to its path before committing or running the check.
 
+## The `song2vid` command and the Agent Guide
+
+Version 1.1 adds a command that makes the same video as the window. It ships inside the app and is built from the same `Song2VidCore` package.
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf /Applications/Song2Vid.app/Contents/Helpers/song2vid ~/.local/bin/song2vid
+song2vid make song.mp3 cover.png -s 1:1 -r 480p
+```
+
+- Every option, the JSON output, the progress modes and the exit statuses are on the docs page, [song2vid.pages.dev/docs](https://song2vid.pages.dev/docs).
+- [skills/song2vid/SKILL.md](skills/song2vid/SKILL.md) tells an agent how to make a video by either route, the app's window or the command. `song2vid --skill` prints it, and the site serves the same text at [song2vid.pages.dev/agent.md](https://song2vid.pages.dev/agent.md). `scripts/build-agent-md.sh` makes that copy, and `scripts/check.sh` fails if it drifts.
+- The download page has an Agent Handoff: one click copies a short prompt for ChatGPT, Claude, Grok Bot or Muse that points the agent at the guide.
+
 ## Licence
 
 [MIT](LICENSE), copyright 2026 devin.
