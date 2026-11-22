@@ -1,0 +1,108 @@
+{
+  "task_id": "song2vid-v1-1",
+  "title": "Song2Vid 1.1: command, agent skill and handoff",
+  "updated_at": "2026-11-22T01:19:32Z",
+  "state": "working",
+  "phase": "Build: S2V-010",
+  "repository": "devin-thomas/song2vid-app (public)",
+  "branch": "build/v2",
+  "delivery": {
+    "mode": "localhost",
+    "preferred_local_port": 4173,
+    "url": "http://localhost:4173/",
+    "last_verified": "",
+    "persistence": "Committed to build/v2 at checkpoints",
+    "limitations": "Localhost only: viewable on this Mac, not on the phone."
+  },
+  "action_required": [],
+  "current_activity": "A Sonnet builder is working on S2V-010: building the command into the app and checking that it runs after download.",
+  "milestones": [
+    {
+      "name": "Plan approved (Grill to Build, Phase 3)",
+      "status": "complete",
+      "note": "2026-11-21; 3 rounds, 10 questions"
+    },
+    {
+      "name": "S2V-010 Command inside the app (Gatekeeper check)",
+      "status": "in_progress"
+    },
+    {
+      "name": "S2V-011 check command",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-012 make command",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-013 Visible progress, headed and headless",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-014 Agent skill, --skill, --update",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-015 Docs page and Agent Guide",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-016 Agent Handoff (4 agents)",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-017 Release 1.1.0 and deploy",
+      "status": "pending"
+    },
+    {
+      "name": "S2V-018 Phase 3 proof with a real agent",
+      "status": "pending"
+    }
+  ],
+  "blockers": [],
+  "warnings": [
+    {
+      "label": "Agent handling",
+      "text": "S2V-010 may find that macOS blocks a command inside a downloaded app. The builder stops and reports if so; the owner will be asked before any change of approach."
+    }
+  ],
+  "decisions": [
+    {
+      "time": "2026-11-21",
+      "decision": "Command ships inside the app; JSON Lines progress; --update only reports; outcome-only Agent Handoff for ChatGPT, Claude, Grok Bot, Muse",
+      "rationale": "Owner answers, ADR-013 to ADR-020",
+      "reversibility": "reversible before release",
+      "status": "final"
+    }
+  ],
+  "outputs": [
+    {
+      "label": "SPEC Part 2",
+      "link": "https://github.com/devin-thomas/song2vid-app/blob/build/v2/SPEC.md"
+    },
+    {
+      "label": "Tickets",
+      "link": "https://github.com/devin-thomas/song2vid-app/tree/build/v2/tickets"
+    }
+  ],
+  "next_up": [
+    "Verify S2V-010 and merge it into build/v2",
+    "S2V-011 check",
+    "S2V-012 make",
+    "S2V-013 progress"
+  ],
+  "activity": [
+    {
+      "time": "2026-11-21",
+      "event": "Plan approved; old merged worktrees cleaned up; S2V-010 dispatched to a Sonnet builder"
+    }
+  ],
+  "walk_away": {
+    "last_good": "build/v2 at the approved plan (3f4141a); 1.0.0 live",
+    "unfinished": "S2V-010 in progress",
+    "next_safe_step": "Wait for the builder's report, then verify on this Mac",
+    "touched": "song2vid-app repo (build/v2, ticket branches)",
+    "processes": "This dashboard's local server on localhost:4173",
+    "input_needed": "None right now"
+  }
+}
