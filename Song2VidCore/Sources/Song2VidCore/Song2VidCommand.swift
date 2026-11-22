@@ -15,6 +15,9 @@ public struct CommandOutput: Equatable, Sendable {
 
 /// The `song2vid` command (SPEC section 14). The command target only passes its arguments here and
 /// writes the result, so everything it decides lives in this package.
+///
+/// The command line is read by `CommandParser` (CommandOptions.swift), each command lives in its own file,
+/// and `run` joins them.
 public enum Song2VidCommand {
     /// The version of the app and the command (ADR-013: one number covers both).
     public static let version = "1.1.0"
@@ -24,109 +27,112 @@ public enum Song2VidCommand {
     /// Exit statuses (SPEC section 14.6). The statuses for the commands that come later are added with them.
     public enum ExitStatus {
         public static let success: Int32 = 0
+        public static let notFound: Int32 = 1
         public static let usage: Int32 = 2
-    }
-
-    /// The global options. Short and long forms mean the same thing (SPEC section 14.2).
-    private enum GlobalOption: CaseIterable {
-        case help, version, repo
-
-        var short: String {
-            switch self {
-            case .help: "-h"
-            case .version: "-v"
-            case .repo: "-R"
-            }
-        }
-
-        var long: String {
-            switch self {
-            case .help: "--help"
-            case .version: "--version"
-            case .repo: "--repo"
-            }
-        }
-
-        static func matching(_ argument: String) -> GlobalOption? {
-            allCases.first { argument == $0.short || argument == $0.long }
-        }
+        public static let unreadable: Int32 = 3
     }
 
     /// Runs the command with the arguments that follow its name.
     public static func run(arguments: [String]) -> CommandOutput {
-        guard !arguments.isEmpty else {
-            return usageError("Missing command.")
+        // Every argument is checked before any is acted on, so a typo never runs half a command.
+        let line: ParsedCommandLine
+        switch CommandParser.parse(arguments) {
+        case .failure(let problem):
+            return .failure(CommandError(problem), json: problem.jsonRequested)
+        case .success(let parsed):
+            line = parsed
         }
 
-        // Validate every argument before acting on any, so a typo never runs half a command.
-        var options: [GlobalOption] = []
-        for argument in arguments {
-            if let option = GlobalOption.matching(argument) {
-                options.append(option)
-            } else if argument.hasPrefix("-") {
-                // The unknown text is never echoed (SPEC section 14.2). A suggestion is a known name, not the input.
-                return usageError("Unknown option.", suggestion: suggestion(for: argument))
-            } else {
-                return usageError("Unknown command.")
-            }
+        guard let command = line.command else { return runGlobal(line) }
+        if line.has(.help) {
+            return CommandOutput(stdout: helpText(for: command.scope), status: ExitStatus.success)
         }
-        guard options.count == 1, let option = options.first else {
-            return usageError("Use one option at a time.")
+        switch command {
+        case .check:
+            return CheckCommand.run(operands: line.operands, json: line.has(.json))
         }
+    }
 
+    /// The options that stand on their own: help, version, repo.
+    private static func runGlobal(_ line: ParsedCommandLine) -> CommandOutput {
+        guard line.options.count == 1, let option = line.options.first?.option else {
+            let problem = UsageProblem(message: "Use one option at a time.", suggestion: nil, scope: .global, jsonRequested: false)
+            return .failure(CommandError(problem), json: false)
+        }
         switch option {
         case .help:
-            return CommandOutput(stdout: helpText, status: ExitStatus.success)
+            return CommandOutput(stdout: helpText(for: .global), status: ExitStatus.success)
         case .version:
             return CommandOutput(stdout: "song2vid \(version)\n", status: ExitStatus.success)
         case .repo:
             return CommandOutput(stdout: repositoryURL + "\n", status: ExitStatus.success)
+        case .json:
+            // --json does not apply without a command, so the parser never lets it get here.
+            return CommandOutput(status: ExitStatus.usage)
         }
     }
 
-    private static func usageError(_ message: String, suggestion: String? = nil) -> CommandOutput {
-        var line = "\(message) Run 'song2vid --help'."
-        if let suggestion { line += " Did you mean \(suggestion)?" }
-        return CommandOutput(stderr: line + "\n", status: ExitStatus.usage)
-    }
-
-    /// The one known long option within two edits of what was typed, if there is exactly one.
-    private static func suggestion(for argument: String) -> String? {
-        guard argument.hasPrefix("--") else { return nil }
-        let close = GlobalOption.allCases.map(\.long).filter { editDistance($0, argument) <= 2 }
-        return close.count == 1 ? close[0] : nil
-    }
-
-    /// The number of single-character edits (insert, delete, replace) between two strings.
-    static func editDistance(_ a: String, _ b: String) -> Int {
-        let a = Array(a), b = Array(b)
-        var previous = Array(0...b.count)
-        for i in stride(from: 1, through: a.count, by: 1) {
-            var row = [i] + Array(repeating: 0, count: b.count)
-            for j in stride(from: 1, through: b.count, by: 1) {
-                let cost = a[i - 1] == b[j - 1] ? 0 : 1
-                row[j] = min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + cost)
-            }
-            previous = row
+    static func helpText(for scope: CommandScope) -> String {
+        switch scope {
+        case .global: globalHelpText
+        case .check: checkHelpText
         }
-        return previous[b.count]
     }
 
-    static let helpText = """
+    static let globalHelpText = """
     song2vid turns one song and one image into an MP4 video.
 
     Usage:
-      song2vid -h | --help       Show this help.
+      song2vid check <audio> <image> [-j]
+      song2vid -h | --help       Show this help. After a command, help for that command.
       song2vid -v | --version    Print the version.
       song2vid -R | --repo       Print the project address.
 
+    Commands:
+      check    Read a song and an image and report what Song2Vid would make from them.
+               Run 'song2vid check --help' for details.
+
     Examples:
+      song2vid check song.mp3 cover.png
+      song2vid check song.mp3 cover.png --json
       song2vid --version
-      song2vid --repo
 
     Exit statuses:
       0  Success.
-      2  Usage error: an option or command that song2vid does not know.
+      1  An input file does not exist.
+      2  Usage error: an option or command that song2vid does not know, or a missing file.
+      3  An input file can't be read or isn't usable.
+
+    """
+
+    static let checkHelpText = """
+    song2vid check reads a song and an image and reports what Song2Vid would make from them.
+    It writes nothing, and it never changes your files.
+
+    Usage:
+      song2vid check <audio> <image> [-j]
+
+    It reports the song's length, sample rate and channels, the image's size after its
+    orientation tag, and for every Frame Shape and Resolution the video's size, how the
+    image is placed (fit or crop) and whether it would be enlarged. Original has one size,
+    or is too small when a side of the image is under 16 pixels.
+
+    Options:
+      -j | --json    Write one JSON line (api_version "1") instead of text.
+      -h | --help    Show this help.
+
+    Examples:
+      song2vid check song.mp3 cover.png
+      song2vid check song.mp3 cover.png --json
+      song2vid check -j song.wav photo.heic
+
+    Exit statuses:
+      0  Success.
+      1  An input file does not exist (audio_not_found, image_not_found).
+      2  Usage error (usage).
+      3  An input file can't be read or isn't usable (audio_unreadable, image_unreadable).
+
+    With --json, errors are a JSON line on stdout too, with the error code, and stderr is empty.
 
     """
 }

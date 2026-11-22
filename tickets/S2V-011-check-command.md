@@ -1,6 +1,6 @@
 # S2V-011 - `song2vid check`
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: S2V-010
 
 ## Goal
@@ -23,3 +23,11 @@ A read-only command that tells a person or agent what Song2Vid would make from t
 ## Dependencies
 
 S2V-010.
+
+## Comments
+
+Built on `ticket/S2V-011`, from `build/v2` at the S2V-010 commit. `check` reads both files with `AudioInfo.read` and `ImageInfo.read` and takes every size and enlarged flag from `OutputFrame`; no logic is copied. The command line is read by a small table-driven parser (`CommandOptions.swift`): each option has a short form, a long form, the commands it applies to and whether it takes a value, so `make` is a new case and new rows. JSON is written from a fixed list of keys (`CommandJSON.swift`), so a key outside the list cannot be written.
+
+Found while testing: the macOS audio and image readers write their own log lines to stderr for a file that is not what it claims to be, and the image reader's line contains the full file path. The readers now run with stdout and stderr pointed at /dev/null (`CommandSilence.swift`), and a test sets `OS_ACTIVITY_DT_MODE=YES` to prove it.
+
+Seam 5 tests (the built command as a separate process) cover every acceptance criterion, including a planted fake value and folder path in text and JSON, on success and on error. The JSON keys and the choices the spec left open are in the implementer notes.
