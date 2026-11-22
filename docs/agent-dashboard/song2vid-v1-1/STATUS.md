@@ -1,6 +1,6 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **working** · Phase: Build: S2V-012 and S2V-016 in parallel · Updated: 2026-11-22T01:48:03Z
+State: **working** · Phase: Build: S2V-012 (make) · Updated: 2026-11-22T01:54:59Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
@@ -9,7 +9,7 @@ No action required from you right now.
 
 ## Current activity
 
-Two Sonnet builders: S2V-012 (make command) and S2V-016 (Agent Handoff on the site).
+A Sonnet builder is working on S2V-012 (make command).
 
 ## Milestones
 
@@ -20,7 +20,7 @@ Two Sonnet builders: S2V-012 (make command) and S2V-016 (Agent Handoff on the si
 - [pending] S2V-013 Visible progress, headed and headless
 - [pending] S2V-014 Agent skill, --skill, --update
 - [pending] S2V-015 Docs page and Agent Guide
-- [in_progress] S2V-016 Agent Handoff (4 agents)
+- [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
 - [pending] S2V-017 Release 1.1.0 and deploy
 - [pending] S2V-018 Phase 3 proof with a real agent
 
@@ -46,10 +46,9 @@ None.
 
 ## Next up
 
-1. Verify S2V-016
-2. Verify S2V-012, then S2V-013 progress
-3. S2V-014 skill, S2V-015 docs
-4. S2V-017 release (owner approval, Open Anyway)
+1. Verify S2V-012, then S2V-013 progress
+2. S2V-014 skill, S2V-015 docs
+3. S2V-017 release (owner approval, Open Anyway)
 
 ## Activity
 
@@ -57,6 +56,7 @@ None.
 - 2026-11-22: S2V-010 verified by the coordinator (check.sh, own release build: app sandboxed without get-task-allow, command unsandboxed and universal, --version and unknown-option checks) and merged; S2V-011 dispatched
 - 2026-11-22: Open Anyway test made non-blocking at the owner's request; S2V-016 dispatched in parallel
 - 2026-11-22: S2V-011 verified (check.sh, real MP3 and JPEG, no path leaks) and merged; S2V-012 dispatched
+- 2026-11-22: S2V-016 Agent Handoff verified (screenshots, mark sources) and merged; copy-only, no open-in links
 
 ## Walk-away snapshot
 

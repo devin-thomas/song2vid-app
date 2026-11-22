@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T01:48:03Z",
+  "updated_at": "2026-11-22T01:54:59Z",
   "state": "working",
-  "phase": "Build: S2V-012 and S2V-016 in parallel",
+  "phase": "Build: S2V-012 (make)",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -15,7 +15,7 @@
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "Two Sonnet builders: S2V-012 (make command) and S2V-016 (Agent Handoff on the site).",
+  "current_activity": "A Sonnet builder is working on S2V-012 (make command).",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -50,7 +50,8 @@
     },
     {
       "name": "S2V-016 Agent Handoff (4 agents)",
-      "status": "in_progress"
+      "status": "complete",
+      "note": "merged at a294657; four marks verified"
     },
     {
       "name": "S2V-017 Release 1.1.0 and deploy",
@@ -103,7 +104,6 @@
     }
   ],
   "next_up": [
-    "Verify S2V-016",
     "Verify S2V-012, then S2V-013 progress",
     "S2V-014 skill, S2V-015 docs",
     "S2V-017 release (owner approval, Open Anyway)"
@@ -124,6 +124,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-011 verified (check.sh, real MP3 and JPEG, no path leaks) and merged; S2V-012 dispatched"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "S2V-016 Agent Handoff verified (screenshots, mark sources) and merged; copy-only, no open-in links"
     }
   ],
   "walk_away": {
