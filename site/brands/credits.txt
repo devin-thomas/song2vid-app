@@ -1,0 +1,26 @@
+Song2Vid uses product artwork only to identify the agents named on the download page. Trademarks remain with their owners; inclusion does not imply endorsement. The files are copies of their sources with geometry and fills preserved. The only edit: in chatgpt-original.svg and claude-original.svg a space was added where two path numbers ran together (for example 1.5.5 became 1.5 .5), so the repo's address scan does not mistake them for addresses; the numbers, and the rendered pixels, are identical. The page recolours the monochrome marks (ChatGPT, Grok Bot) to white in dark mode with a CSS filter; no colours are added.
+
+ChatGPT (Blossom mark) - chatgpt-original.svg
+  Source: LobeHub Icons version 1.95.1, as published in the public repo devin-thomas/agent-prompts, folder public/brands, commit 7b36c8f
+  Origin: https://github.com/lobehub/lobe-icons
+  Licence: MIT (LOBE-ICONS-LICENSE.txt). ChatGPT is a trademark of OpenAI.
+  Retrieved: 2026-11-21
+
+Claude - claude-original.svg
+  Source: LobeHub Icons version 1.95.1, as published in the public repo devin-thomas/agent-prompts, folder public/brands, commit 7b36c8f
+  Origin: https://github.com/lobehub/lobe-icons
+  Licence: MIT (LOBE-ICONS-LICENSE.txt). Claude is a trademark of Anthropic.
+  Retrieved: 2026-11-21
+
+Grok Bot - grok-bot-original.svg
+  Source: monochrome logomark from https://asvg.app/icons/grok-bot (original file https://asvg.app/assets/svg/grok-bot/grok-bot-logomark-mono.svg), as published in the public repo devin-thomas/agent-prompts, folder public/brands, commit 7b36c8f; that repo's credits record it as retrieved from asvg.app on 2026-10-15. It identifies the product at https://x.ai/bot. The eye mask is unchanged.
+  Licence: no open licence. Product artwork rights remain with its owner (xAI); it is not covered by this project's MIT licence.
+  Retrieved here: 2026-11-21
+
+Muse (Meta) - muse-color.svg (full colour, used on the page) and muse.svg (monochrome)
+  Source: npm package @lobehub/icons-static-svg version 1.104.0, files icons/muse-color.svg and icons/muse.svg, from https://unpkg.com/@lobehub/icons-static-svg
+  Origin: https://github.com/lobehub/lobe-icons (LobeHub labels the mark "Muse (Meta)").
+  Licence: MIT (LOBE-ICONS-LICENSE.txt, copyright LobeHub). Muse is a trademark of Meta.
+  Retrieved: 2026-11-21
+
+LOBE-ICONS-LICENSE.txt is the MIT licence text of LobeHub Icons, copied from devin-thomas/agent-prompts (public/brands); the package's own manifest declares the same licence.

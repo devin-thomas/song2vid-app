@@ -1,6 +1,6 @@
 # S2V-016 - Agent Handoff on the download page
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: none (site files only; built in parallel with the command tickets)
 
 ## Goal
@@ -24,3 +24,7 @@ A visitor hands "make a video with Song2Vid" to ChatGPT, Claude, Grok Bot or Mus
 ## Dependencies
 
 None for building. The live check of `/agent.md` happens in S2V-017.
+
+## Comments
+
+- 2026-11-21: Claimed and built on branch `ticket/S2V-016` (site files only). The handoff is copy-only: no open-in links, because no prompt-link format could be verified as working for these four agents on the day. Not merged and not deployed; the live `/agent.md` check stays with S2V-017.
