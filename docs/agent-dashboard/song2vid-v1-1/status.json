@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T02:09:40Z",
-  "state": "waiting",
-  "phase": "Paused by the owner during S2V-013",
+  "updated_at": "2026-11-22T21:57:24Z",
+  "state": "working",
+  "phase": "Building S2V-014",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -15,7 +15,7 @@
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "Paused at the owner's request. No builder is running.",
+  "current_activity": "S2V-014 in progress: agent skill, --skill and --update.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -39,8 +39,8 @@
     },
     {
       "name": "S2V-013 Visible progress, headed and headless",
-      "status": "pending",
-      "note": "builder stopped when paused; restart from build/v2"
+      "status": "complete",
+      "note": "merged at a6461f8; real 2160p run viewed in a pseudo-terminal"
     },
     {
       "name": "S2V-014 Agent skill, --skill, --update",
@@ -139,6 +139,10 @@
     {
       "time": "2026-11-22",
       "event": "Paused by the owner; the S2V-013 builder was stopped"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "S2V-013 built, verified (check.sh, process tests for JSON, plain and live progress, real 2160p run) and merged; S2V-014 started"
     }
   ],
   "walk_away": {
