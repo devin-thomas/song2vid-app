@@ -80,6 +80,26 @@ struct JSONOutputLine {
         object = parsed
     }
 
+    /// The last line of a `make --json` run: every line before it must be a progress line (SPEC section 14.5), and the
+    /// last must be the one `result` or `error`.
+    static func final(_ output: String) throws -> JSONOutputLine {
+        let lines = output.split(separator: "\n", omittingEmptySubsequences: false)
+        guard lines.count >= 2, lines.last?.isEmpty == true else { throw CommandTestFailure("output does not end in a newline") }
+        for line in lines.dropLast(2) {
+            let object = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any]
+            guard object?["type"] as? String == "progress", object?["api_version"] as? String == "1" else {
+                throw CommandTestFailure("a line before the last is not a progress line: \(line)")
+            }
+        }
+        return try JSONOutputLine(String(lines[lines.count - 2]) + "\n")
+    }
+
+    /// What `make` wrote to stderr in plain headless mode before its final message: only progress lines.
+    static func plainProgressLinesOnly(_ lines: [Substring]) -> Bool {
+        let stages = ["Checking files", "Preparing", "Encoding", "Finishing"]
+        return lines.allSatisfy { line in stages.contains { line.hasPrefix($0) } && !line.contains("\u{1B}") }
+    }
+
     subscript(key: String) -> Any? { object[key] }
     func child(_ key: String) -> [String: Any]? { object[key] as? [String: Any] }
     var frames: [[String: Any]] { object["frames"] as? [[String: Any]] ?? [] }

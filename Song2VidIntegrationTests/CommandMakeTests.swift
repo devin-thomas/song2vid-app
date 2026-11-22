@@ -50,7 +50,7 @@ struct CommandMakeTests {
         let result = try CommandProcess.run(["make", audio, image, "-o", workspace.path("out.mp4"), "--json"] + options)
         #expect(result.status == 0)
         #expect(result.stderr.isEmpty)
-        let line = try JSONOutputLine(result.stdout)
+        let line = try JSONOutputLine.final(result.stdout)
         #expect(line["type"] as? String == "result")
         #expect(line["command"] as? String == "make")
         #expect(line["api_version"] as? String == "1")
@@ -85,7 +85,8 @@ struct CommandMakeTests {
 
         let result = try CommandProcess.run(["make", audio, image], currentDirectory: workspace.folder)
         #expect(result.status == 0)
-        #expect(result.stderr.isEmpty)
+        // Headless, progress goes to stderr as plain lines; the result is on stdout.
+        #expect(JSONOutputLine.plainProgressLinesOnly(result.stderr.split(separator: "\n")))
         // 1000x800 at 1080p is enlarged (scale 1.35 into 1920x1080 fit: 1350x1080).
         for part in ["My Song.mp4", "1920×1080", "Fit with bars", "enlarged", "0:02"] {
             #expect(result.stdout.contains(part), "the text result is missing \(part)")
@@ -258,7 +259,7 @@ struct CommandMakeTests {
         let image = try workspace.picture(width: 15, height: 15)
         let result = try CommandProcess.run(["make", audio, image, "-s", "1:1", "-r", "480p", "-o", workspace.path("tiny.mp4"), "--json"])
         #expect(result.status == 0)
-        #expect(try JSONOutputLine(result.stdout)["enlarged"] as? Bool == true)
+        #expect(try JSONOutputLine.final(result.stdout)["enlarged"] as? Bool == true)
         let facts = try await VideoFacts(of: workspace.url("tiny.mp4"))
         #expect(facts.width == 480 && facts.height == 480)
     }

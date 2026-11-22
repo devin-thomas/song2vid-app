@@ -58,6 +58,17 @@ public enum Song2VidCommand {
 
     /// Runs the command with the arguments that follow its name.
     public static func run(arguments: [String], progress: CommandProgressHandler? = nil) -> CommandOutput {
+        run(arguments: arguments, mode: progress.map { .handler($0) } ?? .none)
+    }
+
+    /// Runs the command and shows progress as SPEC section 14.5 describes: a live line in a terminal, plain lines
+    /// when output is going to a file or pipe, JSON Lines with `--json`. `environment` is where `NO_COLOR` and
+    /// `TERM` are read from.
+    public static func run(arguments: [String], environment: [String: String]) -> CommandOutput {
+        run(arguments: arguments, mode: .display(environment: environment))
+    }
+
+    private static func run(arguments: [String], mode: ProgressMode) -> CommandOutput {
         // Every argument is checked before any is acted on, so a typo never runs half a command.
         let line: ParsedCommandLine
         switch CommandParser.parse(arguments) {
@@ -77,7 +88,7 @@ public enum Song2VidCommand {
         case .make:
             switch MakeOptions.resolve(line) {
             case .failure(let problem): return .failure(CommandError(problem), json: problem.jsonRequested)
-            case .success(let options): return MakeCommand.run(options, progress: progress)
+            case .success(let options): return MakeCommand.run(options, progress: mode)
             }
         }
     }

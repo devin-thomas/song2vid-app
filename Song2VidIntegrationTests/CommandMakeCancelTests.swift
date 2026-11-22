@@ -33,7 +33,8 @@ struct CommandMakeCancelTests {
 
         #expect(result.status == 130)
         #expect(result.stdout.isEmpty)
-        #expect(result.stderr == "Cancelled.\n")
+        #expect(result.stderr.hasSuffix("Cancelled.\n"))
+        #expect(JSONOutputLine.plainProgressLinesOnly(result.stderr.dropLast("Cancelled.\n".count).split(separator: "\n")))
         #expect(try workspace.listing() == before)
     }
 
@@ -52,7 +53,7 @@ struct CommandMakeCancelTests {
 
         #expect(result.status == 130)
         #expect(result.stderr.isEmpty)
-        let line = try JSONOutputLine(result.stdout)
+        let line = try JSONOutputLine.final(result.stdout)
         #expect(line["type"] as? String == "error")
         #expect(line.child("error")?["code"] as? String == "cancelled")
         #expect(line.child("error")?["message"] as? String == "Cancelled.")
@@ -98,7 +99,7 @@ struct CommandMakeCancelTests {
 
         #expect(result.status == 4)
         #expect(result.stderr.isEmpty)
-        let error = try #require(try JSONOutputLine(result.stdout).child("error"))
+        let error = try #require(try JSONOutputLine.final(result.stdout).child("error"))
         #expect(error["code"] as? String == "output_exists")
         #expect(error["message"] as? String == "The output file already exists. Use --overwrite to replace it.")
         #expect(try Data(contentsOf: output) == Data("made by someone else meanwhile".utf8))

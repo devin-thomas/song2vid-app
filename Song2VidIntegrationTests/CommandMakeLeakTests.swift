@@ -67,8 +67,10 @@ struct CommandMakeLeakTests {
                 for text in forbidden {
                     #expect(!combined.contains(text), "\(name) (json: \(json)) printed \(text)")
                 }
-                if json || name.hasPrefix("success") || name == "help" || name == "dry run" || name == "quiet" {
+                if json || name == "help" || name == "dry run" || name == "quiet" {
                     #expect(result.stderr.isEmpty, "\(name) (json: \(json)) wrote to stderr: \(result.stderr)")
+                } else if name.hasPrefix("success") {
+                    #expect(JSONOutputLine.plainProgressLinesOnly(result.stderr.split(separator: "\n")), "\(name) wrote to stderr: \(result.stderr)")
                 }
             }
         }
@@ -94,7 +96,7 @@ struct CommandMakeLeakTests {
             let named = arguments.map { $0.hasSuffix("made.mp4") ? $0.replacingOccurrences(of: "made.mp4", with: "keys.mp4") : $0 }
             let result = try CommandProcess.run(named + ["--json"], environment: environment(workspace), currentDirectory: workspace.folder)
             if arguments.contains("-q") { continue }
-            let line = try JSONOutputLine(result.stdout)
+            let line = try JSONOutputLine.final(result.stdout)
             let used = keys(in: line.object)
             #expect(used.isSubset(of: makeKeys), "unexpected keys \(used.subtracting(makeKeys))")
             seen.formUnion(used)
