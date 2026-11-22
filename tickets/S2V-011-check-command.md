@@ -1,6 +1,6 @@
 # S2V-011 - `song2vid check`
 
-Status: claimed
+Status: resolved
 Blocked by: S2V-010
 
 ## Goal
@@ -31,3 +31,4 @@ Built on `ticket/S2V-011`, from `build/v2` at the S2V-010 commit. `check` reads 
 Found while testing: the macOS audio and image readers write their own log lines to stderr for a file that is not what it claims to be, and the image reader's line contains the full file path. The readers now run with stdout and stderr pointed at /dev/null (`CommandSilence.swift`), and a test sets `OS_ACTIVITY_DT_MODE=YES` to prove it.
 
 Seam 5 tests (the built command as a separate process) cover every acceptance criterion, including a planted fake value and folder path in text and JSON, on success and on error. The JSON keys and the choices the spec left open are in the implementer notes.
+- 2026-11-22 (coordinator): Verified and merged. check.sh passed on a separate checkout of 320a7af. Ran `check` on the owner's real MP3 and a 2048×2048 JPEG (text and JSON; sizes and enlarged flags correct by hand), a .docx as audio gave 3 / `audio_unreadable`, and with `OS_ACTIVITY_DT_MODE=YES` no folder path leaked. Not checked: other audio and image formats, the x86_64 slice, terminal (tty) output.
