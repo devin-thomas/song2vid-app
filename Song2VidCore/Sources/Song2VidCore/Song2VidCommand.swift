@@ -58,17 +58,17 @@ public enum Song2VidCommand {
 
     /// Runs the command with the arguments that follow its name.
     public static func run(arguments: [String], progress: CommandProgressHandler? = nil) -> CommandOutput {
-        run(arguments: arguments, mode: progress.map { .handler($0) } ?? .none)
+        run(arguments: arguments, mode: progress.map { .handler($0) } ?? .none, environment: [:])
     }
 
     /// Runs the command and shows progress as SPEC section 14.5 describes: a live line in a terminal, plain lines
     /// when output is going to a file or pipe, JSON Lines with `--json`. `environment` is where `NO_COLOR` and
     /// `TERM` are read from.
     public static func run(arguments: [String], environment: [String: String]) -> CommandOutput {
-        run(arguments: arguments, mode: .display(environment: environment))
+        run(arguments: arguments, mode: .display(environment: environment), environment: environment)
     }
 
-    private static func run(arguments: [String], mode: ProgressMode) -> CommandOutput {
+    private static func run(arguments: [String], mode: ProgressMode, environment: [String: String]) -> CommandOutput {
         // Every argument is checked before any is acted on, so a typo never runs half a command.
         let line: ParsedCommandLine
         switch CommandParser.parse(arguments) {
@@ -78,7 +78,7 @@ public enum Song2VidCommand {
             line = parsed
         }
 
-        guard let command = line.command else { return runGlobal(line) }
+        guard let command = line.command else { return runGlobal(line, environment: environment) }
         if line.has(.help) {
             return CommandOutput(stdout: helpText(for: command.scope), status: ExitStatus.success)
         }
@@ -93,11 +93,17 @@ public enum Song2VidCommand {
         }
     }
 
-    /// The options that stand on their own: help, version, repo.
-    private static func runGlobal(_ line: ParsedCommandLine) -> CommandOutput {
-        guard line.options.count == 1, let option = line.options.first?.option else {
-            let problem = UsageProblem(message: "Use one option at a time.", suggestion: nil, scope: .global, jsonRequested: false)
-            return .failure(CommandError(problem), json: false)
+    /// The options that stand on their own: help, version, repo, skill, update.
+    private static func runGlobal(_ line: ParsedCommandLine, environment: [String: String]) -> CommandOutput {
+        // `--json` goes only with `--update`; every other global option stands alone.
+        let json = line.has(.json)
+        let options = line.options.map(\.option).filter { $0 != .json }
+        guard options.count == 1, let option = options.first, !json || option == .update else {
+            let problem = UsageProblem(
+                message: json && options.count == 1 ? "That option does not apply here." : "Use one option at a time.",
+                suggestion: nil, scope: .global, jsonRequested: json
+            )
+            return .failure(CommandError(problem), json: json)
         }
         switch option {
         case .help:
@@ -106,6 +112,10 @@ public enum Song2VidCommand {
             return CommandOutput(stdout: "song2vid \(version)\n", status: ExitStatus.success)
         case .repo:
             return CommandOutput(stdout: repositoryURL + "\n", status: ExitStatus.success)
+        case .skill:
+            return SkillCommand.run()
+        case .update:
+            return UpdateCommand.run(json: json, environment: environment)
         default:
             // The other options belong to commands, so the parser never lets them get here.
             return CommandOutput(status: ExitStatus.usage)
@@ -128,7 +138,10 @@ public enum Song2VidCommand {
       song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-w] [-n] [-j] [-q]
       song2vid -h | --help       Show this help. After a command, help for that command.
       song2vid -v | --version    Print the version.
+      song2vid -S | --skill      Print the agent skill: how an agent makes a video with Song2Vid.
       song2vid -R | --repo       Print the project address.
+      song2vid -u | --update [-j]
+                                 Say whether a newer Song2Vid is out. It downloads and changes nothing.
 
     Commands:
       check    Read a song and an image and report what Song2Vid would make from them.
@@ -142,6 +155,7 @@ public enum Song2VidCommand {
       song2vid make song.mp3 cover.png
       song2vid make song.mp3 cover.png -s 1:1 -r 480p -o preview.mp4 --json
       song2vid --version
+      song2vid --update --json
 
     Exit statuses:
       0  Success.
@@ -149,7 +163,7 @@ public enum Song2VidCommand {
       2  Usage error: an option or command that song2vid does not know, or a missing file.
       3  An input file can't be read or isn't usable.
       4  The output can't be written (it exists, isn't .mp4, or its folder can't be used).
-      5  Making the video failed after it started.
+      5  Making the video failed after it started, or --update could not reach GitHub.
       130  Cancelled with Ctrl-C or by a stop signal.
 
     """

@@ -16,6 +16,7 @@ struct CommandError: Error, Equatable, Sendable {
         case outputNotMP4 = "output_not_mp4"
         case diskFull = "disk_full"
         case exportFailed = "export_failed"
+        case network
         case cancelled
     }
 
@@ -29,7 +30,7 @@ struct CommandError: Error, Equatable, Sendable {
         case .usage: Song2VidCommand.ExitStatus.usage
         case .audioUnreadable, .imageUnreadable, .imageTooSmall: Song2VidCommand.ExitStatus.unreadable
         case .outputExists, .outputNotWritable, .outputNotMP4, .diskFull: Song2VidCommand.ExitStatus.outputFailed
-        case .exportFailed: Song2VidCommand.ExitStatus.exportFailed
+        case .exportFailed, .network: Song2VidCommand.ExitStatus.exportFailed
         case .cancelled: Song2VidCommand.ExitStatus.cancelled
         }
     }

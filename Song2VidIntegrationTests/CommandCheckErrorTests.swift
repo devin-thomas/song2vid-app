@@ -83,7 +83,7 @@ struct CommandCheckErrorTests {
     static let usageText = "Unknown option. Run 'song2vid check --help'.\n"
 
     @Test("An unknown option is a usage error that does not echo it", arguments: [
-        "--zzz-typed-text", "-Q", "-jj", "-hj", "--", "-", "-S", "-u",
+        "--zzz-typed-text", "-Q", "-jj", "-hj", "--", "-", "-X", "-U",
     ])
     func unknownOption(option: String) throws {
         let workspace = try CommandWorkspace()
@@ -133,13 +133,28 @@ struct CommandCheckErrorTests {
         #expect(result.stderr == "That option does not apply here. Run 'song2vid check --help'.\n")
     }
 
-    @Test("--json is not a global option")
+    @Test("--json alone is a usage error, as JSON, because it goes only with check, make or --update")
     func jsonNeedsACommand() throws {
         for option in ["--json", "-j"] {
             let result = try CommandProcess.run([option])
             #expect(result.status == 2)
-            #expect(result.stdout.isEmpty)
-            #expect(result.stderr == "That option does not apply here. Run 'song2vid --help'.\n")
+            #expect(result.stderr.isEmpty)
+            let error = try #require(try JSONOutputLine(result.stdout).child("error"))
+            #expect(error["code"] as? String == "usage")
+            #expect(error["message"] as? String == "Use one option at a time. Run 'song2vid --help'.")
+        }
+    }
+
+    @Test("-S and -u belong to the global form, so after check they do not apply")
+    func globalOnlyOptionsAfterCheck() throws {
+        let workspace = try CommandWorkspace()
+        defer { workspace.remove() }
+        let audio = try workspace.tone()
+        let image = try workspace.picture(width: 300, height: 200)
+        for option in ["-S", "--skill", "-u", "--update"] {
+            let result = try CommandProcess.run(["check", audio, image, option])
+            #expect(result.status == 2)
+            #expect(result.stderr == "That option does not apply here. Run 'song2vid check --help'.\n")
         }
     }
 

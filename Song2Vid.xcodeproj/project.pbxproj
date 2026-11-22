@@ -12,6 +12,7 @@
 		C37EA1E2565A02BD71F12CC3 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = 36F7F86747C1ADB0BCBAEFD7 /* Song2VidCore */; };
 		AAAA00000000000000000A06 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000A07 /* Song2VidCore */; };
 		AAAA00000000000000000A0E /* song2vid in Copy command into Helpers */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A02 /* Song2VidCommand */; };
+		AAAA00000000000000000A21 /* SKILL.md in Copy skill into Resources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A20 /* SKILL.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +51,17 @@
 			name = "Copy command into Helpers";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AAAA00000000000000000A22 /* Copy skill into Resources */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				AAAA00000000000000000A21 /* SKILL.md in Copy skill into Resources */,
+			);
+			name = "Copy skill into Resources";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +70,7 @@
 		71289846C09182FE794B2CB3 /* Song2Vid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Song2Vid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Song2VidIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAAA00000000000000000A02 /* Song2VidCommand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = song2vid; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAAA00000000000000000A20 /* SKILL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = SKILL.md; path = skills/song2vid/SKILL.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -152,6 +165,7 @@
 				98AD10552DC3D01F4B0F09F8 /* Packages */,
 				5F92D05E971266AF85563502 /* Song2Vid */,
 				AAAA00000000000000000A03 /* Song2VidCommand */,
+				AAAA00000000000000000A20 /* SKILL.md */,
 				B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */,
 				ADBF0BEF21224B06D2DF3A1A /* Song2VidTests */,
 				103C3732C9473B0B60144C72 /* Products */,
@@ -225,6 +239,7 @@
 				FD0A26F7719C9D63259A48E4 /* Resources */,
 				6DC98FC333AD875162A81858 /* Frameworks */,
 				AAAA00000000000000000A0D /* Copy command into Helpers */,
+				AAAA00000000000000000A22 /* Copy skill into Resources */,
 			);
 			buildRules = (
 			);

@@ -28,6 +28,10 @@ enum JSONKey: String, CaseIterable, Sendable {
     case output
     case bytes
     case dryRun = "dry_run"
+    case current
+    case latest
+    case updateAvailable = "update_available"
+    case downloadPage = "download_page"
     case stage
     case percent
     case elapsedSeconds = "elapsed_seconds"
