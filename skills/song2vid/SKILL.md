@@ -30,8 +30,8 @@ Pick the route you can do. **Terminal** (you can run commands): the command. **A
    - No app in `/Applications`: send the person to https://song2vid.pages.dev (unzip, move Song2Vid to Applications, do the first open), then repeat this step.
    - `song2vid: command not found` after linking: add `~/.local/bin` to `PATH` for the shell, for zsh `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc`, and use `~/.local/bin/song2vid` in the meantime.
    - macOS blocks it with "Not Opened": the first-open rule above.
-3. Look at the files first: `song2vid check <audio> <image> --json`. This step is done when you hold one `result` line with the song's length and the image's size, or an `error` line (see Errors).
-4. Make the video: `song2vid make <audio> <image> -o <name.mp4> -s <shape> -r <resolution> --json`. Run it in the background if your tools allow, and read the newest line of its output now and then: a `progress` line has `stage`, `percent` and `remaining_seconds`. This step is done when the last line is a `result` or an `error` line and the command has exited.
+3. Look at the files first (a quick, safe step that also shows which sizes would be enlarged): `song2vid check <audio> <image> --json`. This step is done when you hold one `result` line with the song's length and the image's size, or an `error` line (see Errors).
+4. Make the video: `song2vid make <audio> <image> -o <name.mp4> -s <shape> -r <resolution> --json`. The output folder must exist. For a long song, run it in the background if your tools allow, and read the newest line of its output now and then: a `progress` line has `stage`, `percent` (0 to 100) and `remaining_seconds`. This step is done when the last line is a `result` or an `error` line and the command has exited.
 5. Tell the person: the file name, its pixel size, its length, and whether the image was enlarged (`"enlarged": true` means it may look soft). For a failure, give the exit status and the error `code` as they came.
 
 Try a plan without writing anything: add `--dry-run` to `make`. Everything the command knows is in `song2vid --help` and `song2vid make --help`.
@@ -55,7 +55,7 @@ Write each option separately: `-w -n`, not `-wn`. `16:9` and `9:16` show the who
 
 Every line has `"api_version":"1"` and a `"type"` of `progress`, `result` or `error`. The last line is exactly one `result` or `error`.
 
-- `progress`: `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`).
+- `progress`: `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (0 to 100, or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`).
 - `make` `result`: `output` with `name`, `width`, `height`, `duration_seconds`, `bytes`; plus `placement` (`fit` or `crop`), `enlarged`, `dry_run`.
 - `check` `result`: `audio`, `image` and `frames`, one per shape and resolution, with `width`, `height`, `placement`, `enlarged`.
 - `error`: `error` with `code` and `message`.
