@@ -1,6 +1,6 @@
 # S2V-012 - `song2vid make`
 
-Status: claimed
+Status: resolved
 Blocked by: S2V-011
 
 ## Goal
@@ -36,3 +36,4 @@ All system-framework work runs with fd 1 and 2 pointed at /dev/null. The command
 
 Seam 5 tests run the built command as a separate process, including a run long enough to send it Ctrl-C and to plant a file at the output mid-run. The choices the spec left open are in the implementer notes.
 
+- 2026-11-22 (coordinator): Verified and merged. check.sh passed on a separate checkout of f1a1863. Made one video per Frame Shape with `make` from the owner's real MP3 and a 2048×2048 JPEG (16:9 1080p, 9:16 1080p, 1:1 480p, 4:3 2160p cropped to the bottom, Original), 1–3 s each. ffprobe: correct sizes, H.264 plus AAC, 137.143 s against a 137.143 s source. Viewed a 4:3 frame: the bottom of the image is kept. A repeat without `-w` gave 4 / `output_exists`. Not checked: a real Ctrl-C in Terminal (S2V-013 covers the headed run), `disk_full`, x86_64.
