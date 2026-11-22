@@ -1,0 +1,154 @@
+import Foundation
+
+/// `song2vid make <audio> <image> [options]` (SPEC section 14.4): checks everything, then makes the video with the
+/// same export code as the app (`VideoExporting`, `ExportRequest`, `OutputFrame`) and no logic of its own about frames.
+enum MakeCommand {
+    /// Runs the command. `exporter` is the app's own; it is a parameter so the export path is the one place a test
+    /// or a future caller could swap.
+    static func run(
+        _ options: MakeOptions, exporter: any VideoExporting = SystemVideoExporter(), progress: CommandProgressHandler?
+    ) -> CommandOutput {
+        let signals = CancelSignals()
+        defer { signals.stop() }
+        // Every call into a system framework happens inside this: its log lines go to /dev/null, and the command's
+        // own progress goes through the channel, to the real streams. The result is returned and written by the caller.
+        return withSystemOutputSilenced(json: options.json) { channel in
+            let relay = ProgressRelay(handler: options.quiet ? nil : progress, channel: channel)
+            defer { relay.close() }
+            do throws(CommandError) {
+                return try execute(options, exporter: exporter, signals: signals, relay: relay)
+            } catch {
+                return .failure(error, json: options.json)
+            }
+        }
+    }
+
+    private static func execute(
+        _ options: MakeOptions, exporter: any VideoExporting, signals: CancelSignals, relay: ProgressRelay
+    ) throws(CommandError) -> CommandOutput {
+        relay.stage(.checking)
+
+        // 1. Validate everything first: the files, the size for Original, the output. Nothing is written until all pass.
+        let inputs = try CommandInputs.read(audioPath: options.audioPath, imagePath: options.imagePath)
+        let frame: OutputFrame
+        do {
+            frame = try OutputFrame(
+                imageSize: inputs.image.size, frameShape: options.shape, resolution: options.resolution, cropPosition: options.crop
+            )
+        } catch {
+            throw .imageTooSmall
+        }
+        let output = try MakeOutput.plan(
+            option: options.output, audioURL: URL(fileURLWithPath: options.audioPath),
+            imageURL: URL(fileURLWithPath: options.imagePath), overwrite: options.overwrite
+        )
+        if signals.isRequested { throw .cancelled }
+
+        var report = MakeReport(inputs: inputs, frame: frame, shape: options.shape, outputName: output.name, bytes: nil, dryRun: options.dryRun)
+        // 2. A dry run says what would be made and stops.
+        if options.dryRun { return CommandOutput(stdout: options.json ? report.jsonValue.line : report.text, status: 0) }
+
+        // 3. Make it in a temporary file beside the output.
+        let temporary = output.temporaryURL()
+        let request = ExportRequest(
+            audioURL: URL(fileURLWithPath: options.audioPath), imageURL: URL(fileURLWithPath: options.imagePath),
+            frame: frame, destinationURL: temporary
+        )
+        relay.stage(.preparing)
+        switch export(request, with: exporter, signals: signals, relay: relay) {
+        case .completed:
+            break
+        case .cancelled:
+            try? FileManager.default.removeItem(at: temporary)
+            throw .cancelled
+        case .failed(let failure):
+            try? FileManager.default.removeItem(at: temporary)
+            throw CommandError(exportFailure: failure)
+        }
+
+        // 4. Only now is the final name touched: --overwrite replaces an old file here, and without it a file that
+        // appeared during the run is an error and the new video is deleted.
+        relay.stage(.finishing)
+        try output.place(temporary, overwrite: options.overwrite)
+        let size = (try? FileManager.default.attributesOfItem(atPath: output.url.path)[.size] as? Int) ?? 0
+        report.bytes = size
+        return CommandOutput(stdout: options.json ? report.jsonValue.line : report.text, status: 0)
+    }
+
+    /// Runs the export to the end on the cooperative pool and waits for it on this thread, so the signal handlers
+    /// (which run on their own queue) can cancel it. Cancelling waits for the exporter to clean up its files.
+    private static func export(
+        _ request: ExportRequest, with exporter: any VideoExporting, signals: CancelSignals, relay: ProgressRelay
+    ) -> ExportOutcome {
+        let finished = DispatchSemaphore(value: 0)
+        let result = OutcomeBox()
+        let task = Task.detached {
+            let outcome = await exporter.export(request) { fraction in relay.encoding(fraction) }
+            result.set(outcome)
+            finished.signal()
+        }
+        signals.onCancel { task.cancel() }
+        finished.wait()
+        signals.clearAction()
+        return result.value ?? .failed(.encodingFailed)
+    }
+}
+
+/// Carries the export's outcome from the task that ran it back to the command's own thread.
+private final class OutcomeBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: ExportOutcome?
+
+    var value: ExportOutcome? {
+        lock.lock()
+        defer { lock.unlock() }
+        return outcome
+    }
+
+    func set(_ newValue: ExportOutcome) {
+        lock.lock()
+        outcome = newValue
+        lock.unlock()
+    }
+}
+
+/// Turns what the command and the exporter report into `CommandProgress` events for the handler, one at a time and
+/// only when the stage or the percent moves on. After `close()` nothing more is delivered.
+final class ProgressRelay: @unchecked Sendable {
+    private let lock = NSLock()
+    private let handler: CommandProgressHandler?
+    private let channel: CommandChannel
+    private var current: CommandProgress.Stage?
+    private var isClosed = false
+
+    init(handler: CommandProgressHandler?, channel: CommandChannel) {
+        self.handler = handler
+        self.channel = channel
+    }
+
+    /// A stage with no percent yet.
+    func stage(_ stage: CommandProgress.Stage) {
+        send(CommandProgress(stage: stage, fraction: nil), onlyIfNewStage: true)
+    }
+
+    /// The exporter's fraction (0 to 1). The last 1% is the writer closing the file and moving it, so it is Finishing.
+    func encoding(_ fraction: Double) {
+        let stage: CommandProgress.Stage = fraction >= 0.99 ? .finishing : .encoding
+        send(CommandProgress(stage: stage, fraction: min(1, max(0, fraction))), onlyIfNewStage: false)
+    }
+
+    func close() {
+        lock.lock()
+        isClosed = true
+        lock.unlock()
+    }
+
+    private func send(_ event: CommandProgress, onlyIfNewStage: Bool) {
+        guard let handler else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isClosed, !(onlyIfNewStage && current == event.stage) else { return }
+        current = event.stage
+        handler(event, channel)
+    }
+}

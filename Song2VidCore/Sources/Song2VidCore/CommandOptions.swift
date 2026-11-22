@@ -7,11 +7,13 @@ import Foundation
 /// The commands that come first on the command line.
 enum CommandName: String, CaseIterable, Sendable {
     case check
+    case make
 
     /// Where the options after this command are read.
     var scope: CommandScope {
         switch self {
         case .check: .check
+        case .make: .make
         }
     }
 }
@@ -20,12 +22,14 @@ enum CommandName: String, CaseIterable, Sendable {
 enum CommandScope: Hashable, Sendable {
     case global
     case check
+    case make
 
     /// The command that prints help for this scope, as the usage errors name it.
     var helpCommand: String {
         switch self {
         case .global: "song2vid --help"
         case .check: "song2vid check --help"
+        case .make: "song2vid make --help"
         }
     }
 }
@@ -33,6 +37,7 @@ enum CommandScope: Hashable, Sendable {
 /// The options the command knows.
 enum CommandOption: CaseIterable, Sendable {
     case help, version, repo, json
+    case shape, resolution, crop, out, overwrite, dryRun, quiet
 }
 
 /// One option: how it is spelled, where it applies and whether a value follows it.
@@ -45,10 +50,17 @@ struct OptionSpec: Sendable {
 
     /// Every option the command knows (SPEC section 14.2).
     static let all: [OptionSpec] = [
-        OptionSpec(option: .help, short: "-h", long: "--help", scopes: [.global, .check], takesValue: false),
+        OptionSpec(option: .help, short: "-h", long: "--help", scopes: [.global, .check, .make], takesValue: false),
         OptionSpec(option: .version, short: "-v", long: "--version", scopes: [.global], takesValue: false),
         OptionSpec(option: .repo, short: "-R", long: "--repo", scopes: [.global], takesValue: false),
-        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.check], takesValue: false),
+        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.check, .make], takesValue: false),
+        OptionSpec(option: .shape, short: "-s", long: "--shape", scopes: [.make], takesValue: true),
+        OptionSpec(option: .resolution, short: "-r", long: "--resolution", scopes: [.make], takesValue: true),
+        OptionSpec(option: .crop, short: "-c", long: "--crop", scopes: [.make], takesValue: true),
+        OptionSpec(option: .out, short: "-o", long: "--out", scopes: [.make], takesValue: true),
+        OptionSpec(option: .overwrite, short: "-w", long: "--overwrite", scopes: [.make], takesValue: false),
+        OptionSpec(option: .dryRun, short: "-n", long: "--dry-run", scopes: [.make], takesValue: false),
+        OptionSpec(option: .quiet, short: "-q", long: "--quiet", scopes: [.make], takesValue: false),
     ]
 
     func isSpelled(_ argument: String) -> Bool { argument == short || argument == long }
@@ -69,6 +81,9 @@ struct ParsedCommandLine: Sendable {
     let operands: [String]
 
     func has(_ option: CommandOption) -> Bool { options.contains { $0.option == option } }
+
+    /// The value given to an option that takes one, if it was given.
+    func value(of option: CommandOption) -> String? { options.first { $0.option == option }?.value }
 }
 
 /// A command line that breaks the grammar. The message is fixed text: nothing the person typed is in it.
@@ -124,7 +139,14 @@ enum CommandParser {
                     options.append(ParsedOption(option: spec.option, value: nil))
                     continue
                 }
-                guard let value = attached ?? remaining.popFirst() else { return problem("An option is missing its value.") }
+                // The next word is the value unless it is another option, so `-o -w` is a missing value, not a file
+                // called `-w`. (A value that starts with a dash can be attached: `--out=-name.mp4`.)
+                let next = remaining.first.flatMap { $0.hasPrefix("-") ? nil : $0 }
+                guard let value = attached ?? next else { return problem("An option is missing its value.") }
+                if attached == nil { remaining.removeFirst() }
+                guard !options.contains(where: { $0.option == spec.option }) else {
+                    return problem("An option can be given only once.")
+                }
                 options.append(ParsedOption(option: spec.option, value: value))
             } else {
                 return problem("Unknown option.", suggestion: suggestion(for: argument, among: inScope))
