@@ -28,6 +28,10 @@ enum JSONKey: String, CaseIterable, Sendable {
     case output
     case bytes
     case dryRun = "dry_run"
+    case stage
+    case percent
+    case elapsedSeconds = "elapsed_seconds"
+    case remainingSeconds = "remaining_seconds"
 }
 
 /// A JSON value. Objects keep their keys in the order given, so the output is the same every run.

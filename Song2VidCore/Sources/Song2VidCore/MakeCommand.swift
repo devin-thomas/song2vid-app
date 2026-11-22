@@ -6,14 +6,20 @@ enum MakeCommand {
     /// Runs the command. `exporter` is the app's own; it is a parameter so the export path is the one place a test
     /// or a future caller could swap.
     static func run(
-        _ options: MakeOptions, exporter: any VideoExporting = SystemVideoExporter(), progress: CommandProgressHandler?
+        _ options: MakeOptions, exporter: any VideoExporting = SystemVideoExporter(), progress: ProgressMode = .none
     ) -> CommandOutput {
         let signals = CancelSignals()
         defer { signals.stop() }
         // Every call into a system framework happens inside this: its log lines go to /dev/null, and the command's
         // own progress goes through the channel, to the real streams. The result is returned and written by the caller.
         return withSystemOutputSilenced(json: options.json) { channel in
-            let relay = ProgressRelay(handler: options.quiet ? nil : progress, channel: channel)
+            let sink: (any ProgressSink)?
+            switch options.quiet ? .none : progress {
+            case .none: sink = nil
+            case .handler(let handler): sink = HandlerSink(handler: handler)
+            case .display(let environment): sink = ProgressDisplay.make(channel: channel, json: options.json, environment: environment)
+            }
+            let relay = ProgressRelay(sink: sink, channel: channel)
             defer { relay.close() }
             do throws(CommandError) {
                 return try execute(options, exporter: exporter, signals: signals, relay: relay)
@@ -116,13 +122,13 @@ private final class OutcomeBox: @unchecked Sendable {
 /// only when the stage or the percent moves on. After `close()` nothing more is delivered.
 final class ProgressRelay: @unchecked Sendable {
     private let lock = NSLock()
-    private let handler: CommandProgressHandler?
+    private let sink: (any ProgressSink)?
     private let channel: CommandChannel
     private var current: CommandProgress.Stage?
     private var isClosed = false
 
-    init(handler: CommandProgressHandler?, channel: CommandChannel) {
-        self.handler = handler
+    init(sink: (any ProgressSink)?, channel: CommandChannel) {
+        self.sink = sink
         self.channel = channel
     }
 
@@ -137,18 +143,21 @@ final class ProgressRelay: @unchecked Sendable {
         send(CommandProgress(stage: stage, fraction: min(1, max(0, fraction))), onlyIfNewStage: false)
     }
 
+    /// Ends progress: the sink is told once, and nothing more is delivered after it.
     func close() {
         lock.lock()
+        defer { lock.unlock() }
+        guard !isClosed else { return }
         isClosed = true
-        lock.unlock()
+        sink?.finish(channel: channel)
     }
 
     private func send(_ event: CommandProgress, onlyIfNewStage: Bool) {
-        guard let handler else { return }
+        guard let sink else { return }
         lock.lock()
         defer { lock.unlock() }
         guard !isClosed, !(onlyIfNewStage && current == event.stage) else { return }
         current = event.stage
-        handler(event, channel)
+        sink.event(event, channel: channel)
     }
 }
