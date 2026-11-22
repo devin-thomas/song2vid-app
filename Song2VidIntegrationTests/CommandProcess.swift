@@ -19,11 +19,14 @@ enum CommandProcess {
     }
 
     /// Runs the command with the given arguments and returns what it wrote and how it ended.
-    static func run(_ arguments: [String], environment: [String: String]? = nil) throws -> Result {
+    static func run(
+        _ arguments: [String], environment: [String: String]? = nil, currentDirectory: URL? = nil
+    ) throws -> Result {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
         if let environment { process.environment = environment }
+        if let currentDirectory { process.currentDirectoryURL = currentDirectory }
         let out = Pipe()
         let err = Pipe()
         process.standardOutput = out
