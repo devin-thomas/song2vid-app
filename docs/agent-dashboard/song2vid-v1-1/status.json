@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T01:34:48Z",
-  "state": "waiting",
-  "phase": "Build: S2V-011 running; S2V-010 waits on the owner's Open Anyway test",
+  "updated_at": "2026-11-22T01:45:28Z",
+  "state": "working",
+  "phase": "Build: S2V-011 and S2V-016 in parallel",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -14,15 +14,8 @@
     "persistence": "Committed to build/v2 at checkpoints",
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
-  "action_required": [
-    {
-      "need": "Approve the test copy with Open Anyway and run the command once",
-      "reason": "macOS blocked the command inside the downloaded test app, as expected. Only you can approve it; this proves the command works after approval (S2V-010).",
-      "action": "In Terminal, go to the s2v-gatekeeper-test/extracted folder (the path is in chat) and run ./Song2Vid.app/Contents/Helpers/song2vid --version. When blocked, click Done, open System Settings > Privacy & Security, click Open Anyway for Song2Vid.app, run the command again and reply with what it printed.",
-      "default": "Building S2V-011 and later continues meanwhile."
-    }
-  ],
-  "current_activity": "A Sonnet builder is working on S2V-011 (check command). S2V-010 is merged into build/v2 and waiting on your Open Anyway test.",
+  "action_required": [],
+  "current_activity": "Two Sonnet builders: S2V-011 (check command) and S2V-016 (Agent Handoff on the site), in parallel.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -31,8 +24,8 @@
     },
     {
       "name": "S2V-010 Command inside the app (Gatekeeper check)",
-      "status": "in_progress",
-      "note": "merged at f58dc78; owner Open Anyway test pending"
+      "status": "complete",
+      "note": "merged at f58dc78; after-approval check moved to S2V-017"
     },
     {
       "name": "S2V-011 check command",
@@ -56,7 +49,7 @@
     },
     {
       "name": "S2V-016 Agent Handoff (4 agents)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "name": "S2V-017 Release 1.1.0 and deploy",
@@ -69,6 +62,10 @@
   ],
   "blockers": [],
   "warnings": [
+    {
+      "label": "Monitoring",
+      "text": "When you are next at the Mac: click Open Anyway for Song2Vid.app in System Settings > Privacy & Security, then tell the coordinator. Nothing waits on it; it is folded into the S2V-017 release check."
+    },
     {
       "label": "Agent handling",
       "text": "S2V-010 may find that macOS blocks a command inside a downloaded app. The builder stops and reports if so; the owner will be asked before any change of approach."
@@ -85,6 +82,13 @@
       "rationale": "Owner answers, ADR-013 to ADR-020",
       "reversibility": "reversible before release",
       "status": "final"
+    },
+    {
+      "time": "2026-11-22",
+      "decision": "Don't block the build on the owner's Open Anyway click; check it in the S2V-017 release check",
+      "rationale": "Owner is away and asked the build to continue",
+      "reversibility": "yes",
+      "status": "final"
     }
   ],
   "outputs": [
@@ -98,10 +102,10 @@
     }
   ],
   "next_up": [
-    "Owner: Open Anyway test of the command",
-    "Verify S2V-011 and merge",
-    "S2V-012 make",
-    "S2V-013 progress"
+    "Verify S2V-011, then dispatch S2V-012",
+    "Verify S2V-016",
+    "S2V-013 progress, S2V-014 skill, S2V-015 docs",
+    "S2V-017 release (owner approval, Open Anyway)"
   ],
   "activity": [
     {
@@ -111,6 +115,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-010 verified by the coordinator (check.sh, own release build: app sandboxed without get-task-allow, command unsandboxed and universal, --version and unknown-option checks) and merged; S2V-011 dispatched"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "Open Anyway test made non-blocking at the owner's request; S2V-016 dispatched in parallel"
     }
   ],
   "walk_away": {
@@ -119,6 +127,6 @@
     "next_safe_step": "Wait for the builder's report, then verify on this Mac",
     "touched": "song2vid-app repo (build/v2, ticket branches)",
     "processes": "This dashboard's local server on localhost:4173",
-    "input_needed": "Owner's Open Anyway test"
+    "input_needed": "None blocking. Open Anyway when back at the Mac."
   }
 }

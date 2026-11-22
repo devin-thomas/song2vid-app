@@ -1,7 +1,7 @@
 # S2V-016 - Agent Handoff on the download page
 
 Status: ready-for-agent
-Blocked by: S2V-015
+Blocked by: none (site files only; built in parallel with the command tickets)
 
 ## Goal
 
@@ -23,4 +23,4 @@ A visitor hands "make a video with Song2Vid" to ChatGPT, Claude, Grok Bot or Mus
 
 ## Dependencies
 
-S2V-015.
+None for building. The live check of `/agent.md` happens in S2V-017.

@@ -19,6 +19,7 @@ Blocked by: S2V-016
 - `https://song2vid.pages.dev/agent.md` returns the skill as Markdown; `/docs` and the handoff work live.
 - The five sample-media videos have the right sizes, lengths and both tracks.
 - Releasing and deploying are confirmed with the owner before they happen.
+- The owner approves the downloaded 1.1.0 app with Open Anyway (also closing S2V-010's after-approval check), then the coordinator runs the command from Terminal and records the result.
 
 ## Dependencies
 

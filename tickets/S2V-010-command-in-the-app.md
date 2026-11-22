@@ -1,6 +1,6 @@
 # S2V-010 - The command ships inside the app and runs after download
 
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Goal
@@ -32,3 +32,4 @@ Built on `ticket/S2V-010`. The command is the `Song2VidCommand` tool target (pro
 Verified: `scripts/check.sh` (entitlements of the app and the command, both slices, version match, 40 Xcode tests including the new process tests); a Release build of the app opened, took a song and an image through the Choose buttons and the save sheet, and saved a 480p MP4 with H.264 and AAC tracks inside the sandbox.
 
 Still open: the Open Anyway check on a quarantined download (acceptance criterion 2). `scripts/build-release-zip.sh` builds the zip for it.
+- 2026-11-22 (coordinator): Verified and merged into `build/v2` at f58dc78 (check.sh; own clean release build: app sandboxed without `get-task-allow`, command unsandboxed and universal, `--version` 0, unknown option 2). Before approval, macOS blocks the command with the "Song2Vid.app Not Opened" dialog (reproduced by the coordinator). The owner asked that the build not wait on their hands: the after-Open-Anyway check moves to S2V-017's release check, which the owner does when back at the Mac.
