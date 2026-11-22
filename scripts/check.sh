@@ -53,4 +53,26 @@ done
 codesign --verify --deep --strict "$app"
 codesign -dv "$app" 2>&1 | grep -E "Signature|TeamIdentifier"
 
+echo "== The song2vid command inside the app (SPEC 14.1)"
+command="$app/Contents/Helpers/song2vid"
+[[ -x "$command" ]] || { echo "check: $command is missing" >&2; exit 1; }
+cmd_archs=$(lipo -archs "$command")
+echo "Command architectures: $cmd_archs"
+for arch in arm64 x86_64; do
+  [[ " $cmd_archs " == *" $arch "* ]] || { echo "check: the command is missing the $arch slice" >&2; exit 1; }
+done
+# Entitlements: the app keeps the sandbox and has no get-task-allow; the command has no sandbox (ADR-013).
+app_entitlements=$(codesign -d --entitlements - --xml "$app" 2>/dev/null)
+cmd_entitlements=$(codesign -d --entitlements - --xml "$command" 2>/dev/null)
+[[ "$app_entitlements" == *"com.apple.security.app-sandbox"* ]] || { echo "check: the app lost its sandbox" >&2; exit 1; }
+[[ "$app_entitlements" != *"get-task-allow"* ]] || { echo "check: the app has get-task-allow" >&2; exit 1; }
+[[ "$cmd_entitlements" != *"com.apple.security.app-sandbox"* ]] || { echo "check: the command is sandboxed" >&2; exit 1; }
+[[ "$cmd_entitlements" != *"get-task-allow"* ]] || { echo "check: the command has get-task-allow" >&2; exit 1; }
+echo "Entitlements: app sandboxed without get-task-allow; command not sandboxed"
+# One version number covers the app and the command (ADR-013).
+app_version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist")
+cmd_version=$("$command" --version)
+[[ "$cmd_version" == "song2vid $app_version" ]] || { echo "check: command says '$cmd_version' but the app is $app_version" >&2; exit 1; }
+echo "$cmd_version"
+
 echo "check: all passed"

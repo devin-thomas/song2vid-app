@@ -10,6 +10,8 @@
 		0AF443F1ECE07899942B2998 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = 718E2BF8E4F05B1562C19883 /* Song2VidCore */; };
 		2CBAF6F5AFA7FDEE02854047 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = E0A392506BDB0F1F9AA90805 /* Song2VidCore */; };
 		C37EA1E2565A02BD71F12CC3 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = 36F7F86747C1ADB0BCBAEFD7 /* Song2VidCore */; };
+		AAAA00000000000000000A06 /* Song2VidCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000A07 /* Song2VidCore */; };
+		AAAA00000000000000000A0E /* song2vid in Copy command into Helpers */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A02 /* Song2VidCommand */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,13 +22,42 @@
 			remoteGlobalIDString = C476EC778B1D2CDF9C99A2AB;
 			remoteInfo = Song2Vid;
 		};
+		AAAA00000000000000000A0C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2CB523EF5210271EA038343 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AAAA00000000000000000A01;
+			remoteInfo = Song2VidCommand;
+		};
+		AAAA00000000000000000A10 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2CB523EF5210271EA038343 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C476EC778B1D2CDF9C99A2AB;
+			remoteInfo = Song2Vid;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AAAA00000000000000000A0D /* Copy command into Helpers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				AAAA00000000000000000A0E /* song2vid in Copy command into Helpers */,
+			);
+			name = "Copy command into Helpers";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		14325A3DAB61B02253A07E8D /* Song2VidCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Song2VidCore; path = Song2VidCore; sourceTree = SOURCE_ROOT; };
 		413FD2F0FD3D4BDFC17D83A6 /* Song2VidTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Song2VidTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		71289846C09182FE794B2CB3 /* Song2Vid.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Song2Vid.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Song2VidIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAAA00000000000000000A02 /* Song2VidCommand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = song2vid; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -57,6 +88,15 @@
 			path = Song2VidIntegrationTests;
 			sourceTree = "<group>";
 		};
+		AAAA00000000000000000A03 /* Song2VidCommand */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Song2VidCommand;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +124,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AAAA00000000000000000A05 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAA00000000000000000A06 /* Song2VidCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -91,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				71289846C09182FE794B2CB3 /* Song2Vid.app */,
+				AAAA00000000000000000A02 /* Song2VidCommand */,
 				C49123C2F4283A1A797CE227 /* Song2VidIntegrationTests.xctest */,
 				413FD2F0FD3D4BDFC17D83A6 /* Song2VidTests.xctest */,
 			);
@@ -102,6 +151,7 @@
 			children = (
 				98AD10552DC3D01F4B0F09F8 /* Packages */,
 				5F92D05E971266AF85563502 /* Song2Vid */,
+				AAAA00000000000000000A03 /* Song2VidCommand */,
 				B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */,
 				ADBF0BEF21224B06D2DF3A1A /* Song2VidTests */,
 				103C3732C9473B0B60144C72 /* Products */,
@@ -154,6 +204,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				AAAA00000000000000000A0F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				B7FDEFD6B7490DEB462DEE23 /* Song2VidIntegrationTests */,
@@ -173,10 +224,12 @@
 				B1C2D213ABE7A4AFD23243C8 /* Sources */,
 				FD0A26F7719C9D63259A48E4 /* Resources */,
 				6DC98FC333AD875162A81858 /* Frameworks */,
+				AAAA00000000000000000A0D /* Copy command into Helpers */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AAAA00000000000000000A0B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5F92D05E971266AF85563502 /* Song2Vid */,
@@ -189,6 +242,28 @@
 			productReference = 71289846C09182FE794B2CB3 /* Song2Vid.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AAAA00000000000000000A01 /* Song2VidCommand */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAAA00000000000000000A08 /* Build configuration list for PBXNativeTarget "Song2VidCommand" */;
+			buildPhases = (
+				AAAA00000000000000000A04 /* Sources */,
+				AAAA00000000000000000A05 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AAAA00000000000000000A03 /* Song2VidCommand */,
+			);
+			name = Song2VidCommand;
+			packageProductDependencies = (
+				AAAA00000000000000000A07 /* Song2VidCore */,
+			);
+			productName = song2vid;
+			productReference = AAAA00000000000000000A02 /* Song2VidCommand */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -198,6 +273,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					AAAA00000000000000000A01 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
 					447710850DAFE7FC99ED1D1D = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Manual;
@@ -230,6 +309,7 @@
 			projectRoot = "";
 			targets = (
 				C476EC778B1D2CDF9C99A2AB /* Song2Vid */,
+				AAAA00000000000000000A01 /* Song2VidCommand */,
 				447710850DAFE7FC99ED1D1D /* Song2VidTests */,
 				508A8E7A89608C18419FFBDF /* Song2VidIntegrationTests */,
 			);
@@ -282,6 +362,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AAAA00000000000000000A04 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -289,6 +376,16 @@
 			isa = PBXTargetDependency;
 			target = C476EC778B1D2CDF9C99A2AB /* Song2Vid */;
 			targetProxy = 20C9F7AD5AE940AFEAE9C959 /* PBXContainerItemProxy */;
+		};
+		AAAA00000000000000000A0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AAAA00000000000000000A01 /* Song2VidCommand */;
+			targetProxy = AAAA00000000000000000A0C /* PBXContainerItemProxy */;
+		};
+		AAAA00000000000000000A0F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C476EC778B1D2CDF9C99A2AB /* Song2Vid */;
+			targetProxy = AAAA00000000000000000A10 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -345,7 +442,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = NO;
@@ -415,7 +512,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = NO;
@@ -430,6 +527,8 @@
 		6E240B1F3683EA20C6C9B1F6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Song2Vid/Song2Vid.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_APP_SANDBOX = YES;
@@ -467,6 +566,8 @@
 		AA76548FA98C9668723091E4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Song2Vid/Song2Vid.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_APP_SANDBOX = YES;
@@ -533,6 +634,32 @@
 			};
 			name = Debug;
 		};
+		AAAA00000000000000000A09 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Song2VidCommand/Song2VidCommand.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				PRODUCT_NAME = song2vid;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		AAAA00000000000000000A0A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Song2VidCommand/Song2VidCommand.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				PRODUCT_NAME = song2vid;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -572,6 +699,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		AAAA00000000000000000A08 /* Build configuration list for PBXNativeTarget "Song2VidCommand" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAAA00000000000000000A09 /* Debug */,
+				AAAA00000000000000000A0A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -591,6 +727,10 @@
 			productName = Song2VidCore;
 		};
 		E0A392506BDB0F1F9AA90805 /* Song2VidCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Song2VidCore;
+		};
+		AAAA00000000000000000A07 /* Song2VidCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Song2VidCore;
 		};

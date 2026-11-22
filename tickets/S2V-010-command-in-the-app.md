@@ -1,6 +1,6 @@
 # S2V-010 - The command ships inside the app and runs after download
 
-Status: ready-for-agent
+Status: claimed
 Blocked by: none
 
 ## Goal
@@ -24,3 +24,11 @@ Prove the riskiest part first: a `song2vid` command built into Song2Vid.app runs
 ## Dependencies
 
 None.
+
+## Comments
+
+Built on `ticket/S2V-010`. The command is the `Song2VidCommand` tool target (product name `song2vid`; the target is not named `song2vid` because its build folder would clash with the app's on a case-insensitive disk). It is copied into `Song2Vid.app/Contents/Helpers/` by a copy phase, signed by its own target with no entitlements before the app is signed. The app now has an explicit entitlements file (sandbox, user-selected read-write) and `CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO`, so `get-task-allow` is gone and the sandbox stays. `MARKETING_VERSION` is 1.1.0, and `scripts/check.sh` fails if the command's `--version` differs from the app's version.
+
+Verified: `scripts/check.sh` (entitlements of the app and the command, both slices, version match, 40 Xcode tests including the new process tests); a Release build of the app opened, took a song and an image through the Choose buttons and the save sheet, and saved a 480p MP4 with H.264 and AAC tracks inside the sandbox.
+
+Still open: the Open Anyway check on a quarantined download (acceptance criterion 2). `scripts/build-release-zip.sh` builds the zip for it.
