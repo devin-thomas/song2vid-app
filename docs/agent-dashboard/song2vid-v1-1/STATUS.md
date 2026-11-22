@@ -1,6 +1,6 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **working** · Phase: Build: S2V-013 (progress) · Updated: 2026-11-22T02:05:55Z
+State: **waiting** · Phase: Paused by the owner during S2V-013 · Updated: 2026-11-22T02:09:40Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
@@ -9,7 +9,7 @@ No action required from you right now.
 
 ## Current activity
 
-A Sonnet builder is working on S2V-013: the live progress bar, plain progress lines and JSON progress lines.
+Paused at the owner's request. No builder is running.
 
 ## Milestones
 
@@ -17,7 +17,7 @@ A Sonnet builder is working on S2V-013: the live progress bar, plain progress li
 - [complete] S2V-010 Command inside the app (Gatekeeper check) (merged at f58dc78; after-approval check moved to S2V-017)
 - [complete] S2V-011 check command (merged at 4b9fb72; checked on real files)
 - [complete] S2V-012 make command (merged; 5 real videos checked with ffprobe)
-- [in_progress] S2V-013 Visible progress, headed and headless
+- [pending] S2V-013 Visible progress, headed and headless (builder stopped when paused; restart from build/v2)
 - [pending] S2V-014 Agent skill, --skill, --update
 - [pending] S2V-015 Docs page and Agent Guide
 - [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
@@ -59,15 +59,16 @@ None.
 - 2026-11-22: S2V-011 verified (check.sh, real MP3 and JPEG, no path leaks) and merged; S2V-012 dispatched
 - 2026-11-22: S2V-016 Agent Handoff verified (screenshots, mark sources) and merged; copy-only, no open-in links
 - 2026-11-22: S2V-012 verified with the owner's sample files (5 shapes, ffprobe) and merged; S2V-013 dispatched
+- 2026-11-22: Paused by the owner; the S2V-013 builder was stopped
 
 ## Walk-away snapshot
 
 - Last verified good state: build/v2 at 234fbcb: check and make work; handoff built
-- Unfinished: S2V-013 in progress
-- Next safe step: Wait for the builder's report, then verify on this Mac
+- Unfinished: S2V-013 not started over yet; S2V-014, 015, 017, 018 pending
+- Next safe step: On resume, dispatch S2V-013 again from build/v2 (any partial work is in its worktree, not merged)
 - Touched: song2vid-app repo (build/v2, ticket branches)
 - Expected processes: This dashboard's local server on localhost:4173
-- Input needed: None blocking. Open Anyway when back at the Mac.
+- Input needed: Say when to resume. Open Anyway when next at the Mac.
 
 ## Delivery and persistence
 

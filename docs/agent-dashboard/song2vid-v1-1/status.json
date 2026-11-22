@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T02:05:55Z",
-  "state": "working",
-  "phase": "Build: S2V-013 (progress)",
+  "updated_at": "2026-11-22T02:09:40Z",
+  "state": "waiting",
+  "phase": "Paused by the owner during S2V-013",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -15,7 +15,7 @@
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "A Sonnet builder is working on S2V-013: the live progress bar, plain progress lines and JSON progress lines.",
+  "current_activity": "Paused at the owner's request. No builder is running.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -39,7 +39,8 @@
     },
     {
       "name": "S2V-013 Visible progress, headed and headless",
-      "status": "in_progress"
+      "status": "pending",
+      "note": "builder stopped when paused; restart from build/v2"
     },
     {
       "name": "S2V-014 Agent skill, --skill, --update",
@@ -134,14 +135,18 @@
     {
       "time": "2026-11-22",
       "event": "S2V-012 verified with the owner's sample files (5 shapes, ffprobe) and merged; S2V-013 dispatched"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "Paused by the owner; the S2V-013 builder was stopped"
     }
   ],
   "walk_away": {
     "last_good": "build/v2 at 234fbcb: check and make work; handoff built",
-    "unfinished": "S2V-013 in progress",
-    "next_safe_step": "Wait for the builder's report, then verify on this Mac",
+    "unfinished": "S2V-013 not started over yet; S2V-014, 015, 017, 018 pending",
+    "next_safe_step": "On resume, dispatch S2V-013 again from build/v2 (any partial work is in its worktree, not merged)",
     "touched": "song2vid-app repo (build/v2, ticket branches)",
     "processes": "This dashboard's local server on localhost:4173",
-    "input_needed": "None blocking. Open Anyway when back at the Mac."
+    "input_needed": "Say when to resume. Open Anyway when next at the Mac."
   }
 }
