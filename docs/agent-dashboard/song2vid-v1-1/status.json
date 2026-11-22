@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T22:10:41Z",
+  "updated_at": "2026-11-22T22:40:18Z",
   "state": "waiting",
-  "phase": "Waiting for the owner: release and deploy",
+  "phase": "Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -16,12 +16,17 @@
   },
   "action_required": [
     {
-      "need": "Go-ahead to release 1.1.0 and deploy the site",
-      "reason": "Publishing a GitHub release and deploying song2vid.pages.dev are public and need your yes (S2V-017).",
-      "action": "Tell the coordinator to go ahead; later, click Open Anyway on the downloaded 1.1.0 app and run the Phase 3 proof (S2V-018)."
+      "need": "Run wrangler login on this Mac",
+      "reason": "Wrangler has no Cloudflare login, so song2vid.pages.dev cannot be deployed yet (the live page still links 1.0.0 and has no /agent.md or /docs).",
+      "action": "Run: wrangler login (approve in the browser). Then tell the coordinator; it deploys from this repo only."
+    },
+    {
+      "need": "Open Anyway on the downloaded 1.1.0 app, then the Phase 3 proof",
+      "reason": "Only you can approve the app; S2V-018 needs a new Claude Code session.",
+      "action": "Follow docs/wiki/phase-3-proof.md and paste the agent's answer to the coordinator."
     }
   ],
-  "current_activity": "Waiting for the owner's go-ahead to publish 1.1.0 and deploy the site.",
+  "current_activity": "1.1.0 is released. The site deploy needs the owner to run wrangler login. Then Open Anyway and the Phase 3 proof (S2V-018).",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -66,7 +71,7 @@
     {
       "name": "S2V-017 Release 1.1.0 and deploy",
       "status": "in_progress",
-      "note": "zip built and sample videos checked; release and deploy wait for the owner"
+      "note": "released on GitHub (v1.1.0); site deploy waits for wrangler login"
     },
     {
       "name": "S2V-018 Phase 3 proof with a real agent",
@@ -115,10 +120,9 @@
     }
   ],
   "next_up": [
-    "Owner go-ahead: merge to main, tag v1.1.0, publish the release, deploy the site",
-    "Live checks of /agent.md, /docs and the Copy button",
-    "Owner: Open Anyway on the downloaded 1.1.0 app; the coordinator runs the command from Terminal",
-    "S2V-018 Phase 3 proof with a new Claude Code session"
+    "Owner: wrangler login; coordinator deploys site/ and checks /agent.md, /docs and the Copy button live",
+    "Owner: Open Anyway on the downloaded 1.1.0 app; coordinator runs the command from Terminal",
+    "S2V-018 Phase 3 proof (docs/wiki/phase-3-proof.md)"
   ],
   "activity": [
     {
@@ -164,6 +168,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-017 prepared: 1.1.0 zip built and tested, five real-media videos verified; waiting for the owner's go-ahead to release and deploy"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "Released 1.1.0 on GitHub with the owner's go-ahead; deploy blocked on a Cloudflare login (owner)"
     }
   ],
   "walk_away": {

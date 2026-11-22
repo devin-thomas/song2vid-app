@@ -1,15 +1,16 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **waiting** · Phase: Waiting for the owner: release and deploy · Updated: 2026-11-22T22:10:41Z
+State: **waiting** · Phase: Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof · Updated: 2026-11-22T22:40:18Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
 
-- **Go-ahead to release 1.1.0 and deploy the site**: Publishing a GitHub release and deploying song2vid.pages.dev are public and need your yes (S2V-017). Smallest action: Tell the coordinator to go ahead; later, click Open Anyway on the downloaded 1.1.0 app and run the Phase 3 proof (S2V-018).
+- **Run wrangler login on this Mac**: Wrangler has no Cloudflare login, so song2vid.pages.dev cannot be deployed yet (the live page still links 1.0.0 and has no /agent.md or /docs). Smallest action: Run: wrangler login (approve in the browser). Then tell the coordinator; it deploys from this repo only.
+- **Open Anyway on the downloaded 1.1.0 app, then the Phase 3 proof**: Only you can approve the app; S2V-018 needs a new Claude Code session. Smallest action: Follow docs/wiki/phase-3-proof.md and paste the agent's answer to the coordinator.
 
 ## Current activity
 
-Waiting for the owner's go-ahead to publish 1.1.0 and deploy the site.
+1.1.0 is released. The site deploy needs the owner to run wrangler login. Then Open Anyway and the Phase 3 proof (S2V-018).
 
 ## Milestones
 
@@ -21,7 +22,7 @@ Waiting for the owner's go-ahead to publish 1.1.0 and deploy the site.
 - [complete] S2V-014 Agent skill, --skill, --update (merged at 53ae196; fresh-agent test passed)
 - [complete] S2V-015 Docs page and Agent Guide (merged at d904c32; checks shown to fail when broken)
 - [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
-- [in_progress] S2V-017 Release 1.1.0 and deploy (zip built and sample videos checked; release and deploy wait for the owner)
+- [in_progress] S2V-017 Release 1.1.0 and deploy (released on GitHub (v1.1.0); site deploy waits for wrangler login)
 - [pending] S2V-018 Phase 3 proof with a real agent
 
 ## Blockers
@@ -46,10 +47,9 @@ None.
 
 ## Next up
 
-1. Owner go-ahead: merge to main, tag v1.1.0, publish the release, deploy the site
-2. Live checks of /agent.md, /docs and the Copy button
-3. Owner: Open Anyway on the downloaded 1.1.0 app; the coordinator runs the command from Terminal
-4. S2V-018 Phase 3 proof with a new Claude Code session
+1. Owner: wrangler login; coordinator deploys site/ and checks /agent.md, /docs and the Copy button live
+2. Owner: Open Anyway on the downloaded 1.1.0 app; coordinator runs the command from Terminal
+3. S2V-018 Phase 3 proof (docs/wiki/phase-3-proof.md)
 
 ## Activity
 
@@ -64,6 +64,7 @@ None.
 - 2026-11-22: S2V-014 built, verified and merged (skill, --skill, --update; fresh Sonnet agent made a video from the skill alone); S2V-015 started
 - 2026-11-22: S2V-015 built, verified and merged (docs page, agent.md, site checks); S2V-017 preparation started
 - 2026-11-22: S2V-017 prepared: 1.1.0 zip built and tested, five real-media videos verified; waiting for the owner's go-ahead to release and deploy
+- 2026-11-22: Released 1.1.0 on GitHub with the owner's go-ahead; deploy blocked on a Cloudflare login (owner)
 
 ## Walk-away snapshot
 
