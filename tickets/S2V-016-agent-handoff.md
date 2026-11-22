@@ -1,6 +1,6 @@
 # S2V-016 - Agent Handoff on the download page
 
-Status: claimed
+Status: resolved
 Blocked by: none (site files only; built in parallel with the command tickets)
 
 ## Goal
@@ -28,3 +28,4 @@ None for building. The live check of `/agent.md` happens in S2V-017.
 ## Comments
 
 - 2026-11-21: Claimed and built on branch `ticket/S2V-016` (site files only). The handoff is copy-only: no open-in links, because no prompt-link format could be verified as working for these four agents on the day. Not merged and not deployed; the live `/agent.md` check stays with S2V-017.
+- 2026-11-22 (coordinator): Verified and merged. Viewed the 390×844 light and 320×667 dark screenshots: all four marks with names and the Copy button above the fold. The Grok Bot SVG is byte-identical to the agent-prompts source (rendered large: the eye-mask mark). ChatGPT and Claude SVGs differ only by spaces between path numbers, added so the safety scan doesn't read them as IP addresses. No open-in links, because none has a documented web prompt-link format (sources in the implementer's notes). Still to check live in S2V-017: the clipboard over HTTPS, and Safari.
