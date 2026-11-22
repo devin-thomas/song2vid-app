@@ -14,3 +14,9 @@ _Avoid_: letterbox, pillarbox, pad
 
 **Crop**: Filling the frame with the image and discarding the parts outside it. Used by 1:1 and 4:3. The person chooses which part is kept.
 _Avoid_: trim, cut
+
+**Agent Guide**: The public Markdown instructions at `song2vid.pages.dev/agent.md` that tell an agent how to install and use the `song2vid` command. The same text is the repo's agent skill.
+_Avoid_: agent docs, llms file
+
+**Agent Handoff**: The control on the download page that gives a short prompt, pointing at the Agent Guide, to copy into a named agent.
+_Avoid_: agent button, prompt widget

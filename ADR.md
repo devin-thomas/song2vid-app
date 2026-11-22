@@ -119,3 +119,43 @@
 **Rationale:** The samples include personal pictures and music that may not be redistributable, and this repo is public.
 
 **Consequences:** Local test scripts read the sample folder path from an environment variable or argument. The repo contains no sample file names or paths.
+
+## ADR-013 - The command ships inside the app
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** The `song2vid` command is built into Song2Vid.app, and the person or their agent links it onto the PATH. There is no separate command download or Homebrew tap.
+
+**Rationale:** The owner chose one download. One version number covers the app and the command, and the release process stays as it is.
+
+**Consequences:** The command is signed without the app sandbox, which would otherwise block it from reading files passed on the command line. Whether macOS lets a command inside a downloaded, ad-hoc signed app run after Open Anyway must be checked on this Mac early in the build. The Agent Guide documents the link step. Rejected: a separate command zip on GitHub Releases, and a Homebrew tap.
+
+## ADR-014 - The command never replaces a file unless told to
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** `song2vid make` stops with an error if the output already exists, unless `--overwrite` is given. `--dry-run` reports what would be made and writes nothing.
+
+**Rationale:** An agent may run the command without a person watching, and a save dialog no longer asks first.
+
+**Consequences:** The Agent Guide tells agents to ask the person before using `--overwrite`.
+
+## ADR-015 - The agent skill is also the public Agent Guide
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** The skill lives at `skills/song2vid/SKILL.md`, written with Matt Pocock's `writing-for-agents`, and the same instructions are served at `song2vid.pages.dev/agent.md`.
+
+**Rationale:** Agents that install skills and agents that only read a web page both get the same instructions, and the handoff prompt can stay one short sentence pointing at the guide.
+
+**Consequences:** The guide must stay readable as plain Markdown and is published with each release.
+
+## ADR-016 - Agent Handoff for ChatGPT, Claude, Grok Bot and Muse
+
+**Status:** Accepted (2026-11-21)
+
+**Decision:** The download page's handoff offers ChatGPT, Claude, Grok Bot and Muse. Claude Code and Codex are not offered.
+
+**Rationale:** The owner's choice: the people who find the download page use chat agents.
+
+**Consequences:** Each mark must be authentic. Muse has no mark in the agent-prompt skill's set, so its official artwork has to be found. Phase 3's terminal test uses Claude Code separately.
