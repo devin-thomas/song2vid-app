@@ -1,9 +1,9 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T22:05:06Z",
+  "updated_at": "2026-11-22T22:09:26Z",
   "state": "working",
-  "phase": "Building S2V-015",
+  "phase": "Preparing S2V-017",
   "repository": "devin-thomas/song2vid-app (public)",
   "branch": "build/v2",
   "delivery": {
@@ -15,7 +15,7 @@
     "limitations": "Localhost only: viewable on this Mac, not on the phone."
   },
   "action_required": [],
-  "current_activity": "S2V-015 in progress: docs page and Agent Guide.",
+  "current_activity": "S2V-017 preparation: building the release zip and checking real sample-media videos. Releasing and deploying wait for the owner's go-ahead.",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -49,7 +49,8 @@
     },
     {
       "name": "S2V-015 Docs page and Agent Guide",
-      "status": "pending"
+      "status": "complete",
+      "note": "merged at d904c32; checks shown to fail when broken"
     },
     {
       "name": "S2V-016 Agent Handoff (4 agents)",
@@ -148,6 +149,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-014 built, verified and merged (skill, --skill, --update; fresh Sonnet agent made a video from the skill alone); S2V-015 started"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "S2V-015 built, verified and merged (docs page, agent.md, site checks); S2V-017 preparation started"
     }
   ],
   "walk_away": {

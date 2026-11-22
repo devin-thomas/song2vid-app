@@ -1,6 +1,6 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **working** · Phase: Building S2V-015 · Updated: 2026-11-22T22:05:06Z
+State: **working** · Phase: Preparing S2V-017 · Updated: 2026-11-22T22:09:26Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
@@ -9,7 +9,7 @@ No action required from you right now.
 
 ## Current activity
 
-S2V-015 in progress: docs page and Agent Guide.
+S2V-017 preparation: building the release zip and checking real sample-media videos. Releasing and deploying wait for the owner's go-ahead.
 
 ## Milestones
 
@@ -19,7 +19,7 @@ S2V-015 in progress: docs page and Agent Guide.
 - [complete] S2V-012 make command (merged; 5 real videos checked with ffprobe)
 - [complete] S2V-013 Visible progress, headed and headless (merged at a6461f8; real 2160p run viewed in a pseudo-terminal)
 - [complete] S2V-014 Agent skill, --skill, --update (merged at 53ae196; fresh-agent test passed)
-- [pending] S2V-015 Docs page and Agent Guide
+- [complete] S2V-015 Docs page and Agent Guide (merged at d904c32; checks shown to fail when broken)
 - [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
 - [pending] S2V-017 Release 1.1.0 and deploy
 - [pending] S2V-018 Phase 3 proof with a real agent
@@ -62,6 +62,7 @@ None.
 - 2026-11-22: Paused by the owner; the S2V-013 builder was stopped
 - 2026-11-22: S2V-013 built, verified (check.sh, process tests for JSON, plain and live progress, real 2160p run) and merged; S2V-014 started
 - 2026-11-22: S2V-014 built, verified and merged (skill, --skill, --update; fresh Sonnet agent made a video from the skill alone); S2V-015 started
+- 2026-11-22: S2V-015 built, verified and merged (docs page, agent.md, site checks); S2V-017 preparation started
 
 ## Walk-away snapshot
 
