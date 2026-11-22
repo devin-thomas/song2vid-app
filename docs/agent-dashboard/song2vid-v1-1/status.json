@@ -1,7 +1,7 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T22:40:18Z",
+  "updated_at": "2026-11-22T23:55:29Z",
   "state": "waiting",
   "phase": "Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof",
   "repository": "devin-thomas/song2vid-app (public)",
@@ -26,7 +26,7 @@
       "action": "Follow docs/wiki/phase-3-proof.md and paste the agent's answer to the coordinator."
     }
   ],
-  "current_activity": "1.1.0 is released. The site deploy needs the owner to run wrangler login. Then Open Anyway and the Phase 3 proof (S2V-018).",
+  "current_activity": "Waiting for the owner: Open Anyway on the downloaded app, then S2V-018",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -71,7 +71,7 @@
     {
       "name": "S2V-017 Release 1.1.0 and deploy",
       "status": "in_progress",
-      "note": "released on GitHub (v1.1.0); site deploy waits for wrangler login"
+      "note": "released (v1.1.0) and site deployed; waits on the owner's Open Anyway check"
     },
     {
       "name": "S2V-018 Phase 3 proof with a real agent",
@@ -172,6 +172,10 @@
     {
       "time": "2026-11-22",
       "event": "Released 1.1.0 on GitHub with the owner's go-ahead; deploy blocked on a Cloudflare login (owner)"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "Deployed the site; live /agent.md, /docs and the 1.1.0 link verified"
     }
   ],
   "walk_away": {
