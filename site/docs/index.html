@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>song2vid command - Song2Vid docs</title>
+<meta name="description" content="How to use the song2vid command that comes inside the Song2Vid Mac app: install, options, progress, JSON output and exit statuses.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f6fb;
+    --card: #ffffff;
+    --text: #1b1a22;
+    --muted: #55535f;
+    --line: #e2e0ec;
+    --link: #5236d6;
+    --accent-a: #4f3cf0;
+    --accent-b: #9b2fe0;
+    --accent-c: #f2408f;
+    --glow: rgba(155, 47, 224, 0.14);
+    --code-bg: #efedf7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151419;
+      --card: #1f1d26;
+      --text: #f3f2f8;
+      --muted: #b0aeba;
+      --line: #34313f;
+      --link: #c4b5ff;
+      --accent-a: #8f85ff;
+      --accent-b: #c77bff;
+      --accent-c: #ff7ab0;
+      --glow: rgba(155, 47, 224, 0.28);
+      --code-bg: #2a2733;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image: radial-gradient(60rem 24rem at 50% -8rem, var(--glow), transparent 70%);
+    background-repeat: no-repeat;
+    color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  main { width: 100%; max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 2rem; flex: 1; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: .75rem; margin: 0 0 1.5rem; }
+  .brand img { width: 44px; height: 44px; flex: none; }
+  .brand a { color: var(--text); font-weight: 700; text-decoration: none; font-size: 1.1rem; }
+  h1 {
+    margin: 0 0 .5rem;
+    font-size: clamp(1.8rem, 7vw, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    background: linear-gradient(100deg, var(--accent-a), var(--accent-b) 55%, var(--accent-c));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .lede { margin: 0 0 1.5rem; color: var(--muted); font-size: 1.1rem; }
+  nav.toc { margin: 0 0 2rem; padding: .9rem 1.1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  nav.toc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; }
+  h2 { font-size: 1.35rem; margin: 2.25rem 0 .75rem; scroll-margin-top: 1rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+  p, ul, ol { margin: 0 0 1rem; }
+  a { color: var(--link); }
+  a:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  code, pre { font: .9rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--code-bg); padding: .1em .35em; border-radius: 5px; overflow-wrap: anywhere; }
+  pre {
+    margin: 0 0 1rem;
+    padding: .8rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow-x: auto;
+    max-width: 100%;
+    white-space: pre;
+  }
+  pre code { background: none; padding: 0; overflow-wrap: normal; }
+  .table { margin: 0 0 1.25rem; overflow-x: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align: left; vertical-align: top; padding: .55rem .75rem; border-bottom: 1px solid var(--line); }
+  th { font-weight: 650; background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; }
+  @media (max-width: 40rem) {
+    .table { border: 0; background: none; overflow: visible; }
+    table, tbody, tr, td { display: block; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    tr { margin: 0 0 .6rem; padding: .55rem .8rem; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    td, td:first-child { padding: .15rem 0; border: 0; white-space: normal; }
+    td:first-child { font-weight: 650; }
+    td:not(:first-child)::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 650; }
+    td:empty { display: none; }
+  }
+  footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
+  footer a { margin: 0 .4rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">
+    <img src="/logo.svg" width="44" height="44" alt="">
+    <a href="/">Song2Vid</a>
+  </div>
+  <h1>The song2vid command</h1>
+  <p class="lede">Song2Vid is also a command for Terminal, for scripts and for agents. It comes inside the app and makes the same video as the window does.</p>
+
+  <nav class="toc" aria-label="On this page">
+    <ul>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#options">Options</a></li>
+      <li><a href="#shapes">Sizes</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#progress">Progress</a></li>
+      <li><a href="#json">JSON</a></li>
+      <li><a href="#exit">Exit statuses</a></li>
+      <li><a href="#window">The window</a></li>
+      <li><a href="#agents">For agents</a></li>
+    </ul>
+  </nav>
+
+  <section aria-labelledby="install">
+    <h2 id="install">Install</h2>
+    <p>Download Song2Vid from <a href="/">the download page</a>, move it to Applications and open it once (see the first-open step below). Then link the command onto your path:</p>
+<pre><code>mkdir -p ~/.local/bin
+ln -sf /Applications/Song2Vid.app/Contents/Helpers/song2vid ~/.local/bin/song2vid
+song2vid --version</code></pre>
+    <p>If Terminal says <code>command not found</code>, add the folder to your path for zsh, then open a new Terminal window:</p>
+<pre><code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
+    <p><strong>First open.</strong> The app is not signed with a paid Apple developer account. The first time, macOS says "Song2Vid.app Not Opened". Go to System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>. The command works after that.</p>
+  </section>
+
+  <section aria-labelledby="commands">
+    <h2 id="commands">Commands</h2>
+<pre><code>song2vid check &lt;audio&gt; &lt;image&gt; [-j]
+song2vid make  &lt;audio&gt; &lt;image&gt; [-o &lt;file.mp4&gt;] [-s &lt;shape&gt;] [-r &lt;resolution&gt;] [-c &lt;h,v&gt;] [-w] [-n] [-j] [-q]
+song2vid -h | -v | -S | -R | -u</code></pre>
+    <ul>
+      <li><code>check</code> reads a song and an image and reports what Song2Vid would make from them. It writes nothing.</li>
+      <li><code>make</code> makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.</li>
+      <li><code>--help</code> prints help. After a command it prints that command's help.</li>
+      <li><code>--version</code> prints the version, for example <code>song2vid 1.1.0</code>.</li>
+      <li><code>--skill</code> prints the <a href="/agent.md">agent instructions</a>.</li>
+      <li><code>--repo</code> prints the project address.</li>
+      <li><code>--update</code> says whether a newer Song2Vid is out. It downloads and changes nothing; installing it is your step.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="options">
+    <h2 id="options">Options</h2>
+    <div class="table" role="region" aria-label="Options">
+      <table>
+        <thead><tr><th scope="col">Long</th><th scope="col">Short</th><th scope="col">Applies to</th><th scope="col">Meaning</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Long"><code>--help</code></td><td data-label="Short"><code>-h</code></td><td data-label="Applies to">all</td><td data-label="Meaning">Help for the command it follows.</td></tr>
+          <tr><td data-label="Long"><code>--version</code></td><td data-label="Short"><code>-v</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints <code>song2vid 1.1.0</code>.</td></tr>
+          <tr><td data-label="Long"><code>--skill</code></td><td data-label="Short"><code>-S</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints the agent skill that ships in the app.</td></tr>
+          <tr><td data-label="Long"><code>--repo</code></td><td data-label="Short"><code>-R</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints the project address.</td></tr>
+          <tr><td data-label="Long"><code>--update</code></td><td data-label="Short"><code>-u</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Says whether a newer release exists. Works with <code>--json</code>.</td></tr>
+          <tr><td data-label="Long"><code>--shape</code></td><td data-label="Short"><code>-s</code></td><td data-label="Applies to">make</td><td data-label="Meaning"><code>16:9</code> (default), <code>9:16</code>, <code>1:1</code>, <code>4:3</code> or <code>original</code>.</td></tr>
+          <tr><td data-label="Long"><code>--resolution</code></td><td data-label="Short"><code>-r</code></td><td data-label="Applies to">make</td><td data-label="Meaning"><code>480p</code>, <code>1080p</code> (default) or <code>2160p</code>. Not with <code>original</code>.</td></tr>
+          <tr><td data-label="Long"><code>--crop</code></td><td data-label="Short"><code>-c</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Which part a <code>1:1</code> or <code>4:3</code> frame keeps, as two fractions <code>h,v</code> from 0 to 1. Default <code>0.5,0.5</code>, the middle. Values outside 0 to 1 are an error.</td></tr>
+          <tr><td data-label="Long"><code>--out</code></td><td data-label="Short"><code>-o</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Where to save. Default: the song's name with <code>.mp4</code>, in the current folder. The name must end in <code>.mp4</code>.</td></tr>
+          <tr><td data-label="Long"><code>--overwrite</code></td><td data-label="Short"><code>-w</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Replace the output if it exists. Without it, an existing file is an error.</td></tr>
+          <tr><td data-label="Long"><code>--dry-run</code></td><td data-label="Short"><code>-n</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Checks everything and reports what would be made. Writes nothing.</td></tr>
+          <tr><td data-label="Long"><code>--json</code></td><td data-label="Short"><code>-j</code></td><td data-label="Applies to">check, make, <code>--update</code></td><td data-label="Meaning">One JSON object per line instead of text.</td></tr>
+          <tr><td data-label="Long"><code>--quiet</code></td><td data-label="Short"><code>-q</code></td><td data-label="Applies to">make</td><td data-label="Meaning">No progress output. The result and any error still print.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Write each short option on its own: <code>-w -n</code>, not <code>-wn</code>. An option the command does not know is a usage error, and the message does not repeat what you typed. When you are one typo from a real option, it says which.</p>
+  </section>
+
+  <section aria-labelledby="shapes">
+    <h2 id="shapes">Frame shapes and sizes</h2>
+    <p>The <code>p</code> in a resolution is the short side of the frame.</p>
+    <div class="table" role="region" aria-label="Output sizes">
+      <table>
+        <thead><tr><th scope="col">Shape</th><th scope="col">Placement</th><th scope="col">480p</th><th scope="col">1080p</th><th scope="col">2160p</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Shape"><code>16:9</code></td><td data-label="Placement">Whole image, with black bars</td><td data-label="480p">854×480</td><td data-label="1080p">1920×1080</td><td data-label="2160p">3840×2160</td></tr>
+          <tr><td data-label="Shape"><code>9:16</code></td><td data-label="Placement">Whole image, with black bars</td><td data-label="480p">480×854</td><td data-label="1080p">1080×1920</td><td data-label="2160p">2160×3840</td></tr>
+          <tr><td data-label="Shape"><code>1:1</code></td><td data-label="Placement">Fills the frame; the rest is cut</td><td data-label="480p">480×480</td><td data-label="1080p">1080×1080</td><td data-label="2160p">2160×2160</td></tr>
+          <tr><td data-label="Shape"><code>4:3</code></td><td data-label="Placement">Fills the frame; the rest is cut</td><td data-label="480p">640×480</td><td data-label="1080p">1440×1080</td><td data-label="2160p">2880×2160</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><code>original</code> keeps the image's own size, up to 3840×2160 (or 2160×3840 for a tall image). Larger images are scaled down, and an odd size loses one pixel because video needs even sizes. An image smaller than the chosen size is enlarged and may look soft; <code>check</code> and the result say so with <code>enlarged</code>.</p>
+  </section>
+
+  <section aria-labelledby="examples">
+    <h2 id="examples">Examples</h2>
+<pre><code># What would Song2Vid make from these two files?
+song2vid check song.mp3 cover.png
+
+# A 1080p 16:9 video next to the song, named after it
+song2vid make song.mp3 cover.png
+
+# A square 480p preview, keeping the upper part of the picture
+song2vid make song.mp3 cover.png -s 1:1 -r 480p -c 0.5,0.2 -o preview.mp4
+
+# Plan it without writing anything, as JSON
+song2vid make song.mp3 cover.png --dry-run --json
+
+# Replace an earlier video
+song2vid make song.mp3 cover.png -o video.mp4 --overwrite</code></pre>
+  </section>
+
+  <section aria-labelledby="progress">
+    <h2 id="progress">Progress</h2>
+    <p><code>make</code> never leaves you wondering whether it works. The stages are <code>Checking files</code>, <code>Preparing</code>, <code>Encoding</code> and <code>Finishing</code>.</p>
+    <ul>
+      <li><strong>In a terminal</strong> one line is redrawn at least ten times a second: a spinner while the percent is not known yet, then a bar with the percent, the time elapsed and the time left. It is replaced by the result when the video is done. Colour is used unless <code>NO_COLOR</code> is set or <code>TERM</code> is <code>dumb</code>.</li>
+      <li><strong>In a log or a pipe</strong> a plain line is written at each stage change and every second, such as <code>Encoding 52% (0:04 elapsed, about 0:04 left)</code>. It has no control characters.</li>
+      <li><strong>With <code>--json</code></strong> progress is JSON Lines on standard output, at each stage change and four times a second, and standard error stays empty. A run in the background can be read at any moment by looking at its newest line.</li>
+      <li><code>--quiet</code> shows no progress. <code>Checking files</code> is shown only if it takes more than a moment, so a mistyped file name gives just its error.</li>
+    </ul>
+    <p>Results go to standard output. Progress, messages and errors go to standard error, except with <code>--json</code>, where everything is a JSON line on standard output.</p>
+  </section>
+
+  <section aria-labelledby="json">
+    <h2 id="json">JSON output</h2>
+    <p>Every line has <code>"api_version":"1"</code> and a <code>"type"</code> of <code>progress</code>, <code>result</code> or <code>error</code>. The last line of a run is exactly one <code>result</code> or <code>error</code>. Keys change only with a new <code>api_version</code>.</p>
+<pre><code>{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8}
+{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false}
+{"api_version":"1","type":"error","error":{"code":"output_exists","message":"The output file already exists. Use --overwrite to replace it."}}</code></pre>
+    <div class="table" role="region" aria-label="JSON keys">
+      <table>
+        <thead><tr><th scope="col">Line</th><th scope="col">Keys</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>stage</code> (<code>checking</code>, <code>preparing</code>, <code>encoding</code>, <code>finishing</code>), <code>percent</code> (0 to 100, or <code>null</code>), <code>elapsed_seconds</code>, <code>remaining_seconds</code> (or <code>null</code>)</td></tr>
+          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>command</code>, <code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>, <code>duration_seconds</code>, <code>bytes</code>), <code>placement</code> (<code>fit</code> or <code>crop</code>), <code>enlarged</code>, <code>dry_run</code>. <code>bytes</code> is <code>null</code> for a dry run.</td></tr>
+          <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code></td></tr>
+          <tr><td data-label="Line"><code>--update</code> result</td><td data-label="Keys"><code>command</code>, <code>current</code>, <code>latest</code>, <code>update_available</code>, <code>download_page</code></td></tr>
+          <tr><td data-label="Line"><code>error</code></td><td data-label="Keys"><code>error</code> (<code>code</code>, <code>message</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>No output, in any mode, contains a folder path, an environment variable or the contents of your files. File names are given without their folder.</p>
+  </section>
+
+  <section aria-labelledby="exit">
+    <h2 id="exit">Exit statuses and error codes</h2>
+    <div class="table" role="region" aria-label="Exit statuses">
+      <table>
+        <thead><tr><th scope="col">Status</th><th scope="col">Meaning</th><th scope="col">Error codes</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Status">0</td><td data-label="Meaning">Success, including <code>--dry-run</code> and <code>check</code>.</td><td data-label="Error codes"></td></tr>
+          <tr><td data-label="Status">1</td><td data-label="Meaning">An input file does not exist.</td><td data-label="Error codes"><code>audio_not_found</code>, <code>image_not_found</code></td></tr>
+          <tr><td data-label="Status">2</td><td data-label="Meaning">Usage error.</td><td data-label="Error codes"><code>usage</code></td></tr>
+          <tr><td data-label="Status">3</td><td data-label="Meaning">An input can't be read or isn't usable.</td><td data-label="Error codes"><code>audio_unreadable</code>, <code>image_unreadable</code>, <code>image_too_small</code></td></tr>
+          <tr><td data-label="Status">4</td><td data-label="Meaning">The output can't be written.</td><td data-label="Error codes"><code>output_exists</code>, <code>output_not_writable</code>, <code>output_not_mp4</code>, <code>disk_full</code></td></tr>
+          <tr><td data-label="Status">5</td><td data-label="Meaning">Making the video failed after it started, or <code>--update</code> could not reach GitHub.</td><td data-label="Error codes"><code>export_failed</code>, <code>network</code></td></tr>
+          <tr><td data-label="Status">130</td><td data-label="Meaning">Cancelled with Ctrl-C or a stop signal. The unfinished file is deleted.</td><td data-label="Error codes"><code>cancelled</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Everything is checked before anything is made. The video is built in a hidden temporary file beside the output and moved into place when it is complete, so a half-made video never has the final name.</p>
+  </section>
+
+  <section aria-labelledby="window">
+    <h2 id="window">The app's window</h2>
+    <p>The window does the same job without Terminal: choose or drop in a song and an image, pick a <strong>Frame Shape</strong> and a <strong>Resolution</strong>, drag the preview to choose the crop, press <strong>Make Video</strong> and choose where to save. It is described step by step, by its control names, in the <a href="/agent.md">agent instructions</a>.</p>
+  </section>
+
+  <section aria-labelledby="agents">
+    <h2 id="agents">For agents</h2>
+    <p>An agent can read <a href="/agent.md">song2vid.pages.dev/agent.md</a>, or run <code>song2vid --skill</code> for the same text. It covers both routes, the window and the command, and the rules an agent follows: ask before <code>--overwrite</code>, leave the input files alone, report only what the command printed, and leave the first-open step to the person.</p>
+  </section>
+</main>
+<footer>
+  <a href="/">Download</a>
+  <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a>
+</footer>
+</body>
+</html>

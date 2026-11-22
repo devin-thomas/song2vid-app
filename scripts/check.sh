@@ -78,4 +78,7 @@ echo "$cmd_version"
 "$command" --skill | cmp -s - skills/song2vid/SKILL.md || { echo "check: --skill differs from skills/song2vid/SKILL.md" >&2; exit 1; }
 echo "--skill matches skills/song2vid/SKILL.md"
 
+echo "== The site: Agent Guide and docs page (SPEC sections 15 and 16)"
+scripts/check-site.sh "$command"
+
 echo "check: all passed"
