@@ -52,7 +52,7 @@ ln -sf /Applications/Song2Vid.app/Contents/Helpers/song2vid ~/.local/bin/song2vi
 song2vid make song.mp3 cover.png -s 1:1 -r 480p
 ```
 
-- Every option, the JSON output, the progress modes and the exit statuses are on the docs page, [song2vid.pages.dev/docs](https://song2vid.pages.dev/docs).
+- Every option, the JSON output, the progress modes and the exit statuses are on the docs page, [song2vid.pages.dev/docs/](https://song2vid.pages.dev/docs/).
 - [skills/song2vid/SKILL.md](skills/song2vid/SKILL.md) tells an agent how to make a video by either route, the app's window or the command. `song2vid --skill` prints it, and the site serves the same text at [song2vid.pages.dev/agent.md](https://song2vid.pages.dev/agent.md). `scripts/build-agent-md.sh` makes that copy, and `scripts/check.sh` fails if it drifts.
 - The download page has an Agent Handoff: one click copies a short prompt for ChatGPT, Claude, Grok Bot or Muse that points the agent at the guide.
 

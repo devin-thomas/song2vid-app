@@ -6,6 +6,8 @@
 <title>Song2Vid - turn a song and an image into a video</title>
 <meta name="description" content="Song2Vid is a free Mac app that turns one song and one image into an MP4 video.">
 <meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://song2vid.pages.dev/">
+<link rel="alternate" type="text/markdown" href="/index.md">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
@@ -159,6 +161,7 @@
     .handoff { margin-bottom: 1.75rem; padding: .9rem; }
   }
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
+  footer p { margin: .25rem 0; }
 </style>
 </head>
 <body>
@@ -171,22 +174,22 @@
 
   <div class="cta">
     <a class="button" href="https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.1.0.zip">Download for Mac</a>
-    <p class="req">Requires macOS 14 or later</p>
+    <p class="req">Free · Version 1.1.0 · Requires macOS 14 or later</p>
   </div>
 
   <section class="handoff" id="handoff" aria-labelledby="handoff-title">
     <h2 id="handoff-title">Or ask your agent to do it</h2>
     <noscript><p>Paste this into ChatGPT, Claude, Grok Bot or Muse.</p></noscript>
-    <div class="picker" id="agent-picker" role="group" aria-label="Agent picker" hidden>
+    <div class="picker" id="agent-picker" role="group" aria-label="Agent picker" data-md="skip" hidden>
       <button class="choice" type="button" data-agent="ChatGPT" aria-pressed="true"><img class="mark mono" src="/brands/chatgpt-original.svg" width="24" height="24" alt="">ChatGPT</button>
       <button class="choice" type="button" data-agent="Claude" aria-pressed="false"><img class="mark" src="/brands/claude-original.svg" width="24" height="24" alt="">Claude</button>
       <button class="choice" type="button" data-agent="Grok Bot" aria-pressed="false"><img class="mark mono" src="/brands/grok-bot-original.svg" width="24" height="24" alt="">Grok Bot</button>
       <button class="choice" type="button" data-agent="Muse" aria-pressed="false"><img class="mark" src="/brands/muse-color.svg" width="24" height="24" alt="">Muse</button>
     </div>
-    <button class="copy" id="copy-button" type="button" hidden>Copy for ChatGPT</button>
-    <p class="status" id="copy-status" role="status" aria-live="polite"></p>
+    <button class="copy" id="copy-button" type="button" data-md="skip" hidden>Copy for ChatGPT</button>
+    <p class="status" id="copy-status" role="status" aria-live="polite" data-md="skip"></p>
     <p class="prompt"><code id="prompt-text">Use Song2Vid to make a video from my song and image. Instructions: https://song2vid.pages.dev/agent.md</code></p>
-    <dialog class="manual" id="manual-dialog" aria-labelledby="manual-title">
+    <dialog class="manual" id="manual-dialog" data-md="skip" aria-labelledby="manual-title">
       <h2 id="manual-title">Copy the prompt by hand</h2>
       <p>Select all, then copy.</p>
       <textarea id="manual-text" readonly aria-label="Prompt"></textarea>
@@ -204,8 +207,11 @@
   </section>
 </main>
 <footer>
-  <a href="/docs">Command docs</a> &middot;
-  <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a>
+  <p><a href="/docs/">Command docs</a> &middot;
+  <a href="/agent.md">Agent Guide</a> &middot;
+  <a href="/index.md">Markdown copy</a> &middot;
+  <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
+  <p>Updated <time datetime="2026-11-22">22 November 2026</time></p>
 </footer>
 <script src="/handoff.js" defer></script>
 </body>
