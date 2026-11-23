@@ -26,3 +26,10 @@ _Avoid_: interactive mode, TTY mode
 
 **Headless**: A run of the `song2vid` command whose output goes to a program, an agent or a file rather than a terminal.
 _Avoid_: batch mode, non-interactive
+
+**Codec**: The video compression format of the output: H.264 or HEVC.
+_Avoid_: format, compression, quality
+
+**Encoder**: The part of the PC that compresses the video: NVIDIA NVENC, a hardware encoder through Media Foundation, or Microsoft's software encoder. Chosen automatically, never by the person.
+_Avoid_: GPU mode, acceleration
+

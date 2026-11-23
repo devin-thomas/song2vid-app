@@ -57,9 +57,37 @@ Agreed so far (round 1):
 - **Workflow:** same as Phase 2: Grill to Build, the chief-of-staff workflow with Sonnet builders, commits as `devin`, tests on this Mac.
 - **Phase 3 proof:** a new Claude Code session that has never seen the project runs the installed command, makes a video, and hits one deliberate failure; the owner confirms. This is separate from the handoff's agent list.
 
+## Windows version (Song2Vid for Windows 1.0)
+
+Started 2026-11-22. Goal: Song2Vid on Windows, built on the public `desktop-app` skill (`devin-thomas/skills`, branch `beta`, folder `beta/desktop-app`) as an outside developer would use it: copy the `web-three-systems` Electron starter and change as little of it as possible. The owner will use it daily on a Windows PC with an RTX 4090.
+
+Agreed so far (round 1):
+
+- **Shell:** the skill's content-app branch: a React page in the starter's Electron shell, with the work done by a bundled command-line tool. Windows is the only shipped target. The Mac app stays SwiftUI. The starter's Mac build is used only to run the headless checks during development (ADR-022).
+- **Quality bar: starter gates plus an applicability ledger (ADR-023).** Every scripted check the starter already ships stays and is adapted to Song2Vid (typecheck, test, shell check, audit, visual baselines, crash, fuses, planted breaks). Every premium-bar rule gets a line in a ledger: applies (with its check), or N/A with a one-line reason. Manual rules are done only where they touch the main journey. One independent critic round on screenshots. The owner's own daily use decides whether it is premium.
+- **Tool contract: SPEC section 14 (ADR-024).** The bundled tool is a Windows `song2vid.exe` with the same `check` and `make` commands, options, exit statuses and `--json` lines (`api_version` 1) as the Mac command. The Electron adapter translates those lines; the skill allows a tool to keep its existing form. Anything added for Windows is added to the one contract.
+- **Encoding: use the hardware (ADR-025).** `song2vid.exe` picks the fastest encoder the PC has, with no setting in the window: NVIDIA NVENC, then a hardware encoder through Media Foundation (AMD or Intel), then Microsoft's software H.264. The finished message and the JSON result name the encoder used. If a hardware encoder fails to start, the tool falls back once and says so. FFmpeg is a small LGPL build: no x264 or x265.
+- **Codec (ADR-026):** a Codec picker in the window, H.264 or HEVC. It remembers the last choice; H.264 on first run. HEVC is disabled with a short reason on a PC with no hardware HEVC encoder, since Windows' software HEVC needs a paid Store extension. The command gets a matching `--codec` option.
+- **The Mac gains HEVC in the same release (ADR-026):** the Mac app and Mac command get the same picker and `--codec`, through AVFoundation.
+- **Test machines:** Titan (Windows 11 Pro, RTX 4090: NVENC) and the DeskMini (Windows 10, AMD Ryzen 5 3400G with Vega graphics: AMD hardware through Media Foundation). Intel hardware stays unverified and is listed so in the release notes.
+- **Where checks run:** the DeskMini is the test PC. Every check that opens a Song2Vid window (crash recovery, the installed-app check, the focus sampler) runs there whenever needed. Titan runs headless checks and NVENC encodes only, and opens a window only when the owner says it is free.
+- **Reaching the DeskMini:** over Tailscale at its tagged address (`deskmini`). Its SSH server is not answering yet (port 22 timed out on 2026-11-22), so the owner turns on Windows' OpenSSH Server there. DeskMini checks wait for that; nothing else does.
+- **Release (ADR-027):** one GitHub release, **Song2Vid 1.2.0**, with a Mac zip and a Windows zip. The download page offers both. `--version` and `--update` behave the same on both systems.
+- **Command on PATH:** like the Mac, a documented step. The Agent Guide and docs page give one PowerShell line that adds the installed command's folder to the user's PATH. The installer never changes PATH.
+- **Scope and place:** the window app **and** `song2vid.exe` for people and agents to put on PATH, so the Agent Guide covers Windows too. The code lives in `windows/` in this repository and shares `SPEC.md`, `GLOSSARY.md` and `ADR.md`.
+
+Settled while writing SPEC Part 4: the contract grows by addition within `api_version` 1, with `encoders`, `preview` and `--cancel-on-eof` added to both commands (ADR-028); the Windows command is Rust over a bundled FFmpeg, with frame math proven identical to the Swift code by a shared fixture file (ADR-029).
+
+Defaults taken from the skill or earlier phases (stated, not asked; the owner can change any):
+
+- The Windows app is dark on first run (the skill's rule for every desktop app). The Mac app's look is unchanged.
+- Installed per user under `%LOCALAPPDATA%\Programs\Song2Vid`, unsigned. The download page says how to get past SmartScreen ("More info", then "Run anyway"), as it already explains Open Anyway on the Mac.
+- Every change made to the starter's files, and every rule or process step cut, goes in `windows/SKILL-NOTES.md`, so the outside-developer run doubles as feedback for the skill.
+- Same build workflow as Phases 2 and 3: chief-of-staff with Sonnet builders, commits as `devin`.
+
 ## Not in scope
 
-- Several songs at once, editing tools, Windows. Parked in `Ideas.md` as update ideas.
+- Several songs at once, editing tools. Parked in `Ideas.md` as update ideas.
 - Paid Apple signing (ADR-005).
 
 ## Open questions
@@ -70,7 +98,8 @@ None. Phase 3 round 3 answers: JSON Lines progress (a), `--update` reports only 
 
 - Workflow: Grill to Build (default).
 - Phase 2: 3 of 5 rounds, 10 of 20 questions. Discovery closed; plan approved 2026-11-18.
-- Phase 3: 3 of 5 rounds, 10 of 20 questions. Discovery closed 2026-11-21. SPEC Part 2 and tickets S2V-010 to S2V-018 written; waiting for the owner's go-ahead to build.
+- Phase 3: 3 of 5 rounds, 10 of 20 questions. Discovery closed 2026-11-21.
+- Windows: 3 of 5 rounds, 12 of 20 questions (2026-11-22). Discovery closed. SPEC Part 4 (sections 22 to 32), ADR-028 and ADR-029 (settled while writing it) and tickets S2V-022 to S2V-034 written; waiting for the owner's go-ahead to build. Planning branch `plan/windows`, cut from `ticket/S2V-021`, because `build/agent-ready-site` is not on GitHub yet. SPEC Part 2 and tickets S2V-010 to S2V-018 written; waiting for the owner's go-ahead to build.
 - **Plan approved 2026-11-18**, with changes: drag and drop (with the replace dialog) and an app icon were added.
 - **Build workflow:** the owner asked for Matt Pocock's `chief-of-staff` skill, installed in this repo under `.claude/skills/`. Opus coordinates, verifies and writes the docs. Sonnet subagents on high reasoning build each ticket.
 
@@ -88,6 +117,12 @@ flowchart LR
   AG[Agent on the Mac] -->|runs| CLI
   CLI --> V
   GUIDE[Agent Guide agent.md on pages.dev] --> AG
+  PAGE -->|link| WDL[Windows download]
+  WDL --> WAPP[Song2Vid for Windows: Electron shell + React page]
+  WAPP -->|runs, reads JSON lines| WCLI[song2vid.exe]
+  WAG[Agent on Windows] -->|runs| WCLI
+  WCLI -->|NVENC / Media Foundation / software| V
+  GUIDE --> WAG
   PAGE -->|Agent Handoff prompt| CHAT[ChatGPT / Claude / Grok Bot / Muse]
   CHAT -->|reads| GUIDE
 ```

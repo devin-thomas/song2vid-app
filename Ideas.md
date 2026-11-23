@@ -8,7 +8,6 @@
 - Zoom in while cropping.
 - Fit with bars using a blurred copy of the image instead of black.
 - Apple signing and notarization, so there is no warning on first open.
-- Windows version.
 
 ## From Phase 3 discovery (2026-11-21)
 

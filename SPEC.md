@@ -348,3 +348,241 @@ Goal: an agent that has only `https://song2vid.pages.dev` can find the public pa
 - The separate-agent proof passes and the owner confirms it.
 - The `agent-ready-website` verification is saved in the private progress file.
 
+
+# Part 4 - Song2Vid 1.2.0: Windows and HEVC
+
+Decisions: ADR-022 to ADR-029. Terms: **Codec** and **Encoder** are in `GLOSSARY.md`. Everything in Parts 1 to 3 still holds unless a section below changes it.
+
+## 22. Objective and success criteria
+
+Song2Vid 1.2.0 adds **Song2Vid for Windows** (a window app and the `song2vid.exe` command) and an **HEVC** Codec on both systems. The Windows app is built from the `desktop-app` skill's `web-three-systems` starter, used the way an outside developer would use it (ADR-022).
+
+- A person on Windows 10 or 11 (64-bit) can download, install and make a correct video in under a minute of clicks, using only the download page's instructions.
+- The Windows output matches the Mac output for the same inputs and options: the same pixel size (section 5), length within 0.1 s, the same placement, and a midpoint frame with SSIM of at least 0.95 against the Mac command's frame.
+- On Titan (RTX 4090), a 3-minute song makes a 1080p H.264 video and a 2160p HEVC video in under 30 seconds each, using NVENC.
+- An agent on Windows can follow the Agent Guide to install the command and make a video, as on the Mac.
+- The Windows app passes its quality bar as section 28 defines it. Whether it is premium is the owner's verdict from daily use.
+
+## 23. Codec and Encoder (both systems)
+
+- **Codec:** H.264 or HEVC. H.264 is the default on first run. Both apps remember the last Codec chosen and start with it next time (ADR-026). Changing the Codec changes nothing else.
+- **HEVC files** use the `hvc1` sample tag so they play in QuickTime, Photos and browsers that support HEVC. Profile Main, 8-bit, 4:2:0, BT.709 tags, like the H.264 output.
+- **H.264 output** stays as section 6.3: High profile, 30 frames per second, BT.709. Audio is unchanged for both Codecs: AAC at 256 kbps with the section 6.3 rate and channel rules.
+- **Encoder:** chosen by the command, never by the person (ADR-025).
+  - Windows, in this order: NVIDIA NVENC, then a hardware encoder through Media Foundation (AMD or Intel), then Microsoft's software H.264 encoder. HEVC has no software step. Windows' software HEVC needs a paid Store extension, so a PC with no hardware HEVC encoder cannot make HEVC.
+  - Mac: Apple's encoder (VideoToolbox), hardware where the Mac has it. HEVC is available when VideoToolbox can open an HEVC encoding session on that Mac.
+- **Fallback (Windows):** if the chosen hardware encoder fails before its first frame is written, the command tries the next encoder in the order once, and the result says it fell back. A failure after encoding has started is `export_failed`. There is no retry.
+- **When HEVC is unavailable:** the window disables the HEVC choice and shows "This computer can't make HEVC videos." If HEVC was the remembered choice, the app starts on H.264 and keeps HEVC remembered, so it comes back on a computer that can make it. The command gives `codec_unavailable` (24.6).
+
+## 24. Command contract additions (both systems, ADR-028)
+
+Both commands implement this section. The Mac command is `song2vid`; the Windows command is `song2vid.exe`. Each follows the same SPEC section 14 rules.
+
+### 24.1 `--codec`
+
+| Option | Short | Applies to | Meaning |
+| --- | --- | --- | --- |
+| `--codec` | `-C` | make | `h264` (default) or `hevc`. Any other value is a usage error. |
+
+The command does not remember anything. Only the window apps remember the Codec.
+
+### 24.2 `song2vid encoders`
+
+`song2vid encoders [-j]` reports which Codecs this computer can make, and with which Encoder. It reads no files and writes none.
+
+- Text: one line per Codec, for example `H.264: NVIDIA encoder` and `HEVC: not available on this computer`.
+- JSON: `{"api_version":"1","type":"result","command":"encoders","codecs":{"h264":{"available":true,"encoder":"nvenc"},"hevc":{"available":false,"encoder":null}}}`.
+- Encoder values: `nvenc`, `media_foundation`, `software` (Windows); `apple` (Mac). Human names: "NVIDIA encoder", "graphics hardware encoder", "software encoder", "Apple encoder".
+- Windows finds the Encoder by opening each candidate in order for a tiny test encode (for example 256x256, 2 frames, to nothing). The whole command finishes within 5 seconds, and a candidate that takes longer counts as unavailable.
+
+### 24.3 `song2vid preview`
+
+`song2vid preview <image> -o <file.png> [-w] [-j]` writes the image as the video will see it: orientation tag applied, transparency made black, scaled to fit within 2048 x 2048 if it is larger (never enlarged). It exists so the Windows app can show any supported image (HEIC and TIFF included) placed the same way the encode will, and so an agent can look at the picture. It follows the same input checks and error codes as `make`, writes through a temporary file, and needs `-w` to replace an existing file. The JSON result is `{"api_version":"1","type":"result","command":"preview","output":{"name":"cover.png","width":2048,"height":1536},"source":{"width":4032,"height":3024}}`.
+
+### 24.4 `--cancel-on-eof`
+
+| Option | Short | Applies to | Meaning |
+| --- | --- | --- | --- |
+| `--cancel-on-eof` | `-E` | make, preview | Read stdin. When it reaches end-of-file, or a line `cancel` arrives, cancel as Ctrl-C does (section 14.4 step 5). |
+
+Without this option the command never reads stdin, so an agent that runs it with stdin closed is not affected. The Windows app always passes it, because Windows has no graceful signal to send a windowless child. A cancel finishes within 2 seconds and leaves no partial or temporary file.
+
+### 24.5 JSON additions
+
+- Section 14.5 is changed: within `api_version` 1, keys may be **added** to a line type and new line types and commands may be added; no key is removed, renamed or given a new meaning. Consumers ignore keys they do not know. The docs page lists every key with the version that added it.
+- The `make` result (and its `--dry-run` result) adds `"codec"` (`"h264"` or `"hevc"`), `"encoder"` (24.2 values; for a dry run, the Encoder that would be used) and `"encoder_fallback"` (`true` when 23's fallback happened).
+- The `progress` line adds `"encoder"` once the Encoder is known (from the `encoding` stage on).
+- The human result line on both systems names the Codec and Encoder, for example `Saved song.mp4 (1920x1080, H.264, NVIDIA encoder, 2:24).`
+
+### 24.6 Error codes and exit statuses
+
+Section 14.6 gains:
+
+| Status | Added codes | Meaning |
+| --- | --- | --- |
+| 3 | `codec_unavailable` | The chosen Codec can't be made on this computer. Checked before encoding. |
+| 4 | `output_in_use` | Windows: another program holds the existing output open, so `--overwrite` could not replace it within 2 seconds. Nothing changed. |
+
+Status 3's meaning becomes "An input can't be read or isn't usable, or the chosen Codec can't be made here."
+
+### 24.7 Version
+
+Both commands print `song2vid 1.2.0`. `--update` is unchanged and compares against the one 1.2.0 release (ADR-027).
+
+## 25. Mac changes for 1.2.0
+
+- **Window:** a **Codec** picker (H.264, HEVC) directly under Resolution, shown for every Frame Shape, Original included. It starts on the remembered Codec, H.264 the first time. When HEVC is unavailable it is disabled, with the section 23 note under the picker. It is disabled while a video is being made.
+- **Export:** `StillEncoder` takes the Codec. HEVC uses `kCMVideoCodecType_HEVC` with the Main profile, the same quality, frame rate, group length and colour tags as H.264, written with the `hvc1` tag.
+- **Command:** section 24 in full: `--codec`, `encoders`, `preview`, `--cancel-on-eof`, the JSON keys and the error codes. Its `--help`, the docs page and the Agent Guide list them.
+- **Version** 1.2.0. The sandbox, entitlements and ad-hoc signing are unchanged (section 17).
+
+## 26. The Windows command: `song2vid.exe` (ADR-024, ADR-025, ADR-029)
+
+### 26.1 What it is
+
+- A Rust program in `windows/tool/` that implements sections 14 and 24 for Windows. It drives a bundled FFmpeg and FFprobe as child processes, started by absolute path from its own folder. It never reads PATH or the current folder to find them.
+- Frame math (section 5 sizes, Original rules, Crop fractions, Fit placement) is a Rust port of `OutputFrame`. Its parity with the Swift code is proven by one fixture file, `fixtures/frame-math.json`, which the Swift tests write and both test suites read. The Swift code stays the source of truth: if the two disagree, the Rust code changes.
+- Built for `x86_64-pc-windows-msvc` with a static C runtime (`crt-static`), so it imports only Windows' own DLLs. A manifest sets the UTF-8 active code page and `longPathAware`. Windows 10 and 11, x64 only.
+- Lives in the installed app at `resources\bin\win32-x64\song2vid.exe`, beside `ffmpeg.exe`, `ffprobe.exe`, `SKILL.md` (for `--skill`) and `manifest.json`. It also works when that folder is copied anywhere else.
+
+### 26.2 Bundled FFmpeg (ADR-025)
+
+- A minimal LGPL build of FFmpeg and FFprobe for win32-x64, made by a script in `windows/ffmpeg/` that records the FFmpeg version, its source address and checksum, and the one configure line. The same line builds every time.
+- It contains only what Song2Vid needs. Demuxers and decoders for section 7's audio (MP3, AAC/M4A, WAV, AIFF, FLAC, ALAC, CAF) and images (JPEG, PNG, HEIC, TIFF, WebP, GIF, BMP). The `h264_nvenc`, `hevc_nvenc`, `h264_mf` and `hevc_mf` encoders (NVENC through `nv-codec-headers`, loaded from the NVIDIA driver at run time). FFmpeg's own `aac` encoder. The MP4 muxer, and the scale, pad, crop and format filters. No GPL or non-free parts (no `--enable-gpl`, no x264 or x265, no `--enable-nonfree`).
+- Its notices, source address and configure line go into `THIRD-PARTY-NOTICES.txt`, rebuilt on every package run and reachable from the app's About (premium bar rule 64).
+
+### 26.3 Behaviour that differs from the Mac command
+
+- **Inputs:** section 7's types, read by FFprobe and FFmpeg. Orientation tags are respected for JPEG, HEIC, TIFF and WebP. If FFmpeg does not apply one, the tool reads it and rotates. Transparent areas become black. An audio file with no audio stream gives `audio_unreadable`.
+- **Speed:** a still picture does not need every frame encoded. Like the Mac's `StillEncoder`, the tool may encode one short group of frames and repeat it for the song's length, as long as the result plays correctly and meets 22's length and SSIM criteria.
+- **Publication:** writes into a temporary file `.song2vid-<32 hex>.tmp` in the output folder, then moves it into place in one step. Without `--overwrite` it uses `MoveFileExW` with no replace flag, so a name that appeared during the run gives `output_exists` and the new file is deleted. With `--overwrite` it replaces, retrying for 2 seconds if the old file is in use, then `output_in_use`.
+- **Process ownership:** every FFmpeg or FFprobe child runs in a job object with kill-on-close, created suspended and resumed only once inside the job, started with `CREATE_NO_WINDOW` and a handle list of only its pipes and `NUL`. If `song2vid.exe` is killed, no child is alive 2 seconds later.
+- **Cancel:** Ctrl-C or Ctrl-Break in a console, or `--cancel-on-eof` (24.4). The temporary file is removed, and the command exits 130 with `cancelled`.
+- **Paths:** any name Windows allows works, including spaces, quotes, non-Latin text, a leading dash, shell characters and paths over 260 characters. No output in any mode contains a folder path. A planted fake secret in the environment never appears.
+- **Headed progress** works in Windows Terminal and the classic console (virtual terminal sequences turned on). Where they cannot be turned on, the command uses the plain headless lines instead.
+- **Test seam:** the environment variable `SONG2VID_TEST_ENCODER` (`nvenc`, `media_foundation` or `software`) forces one Encoder, for tests only. It is not in `--help`, the docs page or the Agent Guide. A forced Encoder that cannot open gives `codec_unavailable`.
+
+### 26.4 Limits
+
+- Memory: `song2vid.exe` and its children stay under 680 MB private memory in total at peak, during a 2160p HEVC run.
+- `encoders` finishes within 5 seconds. `check` and `preview` finish within 3 seconds for a 50 MB image and a 10-minute song on Titan.
+
+## 27. Song2Vid for Windows: the window app
+
+### 27.1 Shell
+
+- `windows/app/` is a copy of `beta/desktop-app/starters/web-three-systems` from `devin-thomas/skills`, at a recorded commit (`windows/app/PROVENANCE.md` names it). It is changed only where Song2Vid needs it. Every change to a starter file outside the marked replace-me blocks is listed in `windows/SKILL-NOTES.md` with its reason.
+- `app.config.json`: product name `Song2Vid`, exe name `Song2Vid`, app id `io.github.devin-thomas.song2vid` (the Mac bundle id), company `devin`, tool `song2vid` with binaries `win32-x64` only. Default window 560 x 760, minimum 480 x 640.
+- The starter's shell is kept as it ships: the window shown at first paint, the system caption buttons over the page's title bar, single instance, the control channel, crash recovery, window restoration, the security boundary, fuses and dark on first run. The Electron build runs on the Mac only for development checks. It is not packaged or released for macOS or Linux.
+
+### 27.2 Window layout
+
+One window, matching section 4 in order and wording, adapted only where Windows words differ:
+
+1. **Audio:** "Choose Audio…" with the file name and length once chosen.
+2. **Image:** "Choose Image…" with the file name and pixel size once chosen.
+3. **Frame Shape:** five choices, default 16:9.
+4. **Resolution:** three choices, default 1080p. For Original it is replaced by "Output: W×H".
+5. **Codec:** H.264 or HEVC, remembered (section 23).
+6. **Preview:** as section 4, item 5. The image comes from `song2vid preview` (24.3), so every supported type shows, oriented as it will be encoded. Crop drag follows the pointer. Arrow keys nudge by 5% of the movable range, and by 25% with Shift held (the Mac's steps). "Reset to Center" restores 0.5, 0.5. The crop area is one focusable control named "Crop position", whose value text reads like "50% across, 30% down". Before an image is chosen it shows "Choose an image".
+7. **Enlarge note:** as section 4, item 6.
+8. **Make Video**, enabled only when both files are loaded.
+
+The page never sees a file path. It holds opaque ids, and the main process keeps the id-to-path map, filled only from the system's open dialog, a dropped file, or a file opened with the app (starter bridge rule).
+
+### 27.3 Drag and drop
+
+Section 4a in full. The Replace dialog is the page's own dialog: Keep Current is the default and is chosen with Esc, and focus returns to where it was. A drop during making shows "Wait for the current video to finish." for 3 seconds in the status bar.
+
+### 27.4 Making the video
+
+1. Make Video opens the Windows save dialog. The default name is the audio file's name with `.mp4`. The default folder is the last folder saved to, else the Videos folder. Windows asks before replacing a file. When the person confirms a replacement there, the app passes `--overwrite`, and only then (premium bar rule 63).
+2. While it runs, the status bar shows the stage, a progress bar and percent, and time left once encoding has run 1 second and passed 5% (a recorded exception to rule 66's 3 seconds, because these jobs take seconds). Cancel stops the job: the page shows "Cancelling" on the next frame and "Cancelled. Nothing was saved." when the tool exits. All other controls are disabled while it runs.
+3. **Done:** "Saved Song.mp4 to Videos." with a second line "H.264 · NVIDIA encoder · 0:06", and a filled **Show in File Explorer** button that opens the folder with the file selected. The controls unlock straight away.
+4. **Closing during a job** asks "Stop making the video?" with **Keep Making** (default, Esc) and **Stop and Close**.
+
+### 27.5 Errors
+
+Each tool error code has the page's own sentence and a filled button that can succeed. The tool's message reaches a person only through Copy Details.
+
+| Code | Sentence | Filled button |
+| --- | --- | --- |
+| `audio_not_found` | The song file is no longer where it was. | Choose Audio… |
+| `image_not_found` | The image file is no longer where it was. | Choose Image… |
+| `audio_unreadable` | Song2Vid can't read this audio file. | Choose Audio… |
+| `image_unreadable` | Song2Vid can't read this image file. | Choose Image… |
+| `image_too_small` | This image is too small. Each side needs at least 16 pixels. | Choose Image… |
+| `codec_unavailable` | This computer can't make HEVC videos. | Use H.264 |
+| `output_not_writable` | Couldn't save to that folder. Nothing was saved. | Choose Another Folder… |
+| `disk_full` | Not enough disk space. Nothing was saved. | Choose Another Folder… |
+| `output_in_use` | Another app is using that file. Close it, then try again. | Try Again |
+| `output_exists` | A file with that name appeared while the video was being made. It was kept, and the new video wasn't saved. | Save As… |
+| `export_failed` | The video couldn't be made. Your files are unchanged. | Try Again |
+| any unknown code | The video couldn't be made. Your files are unchanged. | Try Again |
+
+A failure that repeats with the same inputs says "It failed again." and its filled button becomes **Copy Details** (premium bar rule 69). If the tool is missing, damaged or the wrong version, the app shows one blocking state, "Song2Vid is missing part of itself. Reinstall it to keep making videos.", with a filled **Open Download Page** button.
+
+### 27.6 Talking to the tool
+
+- The adapter in `electron/tool/` runs `song2vid.exe` with `--json --cancel-on-eof` and reads the section 14.5 and 24.5 lines. It ignores unknown keys and types. A non-JSON line, a line over 1 MiB, or an exit without exactly one final line ends the job as `export_failed`, after the adapter has drained the rest of the output.
+- At launch it runs `song2vid.exe --version --json` and `encoders --json`, caching the answer by the binaries' size and modification time, so the Codec picker is ready at once. It refreshes the answer in the background on every launch, because a driver can change.
+- It cancels by closing stdin, then kills the process after 3 seconds. No job is ever killed for being silent. After 30 seconds without a line, the status bar shows "Still working…" with Cancel.
+- Before a job starts it records the job, so the next launch removes a leftover `.song2vid-*.tmp` file. It removes only a file of that pattern, directly in the output folder that was recorded.
+
+### 27.7 Commands, keys and preferences
+
+- Commands (in the starter's palette and its one shortcut table): Choose Audio (Ctrl+O), Choose Image (Ctrl+Shift+O), Make Video (Ctrl+Enter), Cancel (Esc while making), Reset Crop to Center (Ctrl+0), Show in File Explorer (after a save), Light or Dark Theme, About Song2Vid. Every one of them works by keyboard alone.
+- Preferences that are saved: Codec, the last save folder, the theme (dark until changed), and window size and position. There is no settings window.
+
+### 27.8 About
+
+About shows Song2Vid 1.2.0, the licence (MIT), a link to the repository, and the third-party notices (FFmpeg's LGPL notice, its source and configure line, and the starter's notices).
+
+## 28. Quality bar (ADR-023)
+
+- **Scripted gates that must pass:** `pnpm typecheck`, `pnpm test`, `pnpm shell:check`, `pnpm qa:audit`, `pnpm qa:visual` (baselines committed for Windows, and for macOS where the headless checks run), `pnpm qa:crash`, `pnpm fuses:check win32-x64`, and `pnpm qa:planted` for the rules it covers. Each gate's marked blocks are rewritten for Song2Vid's states, journeys and shortcuts. No gate is deleted.
+- **Ledger:** `windows/docs/PREMIUM-LEDGER.md` has one row per premium-bar rule (1 to 111, with 41b), each **applies** (with its check, and its verdict per run: verified, unmet or unverified) or **N/A** (with a one-line reason). Known N/A, unless the build shows otherwise: 41, 41b, 27, 29, 44 (no text entry); 25, 26 (no long list); 73, 74, 76 (no value control with typed entry or a fine modifier: crop drag follows the pointer and is checked under 6 and 75); 40 (no window material); 80, 81, 87, 90 (no macOS build shipped); 83 to 86, 93 to 96 (no Linux build); 92 (sheets apply to macOS and GNOME only). Rule 75 applies to the crop control in the form 27.2 gives it.
+- **Process steps:** step 1 (journeys first, four of them: choose and make; drop and make; crop a square video; switch to HEVC and see it remembered after a restart, each with a step budget) and step 10 (seam files first: the tool contract is SPEC sections 14 and 24, plus `src/bridge.ts`, `docs/BRIDGE.md`, `docs/JOURNEYS.md` and `shortcuts.json`, written before page work). One round of step 3 (an independent critic given only screenshots). Each must-fix finding is fixed, and each class of finding becomes an audit gate where the starter allows. Steps 2, 5, 6, 7, 8, 9 and 11 are N/A for this release, as the ledger records. Step 4 is the owner's daily use.
+- **Where checks run:** headless gates run on the Mac and on Titan. Every check that opens a window (`qa:crash`, `qa:kill` if kept, `shell:evidence`, `measure:focus`, the installed check with the foreground sampler) runs on the DeskMini, which may be used at any time. Titan opens a window only when the owner says it is free.
+- **Memory:** the installed app is under 300 MB private memory after 5 idle minutes and under 680 MB during a 2160p HEVC job, counting `song2vid.exe` and FFmpeg, on the DeskMini and Titan.
+- **Reporting:** the handoff says "passes the automated bar" and lists every unverified rule. It never says premium.
+
+## 29. Packaging, install and the command on PATH
+
+- `pnpm package:win` on Titan makes the app folder with the tool folder staged (`resources\bin\win32-x64\`) and the fuses flipped. Unsigned (ADR-022).
+- The public download is `Song2Vid-1.2.0-windows-x64.zip`. It holds the `Song2Vid` folder, `Install Song2Vid.cmd` and a short `README.txt`. The installer copies the folder to `%LOCALAPPDATA%\Programs\Song2Vid` and adds a Start Menu shortcut, with no administrator rights. It stops with a message if Song2Vid is running. The installed folder has `Uninstall Song2Vid.cmd`, which removes the app and its shortcut but never the person's data or videos.
+- The installer never changes PATH. The Agent Guide and docs page give this one line, run once in PowerShell:
+
+  ```powershell
+  [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ";$env:LOCALAPPDATA\Programs\Song2Vid\resources\bin\win32-x64", 'User')
+  ```
+
+  After it, a new terminal runs `song2vid --version`.
+- SmartScreen will warn on first open of a downloaded unsigned app. The download page says: "More info", then "Run anyway".
+
+## 30. Site, Agent Guide and docs
+
+- **Download page:** two downloads, **Download for Mac** and **Download for Windows**, each with its requirement ("macOS 14 or later" and "Windows 10 or 11, 64-bit") and its first-open step (Open Anyway; More info, then Run anyway). It mentions HEVC once. The version line reads 1.2.0.
+- **Section 20's facts** change: fact 2 becomes both requirements and the version 1.2.0. The site checks and the separate-agent proof use the new fact.
+- **Agent Guide** (`skills/song2vid/SKILL.md`): Windows install and the PATH line, the Windows window route by its control names in order, `--codec`, `encoders`, `preview`, and how to pick a Codec (H.264 unless the person asks for HEVC or smaller files, and only if `encoders` says it is available). The `--cancel-on-eof` option is documented for programs, not suggested for agents.
+- **Docs page:** every addition in section 24, the key table with the version each key arrived in, and the Windows install.
+
+## 31. Testing (adds to sections 11 and 18)
+
+- **Frame math parity:** `fixtures/frame-math.json` (at least 200 cases: every Frame Shape and Resolution, Original edge cases at 1% and 0.99, odd sizes, 16 px limits, Crop fractions 0, 0.5 and 1). The Swift tests write it and check it is current. The Rust tests read it and must match exactly.
+- **Mac:** HEVC for each Frame Shape at 480p (`hvc1` tag, Main profile, size, length within 0.1 s, both tracks); the Codec picker remembered across a relaunch; `encoders`, `preview`, `--cancel-on-eof` and the new codes, by the seam 5 process tests.
+- **Windows command (process tests on Titan over SSH, headless, and the same suite on the DeskMini):** every section 14 and 24 behavior the Mac suite checks, plus each Encoder forced with `SONG2VID_TEST_ENCODER` where the PC has it (Titan: `nvenc` and `software`; DeskMini: `media_foundation` and `software`); a forced failing hardware encoder that falls back; HEVC unavailable under `software`; killing `song2vid.exe` mid-job leaves no `ffmpeg.exe` after 2 seconds; `--cancel-on-eof` cancels within 2 seconds with no file left; the path matrix of 26.3; an existing output held open gives `output_in_use`; no folder path or planted secret in any output; memory under 680 MB at peak.
+- **Parity:** the same five inputs (one per Frame Shape, from generated media) made on the Mac and on Windows give equal sizes, lengths within 0.1 s, and midpoint frames with SSIM of at least 0.95, compared on the Mac with FFmpeg's `ssim` filter.
+- **Speed:** 22's Titan timings, recorded with the Encoder used, plus the same runs with `software` forced for comparison.
+- **App:** the section 28 gates; the adapter against a stand-in tool that replays section 14 and 24 lines (success, slow success, every error code, an unknown code, a crash with no final line, garbage, a 2 MiB line, silence, a cancel ignored), and the starter's host-kill test.
+- **Owner's sample media** (ADR-012): copied to a scratch folder on each Windows PC, never into the repo. One video per Frame Shape in each Codec on Titan, and in H.264 and HEVC on the DeskMini.
+- **Release check:** on the DeskMini, under a Windows user that has never had Song2Vid, download the 1.2.0 Windows zip from the live page, pass SmartScreen, install, make a video in the window, add the command to PATH, and run `--version`, `encoders` and one `make` from a new terminal. Then uninstall. Meanwhile the foreground sampler records that no check took focus. Repeat the 1.1.0 release check (section 18) for the Mac zip.
+- **Windows agent proof:** a new Claude Code session on Titan that has never seen the repo, given only the Agent Guide's address, installs the command on PATH and makes a 480p 1:1 HEVC video with `--json`. It runs one `make` with a missing image, and reports the real values, exit status (1) and code (`image_not_found`). The owner confirms.
+
+## 32. Release 1.2.0 and definition of done
+
+- One GitHub release, **Song2Vid 1.2.0**, with the Mac zip (universal, ad hoc signed) and the Windows zip, each with its SHA-256 in the release notes. The notes list what was not verified: Intel's hardware encoder, Windows on Arm, and every premium-bar rule left unverified.
+- The site deploy publishes the two downloads, `agent.md`, `/docs` and the generated files together with the release.
+- Tickets S2V-022 to S2V-034 meet their acceptance criteria, and both repositories' checks pass: `scripts/check.sh` on the Mac, and `windows/scripts/check.ps1` on Titan.
+- The release check, the Windows agent proof and the separate-agent site proof pass, and the owner confirms them.
+- The repo history shows only the owner as author, and the public-repo checks pass, with Windows paths (`C:\Users\…`) added to the safety scan.

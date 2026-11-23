@@ -210,3 +210,83 @@
 
 **Consequences:** Changing a page means running the script (the check says so). Rejected: writing the Markdown and `llms.txt` by hand (they would drift); a framework or build tool for a two-page site; structured data, which this site does not need.
 
+## ADR-022 - Song2Vid for Windows uses the desktop-app skill's Electron starter
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** Build the Windows version from the `web-three-systems` starter in the public `desktop-app` skill (beta branch): a React page in its Electron shell over a bundled tool. Ship Windows only; the Mac app stays SwiftUI.
+
+**Rationale:** The owner wants to prove the skill works for an outside developer with as little extra work as possible. Song2Vid's file pickers, drop target and crop preview put it on the skill's content-app branch rather than the fastwin utility branch.
+
+**Consequences:** About 300 MB installed against the Mac app's few megabytes, under the skill's 300 MB idle memory budget. Changes to the starter are kept small and listed, so they can go back to the skill as feedback. Supersedes the last line of ADR-001's consequences ("a separate build later").
+
+## ADR-023 - A proportionate premium bar: starter gates plus an applicability ledger
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** Keep every scripted check the starter ships, adapted to Song2Vid. Give every premium-bar rule a ledger line: applies (with the check that proves it) or N/A (with a one-line reason). Do manual rules only where they touch the main journey. Run one independent critic round. The owner's daily use is the premium verdict.
+
+**Rationale:** The scripted checks already pass on the untouched starter, so keeping them costs only the edits to their marked blocks. Most of the bar's weight is in rules Song2Vid cannot trigger (no text fields, no long lists, no sign-in, no Linux or macOS build) and in process steps sized for bigger apps.
+
+**Consequences:** Rejected: the full bar with every process step (ceremony out of proportion to one window and one job); a hand-picked subset that deletes the starter's other checks (drifts from the skill and loses the starter's free coverage).
+
+## ADR-024 - The Windows tool speaks the existing command contract
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** The bundled tool is `song2vid.exe`, implementing SPEC section 14 (`check`, `make`, options, exit statuses, `--json` with `api_version` 1). The Electron adapter turns its JSON lines into the starter's job states. The skill's `--events 1` protocol is not added.
+
+**Rationale:** The skill's packaging reference says an existing tool keeps its form. One contract means one Agent Guide and one docs page for both systems, and the Windows command behaves like the Mac one.
+
+**Consequences:** The starter's adapter, stand-in tool scenarios and capability check are rewritten against section 14 instead of copied. Where section 14 lacks something the adapter needs (cancel by closing stdin, which Windows needs because it has no graceful signal), it is added to section 14 for both systems.
+
+## ADR-025 - Windows encodes with the hardware it has
+
+**Status:** Accepted (2026-11-22, rounds 1 and 2)
+
+**Decision:** The Windows tool can make HEVC as well as H.264 and chooses the encoder automatically: NVENC, then a Media Foundation hardware encoder (AMD, Intel), then Microsoft's software H.264. The result names the encoder; a hardware encoder that fails to start falls back once, with a note. FFmpeg is a small LGPL build with NVENC (loaded from the driver at run time) and Media Foundation; no GPL encoders.
+
+**Rationale:** The owner will use the app daily on an RTX 4090 and does not want the GPU left idle.
+
+**Consequences:** No setting for the encoder in the window. A PC with no hardware HEVC encoder makes H.264 only (ADR-026). Intel's hardware path ships unverified; NVENC is verified on Titan and AMD on the DeskMini. Rejected: x264/x265 (GPL binary inside an MIT app); an encoder picker in the window.
+
+## ADR-026 - A Codec choice on both systems, remembered
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** Both apps get a Codec picker (H.264 or HEVC) that remembers the last choice, H.264 on first run; both commands get `--codec`. The Mac app and command gain HEVC in the same release as Song2Vid for Windows. On Windows, HEVC is disabled with a reason when the PC has no hardware HEVC encoder.
+
+**Rationale:** The owner makes videos daily on a 4090 and wants smaller HEVC files without picking it every time. One contract for both systems keeps one Agent Guide.
+
+**Consequences:** The first remembered setting in either app; the rest of "Remember last settings" stays in Ideas. The Mac release grows by an AVFoundation HEVC path. Rejected: HEVC only in the command; Mac HEVC later.
+
+## ADR-027 - One 1.2.0 release for both systems
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** Song2Vid for Windows and the Mac's HEVC change ship together as Song2Vid 1.2.0: one GitHub release with a Mac zip and a Windows zip, one version number on both commands.
+
+**Rationale:** Both systems share one command contract and one Agent Guide; one version keeps `--version`, `--update` and the docs page simple.
+
+**Consequences:** Neither system ships until both are ready. `--update` compares one version on both. Rejected: a separate Windows 1.0.0 with its own release and update check.
+
+## ADR-028 - The command contract grows by addition within api_version 1
+
+**Status:** Accepted (2026-11-22, while writing SPEC Part 4)
+
+**Decision:** Version 1.2.0 adds `--codec`, `--cancel-on-eof`, the `encoders` and `preview` commands, the `codec`, `encoder` and `encoder_fallback` keys, and the `codec_unavailable` and `output_in_use` codes, to both commands, without a new `api_version`. Section 14.5's rule becomes: keys, line types and commands may be added within a version, and never removed, renamed or given a new meaning.
+
+**Rationale:** Agents and scripts written for 1.1 keep working. A new `api_version` would break them for additions they can ignore. `preview` lets the Windows app show HEIC and TIFF, which Chromium cannot, oriented exactly as encoded, and lets an agent see the picture. `--cancel-on-eof` gives the app a way to cancel a windowless child on Windows without making stdin matter to anyone who does not ask for it.
+
+**Consequences:** The docs page records the version each key arrived in. Rejected: `api_version` 2; Windows-only commands outside the shared contract; reading stdin by default, which would cancel a run whose stdin is closed.
+
+## ADR-029 - The Windows command is Rust over a bundled FFmpeg, with shared frame fixtures
+
+**Status:** Accepted (2026-11-22, while writing SPEC Part 4)
+
+**Decision:** `song2vid.exe` is a Rust program that implements the contract and runs a bundled LGPL FFmpeg and FFprobe as child processes in a kill-on-close job object. The frame math is ported from `OutputFrame`, and parity is proven by `fixtures/frame-math.json`, written by the Swift tests and read by both suites.
+
+**Rationale:** The skill's tool contract wants a real executable with a static runtime and children it owns. Rust builds that with `crt-static`, handles UTF-16 arguments, and is covered by the owner's `style` guide. Song2VidCore depends on AVFoundation and cannot run on Windows. Swift on Windows would bring a runtime and a toolchain for a few hundred lines of math. A fixture file turns "no copied logic" into "copied logic proven identical".
+
+**Consequences:** Two implementations of the frame rules, held together by the fixture check. FFmpeg's command line becomes the encoding seam on Windows. Rejected: Swift on Windows; C++; FFmpeg's libraries linked into the tool, which brings more licence and build work for no gain over child processes.
+
