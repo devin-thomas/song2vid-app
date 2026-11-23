@@ -306,7 +306,7 @@ Human error messages are one line on stderr and use the Part 1 wording where it 
 
 Goal: an agent that has only `https://song2vid.pages.dev` can find the public pages, answer from them with a link, and say so when the site does not publish something. This is the Starter Pack Level 1 readiness milestone (`agent-ready-website`). It changes only `site/`. There is no new app release.
 
-**Public pages.** `/` (the home page), `/docs/` (the docs page) and `/agent.md` (the Agent Guide). Each page has one address. `/docs` redirects permanently to `/docs/`, and every link uses `/docs/`.
+**Public pages.** `/` (the home page), `/docs/` (the docs page) and `/agent.md` (the Agent Guide). Each page has one address. `/docs` redirects permanently to `/docs/`, and every link uses `/docs/`. Any other address returns a real 404 from `site/404.html`, which names the pages that exist. Without that file Cloudflare Pages serves the home page with status 200 for every unknown address, which would let an agent believe a page it asked about exists.
 
 **Three facts a visitor may ask an agent, and where each lives in the HTML the server sends (no script needed):**
 1. What Song2Vid is, and that it is free: `/`.
@@ -337,7 +337,7 @@ Goal: an agent that has only `https://song2vid.pages.dev` can find the public pa
 - The allowlist holds.
 - Each check is shown to fail on a deliberately broken copy (`SITE_DIR`).
 
-**Outside checks (after the deploy), with `curl` against `song2vid.pages.dev`:** `/` and `/docs/` return 200, `text/html`, with their own canonical link; `/docs` redirects permanently (308) to `/docs/`; `/llms.txt`, `/sitemap.xml`, `/robots.txt`, `/index.md`, `/docs.md`, `/agent.md` return 200 with the types above; the three facts are in the served HTML; a made-up address (for example `/roadmap`) is not a 200 page of unpublished content; no response contains a local path, email or the sample files' names.
+**Outside checks (after the deploy), with `curl` against `song2vid.pages.dev`:** `/` and `/docs/` return 200, `text/html`, with their own canonical link; `/docs` redirects permanently (308) to `/docs/`; `/llms.txt`, `/sitemap.xml`, `/robots.txt`, `/index.md`, `/docs.md`, `/agent.md` return 200 with the types above; the three facts are in the served HTML; a made-up address (for example `/roadmap`) returns 404; no response contains a local path, email or the sample files' names.
 
 **Proof with a separate agent.** A new Claude Code session that has not seen this repo gets only the site's address and two questions. (1) "Using only https://song2vid.pages.dev, what version of Song2Vid is current and what macOS does it need? Give the address of the page you used." It must answer 1.1.0 and macOS 14 or later, and cite `/`. (2) "What changes are planned for the next version of Song2Vid?" It must say the site does not publish that, without guessing. The coordinator opens the cited page and confirms the fact is there. On a pass, the `agent-ready-website` step gets its `verification` object in the private progress file.
 
