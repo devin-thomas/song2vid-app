@@ -38,6 +38,15 @@ struct CommandMakeTests {
         (try workspace.tone(seconds: seconds), try workspace.picture(width: 1000, height: 800))
     }
 
+    private func expectValidationError(
+        _ result: CommandProcess.Result, _ message: String, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
+        let lines = result.stderr.split(separator: "\n", omittingEmptySubsequences: false)
+        #expect(result.stdout.isEmpty, sourceLocation: sourceLocation)
+        #expect(lines.suffix(2) == [Substring(message), ""], sourceLocation: sourceLocation)
+        #expect(lines.dropLast(2).allSatisfy { $0.hasPrefix("Checking files (") }, sourceLocation: sourceLocation)
+    }
+
     // MARK: Making each shape
 
     @Test("make writes an MP4 of the right size and length with a video track and an audio track, for each Frame Shape", arguments: shapes)
@@ -240,12 +249,11 @@ struct CommandMakeTests {
 
         let text = try CommandProcess.run(arguments, currentDirectory: workspace.folder)
         #expect(text.status == failure.status)
-        #expect(text.stdout.isEmpty)
-        #expect(text.stderr == failure.message + "\n")
+        expectValidationError(text, failure.message)
         let json = try CommandProcess.run(arguments + ["--json"], currentDirectory: workspace.folder)
         #expect(json.status == failure.status)
         #expect(json.stderr.isEmpty)
-        let error = try #require(try JSONOutputLine(json.stdout).child("error"))
+        let error = try #require(try JSONOutputLine.final(json.stdout).child("error"))
         #expect(error["code"] as? String == failure.code)
         #expect(error["message"] as? String == failure.message)
         #expect(try workspace.listing() == before)
@@ -274,10 +282,11 @@ struct CommandMakeTests {
         let before = try workspace.listing()
         let result = try CommandProcess.run(["make", audio, image, "--out=\(workspace.path(name))"])
         #expect(result.status == 4)
-        #expect(result.stdout.isEmpty)
-        #expect(result.stderr == "The output file name must end in .mp4.\n")
+        expectValidationError(result, "The output file name must end in .mp4.")
         let json = try CommandProcess.run(["make", audio, image, "--out=\(workspace.path(name))", "-j"])
-        #expect(try JSONOutputLine(json.stdout).child("error")?["code"] as? String == "output_not_mp4")
+        #expect(json.status == 4)
+        #expect(json.stderr.isEmpty)
+        #expect(try JSONOutputLine.final(json.stdout).child("error")?["code"] as? String == "output_not_mp4")
         #expect(try workspace.listing() == before)
     }
 
@@ -288,7 +297,7 @@ struct CommandMakeTests {
         let (audio, image) = try inputs(workspace)
         let missing = try CommandProcess.run(["make", audio, image, "-o", workspace.path("no-such-folder/out.mp4"), "--json"])
         #expect(missing.status == 4)
-        let missingError = try #require(try JSONOutputLine(missing.stdout).child("error"))
+        let missingError = try #require(try JSONOutputLine.final(missing.stdout).child("error"))
         #expect(missingError["code"] as? String == "output_not_writable")
         #expect(missingError["message"] as? String == "The output folder was not found.")
 
@@ -298,7 +307,7 @@ struct CommandMakeTests {
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
         let readOnly = try CommandProcess.run(["make", audio, image, "-o", locked.appendingPathComponent("out.mp4").path])
         #expect(readOnly.status == 4)
-        #expect(readOnly.stderr == "Song2Vid can't write to the output folder.\n")
+        expectValidationError(readOnly, "Song2Vid can't write to the output folder.")
         #expect(try FileManager.default.contentsOfDirectory(atPath: locked.path).isEmpty)
     }
 
@@ -313,12 +322,11 @@ struct CommandMakeTests {
 
         let text = try CommandProcess.run(["make", audio, image, "-o", existing.path])
         #expect(text.status == 4)
-        #expect(text.stdout.isEmpty)
-        #expect(text.stderr == "The output file already exists. Use --overwrite to replace it.\n")
+        expectValidationError(text, "The output file already exists. Use --overwrite to replace it.")
         let json = try CommandProcess.run(["make", audio, image, "-o", existing.path, "--json"])
         #expect(json.status == 4)
         #expect(json.stderr.isEmpty)
-        let error = try #require(try JSONOutputLine(json.stdout).child("error"))
+        let error = try #require(try JSONOutputLine.final(json.stdout).child("error"))
         #expect(error["code"] as? String == "output_exists")
         #expect(error["message"] as? String == "The output file already exists. Use --overwrite to replace it.")
         #expect(try Data(contentsOf: existing) == Data("my earlier video".utf8))
@@ -354,7 +362,7 @@ struct CommandMakeTests {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
         let refused = try CommandProcess.run(["make", audio, image, "-o", folder.path, "-w"])
         #expect(refused.status == 4)
-        #expect(refused.stderr == "The output can't be a folder.\n")
+        expectValidationError(refused, "The output can't be a folder.")
         var isDirectory: ObjCBool = false
         #expect(FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory) && isDirectory.boolValue)
 
@@ -364,7 +372,7 @@ struct CommandMakeTests {
         let original = try Data(contentsOf: workspace.url("track.mp4"))
         let same = try CommandProcess.run(["make", workspace.path("track.mp4"), image, "-w"], currentDirectory: workspace.folder)
         #expect(same.status == 4)
-        #expect(same.stderr == "The output can't be one of the input files.\n")
+        expectValidationError(same, "The output can't be one of the input files.")
         #expect(try Data(contentsOf: workspace.url("track.mp4")) == original)
     }
 }
