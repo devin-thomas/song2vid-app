@@ -1,6 +1,6 @@
 # S2V-019 - Each page states the facts and its own address
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 ## Goal
@@ -28,3 +28,5 @@ Each public page gives one address, its facts in plain HTML, a visible updated d
 None.
 
 ## Comments
+
+- 2026-11-22 (coordinator): Done. Both pages have one canonical link, a Markdown alternate link, and a visible "Updated 22 November 2026" in a `<time>` element. The home page now says "Free · Version 1.1.0 · Requires macOS 14 or later" (equal to `song2vid --version`); its footer links the Agent Guide, the Markdown copy and `/docs/`. No link to `/docs` without the slash remains (README updated too). The picker, Copy button, status line and manual-copy dialog carry `data-md="skip"`. Checked through `wrangler pages dev` with `curl` (canonical, alternate, time, the three facts present in the served HTML) and in the browser pane at 320 × 667, 390 × 844 and desktop in dark mode: no horizontal scroll, the layout unchanged. Light mode and the handoff script were not changed and not re-run in a browser.
