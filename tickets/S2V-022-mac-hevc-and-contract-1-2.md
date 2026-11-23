@@ -1,6 +1,6 @@
 # S2V-022 - Mac: HEVC and the 1.2 command contract
 
-Status: open
+Status: resolved
 Blocked by: none
 
 ## Goal
@@ -27,3 +27,9 @@ The Mac command and core make HEVC and implement every addition in SPEC §24, so
 None.
 
 ## Comments
+- 2026-11-22 (builder): Built the Mac 1.2.0 command contract, shared HEVC export, Apple encoder probe, oriented PNG preview, opt-in stdin cancellation, and 315 Swift-generated frame math cases. Updated the staged help, docs and Agent Guide for the new commands and additive JSON fields. Section 14.5 now follows section 24.5. A non-PNG destination for `preview` is a usage error.
+  - `scripts/check.sh` passed (0). The Swift package tests, both Xcode test targets, ad-hoc signing and entitlements, both universal slices, the bundled command, and the site checks passed. The process tests exercised rotated JPEG and HEIC, black transparency, overwrite refusal and replacement, 1.1 JSON readers, and the test seam returning exit 3 and `codec_unavailable` without writing.
+  - `ffprobe -v error -show_streams -show_format -of json <output>` and `ffprobe -v error -select_streams v:0 -show_packets -show_entries packet=pts_time,flags -of json <output>` passed (0) on five generated HEVC outputs. Sizes were 854x480, 480x854, 480x480, 640x480 and 640x480 for 16:9, 9:16, 1:1, 4:3 and Original. Each was 13.370 seconds, `hvc1` Main, 8-bit 4:2:0, BT.709, 30 fps and AAC, with keyframes at 0 and 10 seconds. `ffmpeg -v error -xerror -i <output> -f null -` decoded all five (0).
+  - `song2vid encoders -j` reported `apple` for H.264 and HEVC (0). For `song2vid make <song> <image> -r 480p -o <output> -j -E`, stdin EOF after one second gave exit 130 in 0.004 seconds. A split `cancel` line at one second gave exit 130 in 0.037 seconds. Both left the output directory unchanged. The same command without `-E` made a complete MP4 with stdin at EOF (0).
+  - `SONG2VID_UPDATE_FRAME_FIXTURES=1 swift test --package-path Song2VidCore --filter FrameMathFixtureTests` regenerated 315 cases (0). `swift test --package-path Song2VidCore --filter FrameMathFixtureTests` failed with exit 1 for a deliberately stale fixture and passed with the generated file restored. `scripts/test-check-site.sh <built song2vid>` passed (0). Headless WebKit rendered the download and docs pages at 1280, 390 and 320 pixels.
+  - A gate attempt under heavy host load recorded a 0.716-second read gap in the JSON progress test. A direct replay measured a maximum 0.374-second read gap, with an approximately 0.25-second producer interval. The complete gate passed on retry with its timing assertions intact. Runtime checks used Apple silicon. The universal gate built and signature-checked the Intel slice.

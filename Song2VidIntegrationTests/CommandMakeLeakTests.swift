@@ -82,7 +82,7 @@ struct CommandMakeLeakTests {
         defer { workspace.remove() }
         // The keys make adds to check's (S2V-015 copies the list to the docs page). Written out here, not read from the code.
         let makeKeys: Set<String> = ["api_version", "type", "command", "output", "name", "width", "height", "duration_seconds", "bytes",
-                                     "placement", "enlarged", "dry_run", "error", "code", "message"]
+                                     "placement", "enlarged", "dry_run", "error", "code", "message", "codec", "encoder", "encoder_fallback"]
         func keys(in value: Any) -> Set<String> {
             switch value {
             case let object as [String: Any]: Set(object.keys).union(object.values.flatMap { keys(in: $0) })
@@ -114,7 +114,7 @@ struct CommandMakeLeakTests {
         for part in [
             "Usage:", "song2vid make <audio> <image>", "Examples:", "Exit statuses:",
             "-o", "--out", "-s", "--shape", "-r", "--resolution", "-c", "--crop", "-w", "--overwrite", "-n", "--dry-run",
-            "-j", "--json", "-q", "--quiet", "-h", "--help", "16:9", "9:16", "1:1", "4:3", "original", "480p", "1080p", "2160p",
+            "-C", "--codec", "-E", "--cancel-on-eof", "-j", "--json", "-q", "--quiet", "-h", "--help", "16:9", "9:16", "1:1", "4:3", "original", "480p", "1080p", "2160p",
             "audio_not_found", "image_not_found", "usage", "audio_unreadable", "image_unreadable", "image_too_small",
             "output_exists", "output_not_writable", "output_not_mp4", "disk_full", "export_failed", "cancelled",
         ] {

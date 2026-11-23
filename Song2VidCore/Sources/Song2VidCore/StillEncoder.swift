@@ -2,7 +2,7 @@ import CoreMedia
 import Foundation
 import VideoToolbox
 
-/// One group of pictures of the still frame, already H.264 encoded: a key frame followed by frames that
+/// One group of pictures of the still frame, already encoded: a key frame followed by frames that
 /// repeat it.
 ///
 /// Every video frame in the song is the same picture, so the video is encoded once, for one group, and
@@ -19,35 +19,11 @@ struct EncodedStill: @unchecked Sendable {
 
     /// Encodes `min(frameCount, groupLength)` frames of the picture.
     /// - Parameter isCancelled: Checked between frames.
-    init(still: StillFrame, size: PixelSize, frameCount: Int, isCancelled: () -> Bool) throws(ExportError) {
+    init(still: StillFrame, size: PixelSize, frameCount: Int, codec: Codec, isCancelled: () -> Bool) throws(ExportError) {
         let count = min(frameCount, Self.groupLength)
         let collector = Collector()
-
-        var created: VTCompressionSession?
-        let specification: [CFString: Any] = [kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder: true]
-        guard VTCompressionSessionCreate(
-            allocator: kCFAllocatorDefault, width: Int32(size.width), height: Int32(size.height),
-            codecType: kCMVideoCodecType_H264, encoderSpecification: specification as CFDictionary,
-            imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback: nil, refcon: nil,
-            compressionSessionOut: &created
-        ) == noErr, let session = created else { throw .encodingFailed }
+        guard let session = Self.openSession(codec: codec, size: size) else { throw .encodingFailed }
         defer { VTCompressionSessionInvalidate(session) }
-
-        let properties: [CFString: Any] = [
-            kVTCompressionPropertyKey_RealTime: false,
-            kVTCompressionPropertyKey_ProfileLevel: kVTProfileLevel_H264_High_AutoLevel,
-            kVTCompressionPropertyKey_AllowFrameReordering: false,
-            kVTCompressionPropertyKey_ExpectedFrameRate: VideoExporter.framesPerSecond,
-            kVTCompressionPropertyKey_MaxKeyFrameInterval: Self.groupLength,
-            // The picture is still, so the quality setting is spent on making that one picture sharp.
-            kVTCompressionPropertyKey_Quality: 0.75,
-            kVTCompressionPropertyKey_ColorPrimaries: kCVImageBufferColorPrimaries_ITU_R_709_2,
-            kVTCompressionPropertyKey_TransferFunction: kCVImageBufferTransferFunction_ITU_R_709_2,
-            kVTCompressionPropertyKey_YCbCrMatrix: kCVImageBufferYCbCrMatrix_ITU_R_709_2,
-        ]
-        guard VTSessionSetProperties(session, propertyDictionary: properties as CFDictionary) == noErr,
-              VTCompressionSessionPrepareToEncodeFrames(session) == noErr
-        else { throw .encodingFailed }
 
         let frameDuration = CMTime(value: 1, timescale: CMTimeScale(VideoExporter.framesPerSecond))
         for index in 0..<count {
@@ -74,6 +50,43 @@ struct EncodedStill: @unchecked Sendable {
         else { throw .encodingFailed }
         samples = collected
         formatDescription = format
+    }
+
+    static func canEncode(_ codec: Codec) -> Bool {
+        guard let session = openSession(codec: codec, size: PixelSize(width: 480, height: 480)) else { return false }
+        VTCompressionSessionInvalidate(session)
+        return true
+    }
+
+    private static func openSession(codec: Codec, size: PixelSize) -> VTCompressionSession? {
+        var created: VTCompressionSession?
+        let specification: [CFString: Any] = [kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder: true]
+        guard VTCompressionSessionCreate(
+            allocator: kCFAllocatorDefault, width: Int32(size.width), height: Int32(size.height),
+            codecType: codec.videoToolboxType, encoderSpecification: specification as CFDictionary,
+            imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback: nil, refcon: nil,
+            compressionSessionOut: &created
+        ) == noErr, let session = created else { return nil }
+
+        let properties: [CFString: Any] = [
+            kVTCompressionPropertyKey_RealTime: false,
+            kVTCompressionPropertyKey_ProfileLevel: codec.profile,
+            kVTCompressionPropertyKey_AllowFrameReordering: false,
+            kVTCompressionPropertyKey_ExpectedFrameRate: VideoExporter.framesPerSecond,
+            kVTCompressionPropertyKey_MaxKeyFrameInterval: Self.groupLength,
+            // The picture is still, so the quality setting is spent on making that one picture sharp.
+            kVTCompressionPropertyKey_Quality: 0.75,
+            kVTCompressionPropertyKey_ColorPrimaries: kCVImageBufferColorPrimaries_ITU_R_709_2,
+            kVTCompressionPropertyKey_TransferFunction: kCVImageBufferTransferFunction_ITU_R_709_2,
+            kVTCompressionPropertyKey_YCbCrMatrix: kCVImageBufferYCbCrMatrix_ITU_R_709_2,
+        ]
+        guard VTSessionSetProperties(session, propertyDictionary: properties as CFDictionary) == noErr,
+              VTCompressionSessionPrepareToEncodeFrames(session) == noErr
+        else {
+            VTCompressionSessionInvalidate(session)
+            return nil
+        }
+        return session
     }
 
     /// The frame at position `index` of the whole video: the matching frame of the group, restamped.

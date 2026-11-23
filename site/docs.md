@@ -24,14 +24,18 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
 ```
 song2vid check <audio> <image> [-j]
-song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-w] [-n] [-j] [-q]
+song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
+song2vid encoders [-j]
+song2vid preview <image> -o <file.png> [-w] [-j] [-E]
 song2vid -h | -v | -S | -R | -u
 ```
 
 - `check` reads a song and an image and reports what Song2Vid would make from them. It writes nothing.
 - `make` makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.
+- `encoders` reports which Codecs are available on this computer.
+- `preview` writes an oriented PNG within 2048 by 2048 pixels. Smaller images keep their size. Transparency becomes black.
 - `--help` prints help. After a command it prints that command's help.
-- `--version` prints the version, for example `song2vid 1.1.0`.
+- `--version` prints the version, for example `song2vid 1.2.0`.
 - `--skill` prints the [agent instructions](https://song2vid.pages.dev/agent.md).
 - `--repo` prints the project address.
 - `--update` says whether a newer Song2Vid is out. It downloads and changes nothing; installing it is your step.
@@ -41,17 +45,19 @@ song2vid -h | -v | -S | -R | -u
 | Long | Short | Applies to | Meaning |
 | --- | --- | --- | --- |
 | `--help` | `-h` | all | Help for the command it follows. |
-| `--version` | `-v` | alone | Prints `song2vid 1.1.0`. |
+| `--version` | `-v` | alone | Prints `song2vid 1.2.0`. |
 | `--skill` | `-S` | alone | Prints the agent skill that ships in the app. |
 | `--repo` | `-R` | alone | Prints the project address. |
 | `--update` | `-u` | alone | Says whether a newer release exists. Works with `--json`. |
 | `--shape` | `-s` | make | `16:9` (default), `9:16`, `1:1`, `4:3` or `original`. |
 | `--resolution` | `-r` | make | `480p`, `1080p` (default) or `2160p`. Not with `original`. |
 | `--crop` | `-c` | make | Which part a `1:1` or `4:3` frame keeps, as two fractions `h,v` from 0 to 1. Default `0.5,0.5`, the middle. Values outside 0 to 1 are an error. |
-| `--out` | `-o` | make | Where to save. Default: the song's name with `.mp4`, in the current folder. The name must end in `.mp4`. |
-| `--overwrite` | `-w` | make | Replace the output if it exists. Without it, an existing file is an error. |
+| `--codec` | `-C` | make | `h264` (default) or `hevc`. Check availability with `encoders`. |
+| `--out` | `-o` | make, preview | An MP4 for `make`, which defaults to the song's name in the current folder. `preview` requires a PNG path. |
+| `--overwrite` | `-w` | make, preview | Replace the output if it exists. Without it, an existing file is an error. |
+| `--cancel-on-eof` | `-E` | make, preview | For programs running the command. Cancel when standard input closes or sends a line containing only `cancel`. Standard input is read only with this option. |
 | `--dry-run` | `-n` | make | Checks everything and reports what would be made. Writes nothing. |
-| `--json` | `-j` | check, make, `--update` | One JSON object per line instead of text. |
+| `--json` | `-j` | check, make, encoders, preview, `--update` | One JSON object per line instead of text. |
 | `--quiet` | `-q` | make | No progress output. The result and any error still print. |
 
 Write each short option on its own: `-w -n`, not `-wn`. An option the command does not know is a usage error, and the message does not repeat what you typed. When you are one typo from a real option, it says which.
@@ -84,8 +90,12 @@ song2vid make song.mp3 cover.png -s 1:1 -r 480p -c 0.5,0.2 -o preview.mp4
 # Plan it without writing anything, as JSON
 song2vid make song.mp3 cover.png --dry-run --json
 
-# Replace an earlier video
-song2vid make song.mp3 cover.png -o video.mp4 --overwrite
+# Check HEVC availability, then make an HEVC video
+song2vid encoders --json
+song2vid make song.mp3 cover.png --codec hevc -o video.mp4
+
+# Save a PNG preview from a photo
+song2vid preview photo.heic -o cover.png
 ```
 
 ## Progress
@@ -101,21 +111,26 @@ Results go to standard output. Progress, messages and errors go to standard erro
 
 ## JSON output
 
-Every line has `"api_version":"1"` and a `"type"` of `progress`, `result` or `error`. The last line of a run is exactly one `result` or `error`. Keys change only with a new `api_version`.
+Every line has `"api_version":"1"` and a `"type"` of `progress`, `result` or `error`. The last line of a run is exactly one `result` or `error`. New keys, line types and commands may be added within an `api_version`. Existing keys keep their names and meanings. Consumers ignore unknown keys.
 
 ```
-{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8}
-{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false}
+{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8,"encoder":"apple"}
+{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false,"codec":"h264","encoder":"apple","encoder_fallback":false}
 {"api_version":"1","type":"error","error":{"code":"output_exists","message":"The output file already exists. Use --overwrite to replace it."}}
 ```
 
-| Line | Keys |
-| --- | --- |
-| `progress` | `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (0 to 100, or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`) |
-| `make` result | `command`, `output` (`name`, `width`, `height`, `duration_seconds`, `bytes`), `placement` (`fit` or `crop`), `enlarged`, `dry_run`. `bytes` is `null` for a dry run. |
-| `check` result | `command`, `audio` (`name`, `duration_seconds`, `sample_rate`, `channels`), `image` (`name`, `width`, `height`), `frames`: one for every shape and resolution with `shape`, `resolution`, `width`, `height`, `placement`, `enlarged`, `too_small` |
-| `--update` result | `command`, `current`, `latest`, `update_available`, `download_page` |
-| `error` | `error` (`code`, `message`) |
+| Line | Keys | Added in |
+| --- | --- | --- |
+| All lines | `api_version`, `type` | 1.1.0 |
+| `progress` | `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (0 to 100, or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`) | 1.1.0 |
+| `make` result | `command`, `output` (`name`, `width`, `height`, `duration_seconds`, `bytes`), `placement` (`fit` or `crop`), `enlarged`, `dry_run`. `bytes` is `null` for a dry run. | 1.1.0 |
+| `check` result | `command`, `audio` (`name`, `duration_seconds`, `sample_rate`, `channels`), `image` (`name`, `width`, `height`), `frames`: one for every shape and resolution with `shape`, `resolution`, `width`, `height`, `placement`, `enlarged`, `too_small` | 1.1.0 |
+| `--update` result | `command`, `current`, `latest`, `update_available`, `download_page` | 1.1.0 |
+| `error` | `error` (`code`, `message`) | 1.1.0 |
+| `progress` | `encoder` from the `encoding` stage onward | 1.2.0 |
+| `make` result | `codec` (`h264` or `hevc`), `encoder` (`apple` on Mac), `encoder_fallback` (always `false` on Mac) | 1.2.0 |
+| `encoders` result | `codecs` contains `h264` and `hevc`, each with `available` and `encoder` (`null` if unavailable) | 1.2.0 |
+| `preview` result | `output` (`name`, `width`, `height`) and `source` (oriented `width` and `height` before scaling) | 1.2.0 |
 
 No output, in any mode, contains a folder path, an environment variable or the contents of your files. File names are given without their folder.
 
@@ -126,10 +141,10 @@ No output, in any mode, contains a folder path, an environment variable or the c
 | 0 | Success, including `--dry-run` and `check`. |  |
 | 1 | An input file does not exist. | `audio_not_found`, `image_not_found` |
 | 2 | Usage error. | `usage` |
-| 3 | An input can't be read or isn't usable. | `audio_unreadable`, `image_unreadable`, `image_too_small` |
-| 4 | The output can't be written. | `output_exists`, `output_not_writable`, `output_not_mp4`, `disk_full` |
-| 5 | Making the video failed after it started, or `--update` could not reach GitHub. | `export_failed`, `network` |
-| 130 | Cancelled with Ctrl-C or a stop signal. The unfinished file is deleted. | `cancelled` |
+| 3 | An input can't be used or the chosen Codec is unavailable. | `audio_unreadable`, `image_unreadable`, `image_too_small`, `codec_unavailable` |
+| 4 | The output can't be written. | `output_exists`, `output_not_writable`, `output_not_mp4`, `disk_full`, `output_in_use` (Windows only) |
+| 5 | Making the video or preview failed, or `--update` could not reach GitHub. | `export_failed`, `network` |
+| 130 | Cancelled by a signal or by standard input with `--cancel-on-eof`. The unfinished file is deleted. | `cancelled` |
 
 Everything is checked before anything is made. The video is built in a hidden temporary file beside the output and moved into place when it is complete, so a half-made video never has the final name.
 

@@ -6,6 +6,7 @@ public struct ExportRequest: Sendable {
     public var imageURL: URL
     /// The frame size and image placement from `OutputFrame`.
     public var frame: OutputFrame
+    public var codec: Codec
     /// Where the MP4 goes. An existing file there is replaced, but only once the new video is complete.
     public var destinationURL: URL
     /// The folder to build the video in before moving it to the destination. Nil means beside the destination
@@ -13,10 +14,14 @@ public struct ExportRequest: Sendable {
     /// file the person chose, not its folder).
     public var scratchFolder: URL?
 
-    public init(audioURL: URL, imageURL: URL, frame: OutputFrame, destinationURL: URL, scratchFolder: URL? = nil) {
+    public init(
+        audioURL: URL, imageURL: URL, frame: OutputFrame, destinationURL: URL,
+        scratchFolder: URL? = nil, codec: Codec = .h264
+    ) {
         self.audioURL = audioURL
         self.imageURL = imageURL
         self.frame = frame
+        self.codec = codec
         self.destinationURL = destinationURL
         self.scratchFolder = scratchFolder
     }

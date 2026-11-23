@@ -12,10 +12,10 @@ struct CommandGlobalOptionsTests {
         #expect(FileManager.default.isExecutableFile(atPath: CommandProcess.executableURL.path))
     }
 
-    @Test("Version prints the name and 1.1.0, then exits 0", arguments: ["--version", "-v"])
+    @Test("Version prints the name and 1.2.0, then exits 0", arguments: ["--version", "-v"])
     func version(option: String) throws {
         let result = try CommandProcess.run([option])
-        #expect(result.stdout == "song2vid 1.1.0\n")
+        #expect(result.stdout == "song2vid 1.2.0\n")
         #expect(result.stderr.isEmpty)
         #expect(result.status == 0)
     }

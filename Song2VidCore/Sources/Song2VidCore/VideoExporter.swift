@@ -37,7 +37,7 @@ public enum VideoExporter {
             let decoded = try decodeImage(at: request.imageURL)
             let still = try StillFrame(image: decoded.image, frame: request.frame)
             encoded = try EncodedStill(
-                still: still, size: request.frame.size, frameCount: frameCount, isCancelled: { Task.isCancelled }
+                still: still, size: request.frame.size, frameCount: frameCount, codec: request.codec, isCancelled: { Task.isCancelled }
             )
         } catch {
             return Task.isCancelled ? .cancelled : .failed(error)
@@ -142,7 +142,7 @@ private final class ExportSession: @unchecked Sendable {
         audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: target.outputSettings)
         audioInput.expectsMediaDataInRealTime = false
 
-        // The frames are already H.264, so the writer only packages them.
+        // The writer packages the compressed frames unchanged, using VideoToolbox's hvc1 description for HEVC.
         videoInput = AVAssetWriterInput(
             mediaType: .video, outputSettings: nil, sourceFormatHint: encoded.formatDescription
         )
@@ -154,18 +154,31 @@ private final class ExportSession: @unchecked Sendable {
     func start(_ continuation: CheckedContinuation<ExportOutcome, Never>) {
         lock.lock()
         self.continuation = continuation
-        let ready = outcome != nil
-        lock.unlock()
-        if ready { deliver(); return }
+        guard !isFinished else {
+            lock.unlock()
+            deliver()
+            return
+        }
 
-        guard writer.canAdd(audioInput), writer.canAdd(videoInput) else { finish(.failed(.encodingFailed)); return }
+        // Cancellation must not tear the writer down while its inputs are being installed.
+        guard writer.canAdd(audioInput), writer.canAdd(videoInput) else {
+            lock.unlock()
+            finish(.failed(.encodingFailed))
+            return
+        }
         writer.add(videoInput)
         writer.add(audioInput)
-        guard writer.startWriting() else { finish(.failed(classify(writer.error, default: .cannotSaveToFolder))); return }
+        guard writer.startWriting() else {
+            let failure = classify(writer.error, default: .cannotSaveToFolder)
+            lock.unlock()
+            finish(.failed(failure))
+            return
+        }
         writer.startSession(atSourceTime: .zero)
 
         audioInput.requestMediaDataWhenReady(on: audioQueue) { [self] in pumpAudio() }
         videoInput.requestMediaDataWhenReady(on: videoQueue) { [self] in pumpVideo() }
+        lock.unlock()
     }
 
     private let audioQueue = DispatchQueue(label: "song2vid.export.audio")
@@ -218,13 +231,7 @@ private final class ExportSession: @unchecked Sendable {
         }
     }
 
-    func cancel() {
-        lock.lock()
-        let committing = isCommitting
-        lock.unlock()
-        // Once the file is complete and being moved into place there is nothing left to cancel.
-        if !committing { finish(.cancelled) }
-    }
+    func cancel() { finish(.cancelled) }
 
     private var isEnded: Bool {
         lock.lock()
@@ -321,13 +328,13 @@ private final class ExportSession: @unchecked Sendable {
     /// Ends the export once. Anything but a completed file is torn down and the partial file removed.
     private func finish(_ result: ExportOutcome) {
         lock.lock()
-        guard !isFinished else { lock.unlock(); return }
+        // Once both inputs have closed, let the writer finish its commit.
+        guard !isFinished, !(result == .cancelled && isCommitting) else { lock.unlock(); return }
         isFinished = true
-        outcome = result
         lock.unlock()
 
         if case .completed = result {
-            deliver()
+            deliver(result)
             return
         }
         // The writer crashes if it is cancelled while a queue is appending to it. The flag set above stops
@@ -339,7 +346,7 @@ private final class ExportSession: @unchecked Sendable {
                 if writer.status == .writing || writer.status == .unknown { writer.cancelWriting() }
                 removePartialFiles()
             }
-            deliver()
+            deliver(result)
         }
     }
 
@@ -354,13 +361,14 @@ private final class ExportSession: @unchecked Sendable {
         }
     }
 
-    private func deliver() {
+    /// Only delivers a result once any partial files have been removed.
+    private func deliver(_ result: ExportOutcome? = nil) {
         lock.lock()
-        let pending = continuation
+        if let result { outcome = result }
+        guard let pending = continuation, let outcome else { lock.unlock(); return }
         continuation = nil
-        let result = outcome
         lock.unlock()
-        if let pending, let result { pending.resume(returning: result) }
+        pending.resume(returning: outcome)
     }
 
     /// Turns a system error into the message the person sees.

@@ -5,6 +5,7 @@ struct MakeReport: Sendable {
     let inputs: CommandInputs
     let frame: OutputFrame
     let shape: FrameShape
+    let codec: Codec
     /// The file name only, never the folder.
     let outputName: String
     /// The size of the finished file. Nil for a dry run, which writes nothing.
@@ -28,12 +29,16 @@ struct MakeReport: Sendable {
             (.placement, .string(placement.rawValue)),
             (.enlarged, .bool(frame.isEnlarged)),
             (.dryRun, .bool(dryRun)),
+            (.codec, .string(codec.rawValue)),
+            (.encoder, .string(AppleEncoder.name)),
+            (.encoderFallback, .bool(false)),
         ])
     }
 
     var text: String {
+        let description = "\(outputName) (\(codec.title), \(AppleEncoder.title))"
         var lines = [
-            dryRun ? "Would make \(outputName). Nothing was written." : "Made \(outputName).",
+            dryRun ? "Would make \(description). Nothing was written." : "Made \(description).",
             "  Size:       \(frame.size.width)×\(frame.size.height) pixels",
             "  Length:     \(CheckReport.clock(duration)) (\(CheckReport.seconds(duration)) seconds)",
             "  Placement:  \(placement.title(for: shape))" + (frame.isEnlarged ? ", image enlarged" : ""),

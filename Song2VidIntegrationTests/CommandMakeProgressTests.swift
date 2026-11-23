@@ -78,7 +78,7 @@ struct CommandMakeProgressTests {
 
         let (output, events, stderr) = try run(["make", audio, image, "-o", workspace.path("out.mp4"), "-r", "480p", "-q"])
         #expect(output.status == 0)
-        #expect(output.stdout.contains("Made out.mp4."))
+        #expect(output.stdout.hasPrefix("Made out.mp4 (H.264, Apple encoder)."))
         #expect(events.isEmpty)
         #expect(stderr.isEmpty)
     }

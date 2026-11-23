@@ -40,6 +40,7 @@ struct ProgressSnapshot: Equatable {
     var remaining: Double?
     /// Which frame of the spinner to draw.
     var tick: Int
+    var encoder: String? = nil
 
     static let stageNames: [CommandProgress.Stage: String] = [
         .checking: "Checking files", .preparing: "Preparing", .encoding: "Encoding", .finishing: "Finishing",
@@ -106,12 +107,14 @@ struct ProgressSnapshot: Equatable {
     // MARK: Headless, JSON
 
     var jsonValue: JSONValue {
-        .line(type: "progress", [
+        var fields: [(JSONKey, JSONValue)] = [
             (.stage, .string(stage.rawValue)),
             (.percent, fraction.map { .seconds(($0 * 1000).rounded(.down) / 10) } ?? .null),
             (.elapsedSeconds, .seconds(elapsed)),
             (.remainingSeconds, remaining.map { .seconds($0) } ?? .null),
-        ])
+        ]
+        if let encoder { fields.append((.encoder, .string(encoder))) }
+        return .line(type: "progress", fields)
     }
 }
 
@@ -145,6 +148,7 @@ final class ProgressDisplay: ProgressSink, @unchecked Sendable {
 
     private var stage: CommandProgress.Stage = .checking
     private var fraction: Double?
+    private var encoder: String?
     private var encodingStartedAt: Double?
     private var ticks = 0
     private var visible = false
@@ -203,6 +207,7 @@ final class ProgressDisplay: ProgressSink, @unchecked Sendable {
         if !started { start(channel) }
         let changed = event.stage != stage
         stage = event.stage
+        encoder = event.encoder
         if let value = event.fraction {
             fraction = max(fraction ?? 0, value)
             if encodingStartedAt == nil { encodingStartedAt = clock() }
@@ -254,7 +259,7 @@ final class ProgressDisplay: ProgressSink, @unchecked Sendable {
             let encoding = now - began
             if fraction >= 1 { remaining = 0 } else if encoding >= 1 { remaining = encoding * (1 - fraction) / fraction }
         }
-        let snapshot = ProgressSnapshot(stage: stage, fraction: fraction, elapsed: now - startedAt, remaining: remaining, tick: ticks)
+        let snapshot = ProgressSnapshot(stage: stage, fraction: fraction, elapsed: now - startedAt, remaining: remaining, tick: ticks, encoder: encoder)
         switch style {
         case .json:
             channel.writeOutput(snapshot.jsonValue.line)

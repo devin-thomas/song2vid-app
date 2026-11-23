@@ -233,7 +233,7 @@ Reads both files and reports, without writing anything:
 - `stage` is `checking`, `preparing`, `encoding` or `finishing`. `percent` and `remaining_seconds` are `null` until known.
 - A progress line is written at each stage change and at least every 0.5 seconds. The last line is always exactly one `result` or `error` line.
 - `check --json` and `--update --json` write a single `result` or `error` line.
-- Every key is from a fixed allowlist, documented on the docs page. Keys change only with a new `api_version`.
+- Every key is documented on the docs page. Keys, line types and commands may be added within an `api_version`. Existing keys and their meanings stay fixed. Consumers ignore keys they do not know (section 24.5).
 - **Quiet period and beat** (settled in S2V-013): `Checking files` is shown only if it lasts more than 0.15 seconds, so a run that fails at once (a missing file) shows only its error. Every later stage is shown the moment it begins. After that the latest state is written every 0.08 s in the live display, every 0.25 s with `--json`, and every 1 s in plain headless mode. A dry run and `check` show no progress.
 - Progress goes through the command's own copies of stdout and stderr, so nothing macOS prints can mix into it. `--quiet` shows none in any mode; with `--json` it still prints the final result or error line.
 - No output, in any mode, contains a folder path, an environment variable's value, or file contents. File names appear without their folder.

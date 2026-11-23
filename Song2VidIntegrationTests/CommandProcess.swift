@@ -49,17 +49,24 @@ enum CommandProcess {
         private let process = Process()
         private let out = Pipe()
         private let err = Pipe()
+        private let input: Pipe?
 
-        init(_ arguments: [String], environment: [String: String]? = nil, currentDirectory: URL? = nil) throws {
+        init(
+            _ arguments: [String], environment: [String: String]? = nil, currentDirectory: URL? = nil, keepStdinOpen: Bool = false
+        ) throws {
+            input = keepStdinOpen ? Pipe() : nil
             process.executableURL = CommandProcess.executableURL
             process.arguments = arguments
             if let environment { process.environment = environment }
             if let currentDirectory { process.currentDirectoryURL = currentDirectory }
             process.standardOutput = out
             process.standardError = err
-            process.standardInput = FileHandle.nullDevice
+            process.standardInput = input ?? FileHandle.nullDevice
             try process.run()
         }
+
+        func writeStdin(_ data: Data) throws { try input?.fileHandleForWriting.write(contentsOf: data) }
+        func closeStdin() throws { try input?.fileHandleForWriting.close() }
 
         var isRunning: Bool { process.isRunning }
 

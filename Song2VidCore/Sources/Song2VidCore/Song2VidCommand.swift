@@ -23,10 +23,13 @@ public struct CommandProgress: Equatable, Sendable {
     public let stage: Stage
     /// How much of the video is done, from 0 to 1, or nil while that is not known (`checking`, `preparing`).
     public let fraction: Double?
+    /// The encoder name on the wire, once the encoding stage starts.
+    public let encoder: String?
 
-    public init(stage: Stage, fraction: Double?) {
+    public init(stage: Stage, fraction: Double?, encoder: String? = nil) {
         self.stage = stage
         self.fraction = fraction
+        self.encoder = encoder
     }
 }
 
@@ -41,7 +44,7 @@ public typealias CommandProgressHandler = @Sendable (CommandProgress, CommandCha
 /// and `run` joins them.
 public enum Song2VidCommand {
     /// The version of the app and the command (ADR-013: one number covers both).
-    public static let version = "1.1.0"
+    public static let version = "1.2.0"
     /// Where the project lives, printed by `--repo`.
     public static let repositoryURL = "https://github.com/devin-thomas/song2vid-app"
 
@@ -88,8 +91,12 @@ public enum Song2VidCommand {
         case .make:
             switch MakeOptions.resolve(line) {
             case .failure(let problem): return .failure(CommandError(problem), json: problem.jsonRequested)
-            case .success(let options): return MakeCommand.run(options, progress: mode)
+            case .success(let options): return MakeCommand.run(options, environment: environment, progress: mode)
             }
+        case .encoders:
+            return EncodersCommand.run(line, environment: environment)
+        case .preview:
+            return PreviewCommand.run(line)
         }
     }
 
@@ -127,6 +134,8 @@ public enum Song2VidCommand {
         case .global: globalHelpText
         case .check: checkHelpText
         case .make: makeHelpText
+        case .encoders: encodersHelpText
+        case .preview: previewHelpText
         }
     }
 
@@ -135,7 +144,9 @@ public enum Song2VidCommand {
 
     Usage:
       song2vid check <audio> <image> [-j]
-      song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-w] [-n] [-j] [-q]
+      song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
+      song2vid encoders [-j]
+      song2vid preview <image> -o <file.png> [-w] [-j] [-E]
       song2vid -h | --help       Show this help. After a command, help for that command.
       song2vid -v | --version    Print the version.
       song2vid -S | --skill      Print the agent skill: how an agent makes a video with Song2Vid.
@@ -148,6 +159,10 @@ public enum Song2VidCommand {
                Run 'song2vid check --help' for details.
       make     Make the video from a song and an image. Never replaces a file unless told to.
                Run 'song2vid make --help' for details.
+      encoders Report which Codecs this computer can make.
+               Run 'song2vid encoders --help' for details.
+      preview  Save an oriented, scaled PNG from an image.
+               Run 'song2vid preview --help' for details.
 
     Examples:
       song2vid check song.mp3 cover.png
@@ -161,10 +176,10 @@ public enum Song2VidCommand {
       0  Success.
       1  An input file does not exist.
       2  Usage error: an option or command that song2vid does not know, or a missing file.
-      3  An input file can't be read or isn't usable.
-      4  The output can't be written (it exists, isn't .mp4, or its folder can't be used).
-      5  Making the video failed after it started, or --update could not reach GitHub.
-      130  Cancelled with Ctrl-C or by a stop signal.
+      3  An input file can't be read or isn't usable, or the chosen Codec is unavailable.
+      4  The output can't be written.
+      5  Making the video or preview failed, or --update could not reach GitHub.
+      130  Cancelled by a signal or by stdin with --cancel-on-eof.
 
     """
 
@@ -204,7 +219,7 @@ public enum Song2VidCommand {
     It never changes your song or image, and it never replaces a file unless you say so with --overwrite.
 
     Usage:
-      song2vid make <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-w] [-n] [-j] [-q]
+      song2vid make <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
 
     Everything is checked before anything is made. The video is built in a temporary file beside the output
     and moved into place when it is complete, so a half-made video never has the final name.
@@ -216,9 +231,11 @@ public enum Song2VidCommand {
       -r | --resolution <size>    480p, 1080p (default) or 2160p. Not with the original shape.
       -c | --crop <h,v>           Which part of the image a crop keeps, as two fractions from 0 to 1.
                                   Default 0.5,0.5 (centred). Only with the 1:1 and 4:3 shapes.
+      -C | --codec <codec>         h264 (default) or hevc. Run 'song2vid encoders' to check availability.
+      -E | --cancel-on-eof         Cancel at end-of-file on stdin or on a line containing only cancel.
       -w | --overwrite            Replace the output if it exists. Without it, an existing file is an error.
       -n | --dry-run              Check everything and report what would be made. Writes nothing.
-      -j | --json                 Write one JSON line (api_version "1") instead of text.
+      -j | --json                 Write JSON Lines (api_version "1") instead of text.
       -q | --quiet                No progress output. The result and errors still print.
       -h | --help                 Show this help.
 
@@ -228,18 +245,68 @@ public enum Song2VidCommand {
       song2vid make song.mp3 cover.png
       song2vid make song.mp3 cover.png -s 1:1 -r 480p -c 0.5,0.2 -o preview.mp4
       song2vid make song.mp3 cover.png --dry-run --json
-      song2vid make song.mp3 cover.png -o video.mp4 --overwrite
+      song2vid make song.mp3 cover.png -C hevc -o video.mp4 --overwrite
 
     Exit statuses:
       0  Success (also --dry-run).
       1  An input file does not exist (audio_not_found, image_not_found).
       2  Usage error (usage).
-      3  An input can't be read or isn't usable (audio_unreadable, image_unreadable, image_too_small).
+      3  An input or Codec can't be used (audio_unreadable, image_unreadable, image_too_small, codec_unavailable).
       4  The output can't be written (output_exists, output_not_writable, output_not_mp4, disk_full).
       5  Making the video failed after it started (export_failed).
-      130  Cancelled with Ctrl-C or SIGTERM (cancelled). The temporary file is deleted.
+      130  Cancelled by a signal or by stdin with --cancel-on-eof (cancelled). The temporary file is deleted.
 
     With --json, errors are a JSON line on stdout too, with the error code, and stderr is empty.
+
+    """
+
+    static let encodersHelpText = """
+    song2vid encoders reports whether this computer can produce H.264 and HEVC.
+    It reads and writes no files.
+
+    Usage:
+      song2vid encoders [-j]
+
+    Options:
+      -j | --json    Write one JSON line (api_version "1") instead of text.
+      -h | --help    Show this help.
+
+    Examples:
+      song2vid encoders
+      song2vid encoders --json
+
+    Exit statuses:
+      0  Success, even if a Codec is unavailable.
+      2  Usage error (usage).
+
+    """
+
+    static let previewHelpText = """
+    song2vid preview saves an image as a PNG with its orientation applied and transparency filled with
+    black. The PNG fits within 2048 by 2048 pixels. Smaller images keep their size.
+
+    Usage:
+      song2vid preview <image> -o <file.png> [-w] [-j] [-E]
+
+    Options:
+      -o | --out <file.png>       Where to save the PNG (required).
+      -w | --overwrite            Replace the output if it exists.
+      -E | --cancel-on-eof         Cancel at end-of-file on stdin or on a line containing only cancel.
+      -j | --json                 Write one JSON line (api_version "1") instead of text.
+      -h | --help                 Show this help.
+
+    Examples:
+      song2vid preview photo.heic -o cover.png
+      song2vid preview photo.jpg --out cover.png --overwrite --json
+
+    Exit statuses:
+      0  Success.
+      1  The image does not exist (image_not_found).
+      2  Usage error (usage).
+      3  The image can't be read (image_unreadable).
+      4  The output can't be written (output_exists, output_not_writable, disk_full).
+      5  Writing the image failed (export_failed).
+      130  Cancelled (cancelled). The temporary file is deleted.
 
     """
 }
