@@ -1,6 +1,6 @@
 # Song2Vid 1.1: command, agent skill and handoff
 
-State: **waiting** · Phase: Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof · Updated: 2026-11-22T23:58:51Z
+State: **waiting** · Phase: Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof · Updated: 2026-11-23T00:09:05Z
 Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Action required
@@ -10,7 +10,7 @@ Repository: devin-thomas/song2vid-app (public) · Branch: build/v2
 
 ## Current activity
 
-Waiting for the owner to run the S2V-018 proof in a new Claude Code session
+Waiting for the owner to confirm S2V-018
 
 ## Milestones
 
@@ -23,7 +23,7 @@ Waiting for the owner to run the S2V-018 proof in a new Claude Code session
 - [complete] S2V-015 Docs page and Agent Guide (merged at d904c32; checks shown to fail when broken)
 - [complete] S2V-016 Agent Handoff (4 agents) (merged at a294657; four marks verified)
 - [complete] S2V-017 Release 1.1.0 and deploy (released, deployed, Open Anyway check passed)
-- [pending] S2V-018 Phase 3 proof with a real agent
+- [in_progress] S2V-018 Phase 3 proof with a real agent (agent proof run and verified; waits on the owner's confirmation)
 
 ## Blockers
 
@@ -67,6 +67,7 @@ None.
 - 2026-11-22: Released 1.1.0 on GitHub with the owner's go-ahead; deploy blocked on a Cloudflare login (owner)
 - 2026-11-22: Deployed the site; live /agent.md, /docs and the 1.1.0 link verified
 - 2026-11-22: S2V-017 resolved: Open Anyway check passed on a Safari download; S2V-010 after-approval check closed
+- 2026-11-22: S2V-018: a fresh agent used the command correctly; values verified against real files
 
 ## Walk-away snapshot
 

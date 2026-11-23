@@ -1,7 +1,7 @@
 {
   "task_id": "song2vid-v1-1",
   "title": "Song2Vid 1.1: command, agent skill and handoff",
-  "updated_at": "2026-11-22T23:58:51Z",
+  "updated_at": "2026-11-23T00:09:05Z",
   "state": "waiting",
   "phase": "Waiting for the owner: wrangler login, Open Anyway, Phase 3 proof",
   "repository": "devin-thomas/song2vid-app (public)",
@@ -26,7 +26,7 @@
       "action": "Follow docs/wiki/phase-3-proof.md and paste the agent's answer to the coordinator."
     }
   ],
-  "current_activity": "Waiting for the owner to run the S2V-018 proof in a new Claude Code session",
+  "current_activity": "Waiting for the owner to confirm S2V-018",
   "milestones": [
     {
       "name": "Plan approved (Grill to Build, Phase 3)",
@@ -75,7 +75,8 @@
     },
     {
       "name": "S2V-018 Phase 3 proof with a real agent",
-      "status": "pending"
+      "status": "in_progress",
+      "note": "agent proof run and verified; waits on the owner's confirmation"
     }
   ],
   "blockers": [],
@@ -180,6 +181,10 @@
     {
       "time": "2026-11-22",
       "event": "S2V-017 resolved: Open Anyway check passed on a Safari download; S2V-010 after-approval check closed"
+    },
+    {
+      "time": "2026-11-22",
+      "event": "S2V-018: a fresh agent used the command correctly; values verified against real files"
     }
   ],
   "walk_away": {
