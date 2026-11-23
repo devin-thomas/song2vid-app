@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://song2vid.pages.dev/sitemap.xml

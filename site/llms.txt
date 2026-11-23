@@ -1,0 +1,18 @@
+# Song2Vid
+
+> Song2Vid is a free Mac app that turns one song and one image into an MP4 video. It also has a `song2vid` command for Terminal, scripts and agents.
+
+## Pages
+
+- [Song2Vid - turn a song and an image into a video](https://song2vid.pages.dev/): Song2Vid is a free Mac app that turns one song and one image into an MP4 video.
+- [song2vid command - Song2Vid docs](https://song2vid.pages.dev/docs/): How to use the song2vid command that comes inside the Song2Vid Mac app: install, options, progress, JSON output and exit statuses.
+- [Agent Guide](https://song2vid.pages.dev/agent.md): step-by-step instructions for an agent that finds, installs and uses the command
+
+## Markdown copies
+
+- [Download page, Markdown](https://song2vid.pages.dev/index.md)
+- [Docs page, Markdown](https://song2vid.pages.dev/docs.md)
+
+## Source
+
+- [Source code and releases](https://github.com/devin-thomas/song2vid-app)
