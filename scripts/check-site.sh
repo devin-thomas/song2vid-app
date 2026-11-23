@@ -3,6 +3,8 @@
 #   1. site/agent.md is the skill, byte for byte.
 #   2. Every option in the command's --help (long and short spelling) is on the docs page.
 #   3. _headers serves /agent.md as Markdown text.
+#   4. The agent-ready checks of SPEC section 20 (scripts/check-site-ready.py): generated files equal a fresh build,
+#      canonical links, dates, facts, links, sitemap, llms.txt, robots.txt, content types, 404 page, publish list.
 # Usage: scripts/check-site.sh <path to the built song2vid command>
 # SITE_DIR and SKILL_FILE can point at other copies, which is how the checks are shown to fail.
 set -euo pipefail
@@ -35,5 +37,8 @@ if ! grep -A3 '^/agent.md' "$site/_headers" | grep -qiF 'Content-Type: text/mark
   fail=1
 fi
 
+version=$("$command" --version | awk '{print $2}')
+python3 -I -B scripts/check-site-ready.py "$site" "$version" || fail=1
+
 (( fail == 0 )) || exit 1
-echo "check-site: agent.md matches the skill; the docs page lists every option ($(printf '%s\n' "$options" | wc -l | tr -d ' ') spellings)"
+echo "check-site: agent.md matches the skill; the docs page lists every option ($(printf '%s\n' "$options" | wc -l | tr -d ' ') spellings); the site is agent-ready (SPEC 20)"

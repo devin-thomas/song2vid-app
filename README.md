@@ -54,6 +54,7 @@ song2vid make song.mp3 cover.png -s 1:1 -r 480p
 
 - Every option, the JSON output, the progress modes and the exit statuses are on the docs page, [song2vid.pages.dev/docs/](https://song2vid.pages.dev/docs/).
 - [skills/song2vid/SKILL.md](skills/song2vid/SKILL.md) tells an agent how to make a video by either route, the app's window or the command. `song2vid --skill` prints it, and the site serves the same text at [song2vid.pages.dev/agent.md](https://song2vid.pages.dev/agent.md). `scripts/build-agent-md.sh` makes that copy, and `scripts/check.sh` fails if it drifts.
+- The site is agent-ready (SPEC §20, ADR-021): its two pages are the source, and `python3 -I scripts/build-site.py` makes `index.md`, `docs.md`, `llms.txt` and `sitemap.xml` from them. `scripts/check-site.sh` (run by `scripts/check.sh`) fails if any of them drift, if a link, date, version or content type is wrong, or if `site/` holds a file that is not on the publish list in the script. `scripts/test-check-site.sh <command>` shows each check failing on a broken copy.
 - The download page has an Agent Handoff: one click copies a short prompt for ChatGPT, Claude, Grok Bot or Muse that points the agent at the guide.
 
 ## Licence
