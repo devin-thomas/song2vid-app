@@ -299,3 +299,52 @@ Human error messages are one line on stderr and use the Part 1 wording where it 
 - 1.1.0 is on GitHub Releases, and `song2vid.pages.dev` serves the handoff, `/docs` and `agent.md`.
 - The Phase 3 proof passes and the owner confirms it.
 - The repo history shows only the owner as author, and the public-repo checks pass.
+
+# Part 3 - Agent-ready download site
+
+## 20. Agent-ready download site (ADR-021)
+
+Goal: an agent that has only `https://song2vid.pages.dev` can find the public pages, answer from them with a link, and say so when the site does not publish something. This is the Starter Pack Level 1 readiness milestone (`agent-ready-website`). It changes only `site/`. There is no new app release.
+
+**Public pages.** `/` (the home page), `/docs/` (the docs page) and `/agent.md` (the Agent Guide). Each page has one address. `/docs` redirects permanently to `/docs/`, and every link uses `/docs/`.
+
+**Three facts a visitor may ask an agent, and where each lives in the HTML the server sends (no script needed):**
+1. What Song2Vid is, and that it is free: `/`.
+2. That it needs macOS 14 or later, and the current version (1.1.0): `/`. The version shown must equal `song2vid --version`.
+3. How to make a video with the command, and the exit status and error code when it fails: `/docs/` and `/agent.md`.
+
+**What must stay out of every page and file:** plans for later versions, anything not yet released, the owner's sample files and their names, tokens, emails, IP addresses and local paths. The site has no drafts and no private records, and a check keeps it that way (see the allowlist below).
+
+**Each HTML page** has a canonical link to its own address, a `<link rel="alternate" type="text/markdown">` to its Markdown copy, and a visible "Updated" date in a `<time datetime>` element.
+
+**Generated files (one script, `scripts/build-site.py`, from the two HTML pages and the skill):**
+- `index.md` and `docs.md`: Markdown copies of the pages. Parts of a page that only work in a browser (the picker, the Copy button, the manual-copy dialog) are marked `data-md="skip"` and left out; the prompt text stays. Each copy ends with the page's canonical address and updated date.
+- `llms.txt`: what Song2Vid is in one sentence, then the live public pages, each with a short description taken from the page's own `<meta name="description">`.
+- `sitemap.xml`: the two HTML pages at their canonical addresses, `lastmod` equal to the page's updated date.
+- `agent.md`: unchanged (a copy of the skill, ADR-015); `scripts/build-agent-md.sh` stays.
+- `robots.txt` is written by hand: it allows everything and points to the sitemap.
+
+**Allowlist.** `scripts/build-site.py` holds the list of files that may be published. `scripts/check-site.sh` fails if `site/` holds a file that is not on the list, or if a listed file is missing.
+
+**Served as.** HTML pages `text/html`; `index.md`, `docs.md`, `agent.md`, `llms.txt` and `robots.txt` as text (`text/markdown; charset=utf-8` for the Markdown ones, `text/plain; charset=utf-8` for the other two); `sitemap.xml` as XML. Set in `site/_headers`.
+
+**Checks (added to `scripts/check-site.sh`, so `scripts/check.sh` runs them):**
+- Regenerating every generated file gives exactly the committed file.
+- Each HTML page: one canonical link equal to its own address; the Markdown alternate exists; the updated date equals the sitemap `lastmod`; the visible version equals `song2vid --version`.
+- Every address in `sitemap.xml` and `llms.txt` is a file in `site/`; each live page appears once in the sitemap; `robots.txt` names the sitemap and blocks nothing.
+- Every internal link in the HTML pages points to a file or folder in `site/`; no link uses `/docs` without the trailing slash.
+- Each of the three facts is present in the HTML source as text.
+- The allowlist holds.
+- Each check is shown to fail on a deliberately broken copy (`SITE_DIR`).
+
+**Outside checks (after the deploy), with `curl` against `song2vid.pages.dev`:** `/` and `/docs/` return 200, `text/html`, with their own canonical link; `/docs` redirects permanently (308) to `/docs/`; `/llms.txt`, `/sitemap.xml`, `/robots.txt`, `/index.md`, `/docs.md`, `/agent.md` return 200 with the types above; the three facts are in the served HTML; a made-up address (for example `/roadmap`) is not a 200 page of unpublished content; no response contains a local path, email or the sample files' names.
+
+**Proof with a separate agent.** A new Claude Code session that has not seen this repo gets only the site's address and two questions. (1) "Using only https://song2vid.pages.dev, what version of Song2Vid is current and what macOS does it need? Give the address of the page you used." It must answer 1.1.0 and macOS 14 or later, and cite `/`. (2) "What changes are planned for the next version of Song2Vid?" It must say the site does not publish that, without guessing. The coordinator opens the cited page and confirms the fact is there. On a pass, the `agent-ready-website` step gets its `verification` object in the private progress file.
+
+## 21. Definition of done (agent-ready site)
+
+- Tickets S2V-019 to S2V-021 meet their acceptance criteria and `scripts/check.sh` passes.
+- `song2vid.pages.dev` serves everything in section 20 and the outside checks pass against the live site.
+- The separate-agent proof passes and the owner confirms it.
+- The `agent-ready-website` verification is saved in the private progress file.
+

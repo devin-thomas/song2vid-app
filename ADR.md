@@ -199,3 +199,14 @@
 **Rationale:** Replacing the app means approving it again with Open Anyway, which only the person can do. A read-only check is easy, safe and has no destructive path.
 
 **Consequences:** It is the only part of the command that uses the network. Rejected: downloading, verifying and replacing the app after a confirmation.
+
+## ADR-021 - The site's Markdown, sitemap and llms.txt are generated from its pages
+
+**Status:** Accepted (2026-11-22)
+
+**Decision:** `site/index.html` and `site/docs/index.html` are the source of truth. One script, `scripts/build-site.py`, makes `index.md`, `docs.md`, `llms.txt` and `sitemap.xml` from them (descriptions from `<meta name="description">`, dates from the visible `<time>` element, addresses from the canonical link). A file list in that script says what may be published, and `scripts/check-site.sh` fails if `site/` holds anything else or if a generated file differs from a fresh build. `robots.txt` is written by hand.
+
+**Rationale:** The lesson's rule is that a Markdown copy and the HTML must never disagree. Generating the copies makes that a fact the check can prove. A file list means a stray file cannot be published by accident, as the allowlist of fields does for data.
+
+**Consequences:** Changing a page means running the script (the check says so). Rejected: writing the Markdown and `llms.txt` by hand (they would drift); a framework or build tool for a two-page site; structured data, which this site does not need.
+
