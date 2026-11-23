@@ -38,7 +38,7 @@ if ! grep -A3 '^/agent.md' "$site/_headers" | grep -qiF 'Content-Type: text/mark
 fi
 
 version=$("$command" --version | awk '{print $2}')
-PYTHONDONTWRITEBYTECODE=1 python3 -I scripts/check-site-ready.py "$site" "$version" || fail=1
+python3 -I -B scripts/check-site-ready.py "$site" "$version" || fail=1
 
 (( fail == 0 )) || exit 1
 echo "check-site: agent.md matches the skill; the docs page lists every option ($(printf '%s\n' "$options" | wc -l | tr -d ' ') spellings); the site is agent-ready (SPEC 20)"
