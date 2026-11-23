@@ -26,3 +26,7 @@ TestMedia/
 
 # Agent worktrees
 .claude/worktrees/
+
+# Python bytecode
+__pycache__/
+*.pyc
