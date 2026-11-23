@@ -91,7 +91,12 @@ struct JSONOutputLine {
                 throw CommandTestFailure("a line before the last is not a progress line: \(line)")
             }
         }
-        return try JSONOutputLine(String(lines[lines.count - 2]) + "\n")
+        let final = try JSONOutputLine(String(lines[lines.count - 2]) + "\n")
+        let type = final["type"] as? String
+        guard final["api_version"] as? String == "1", type == "result" || type == "error" else {
+            throw CommandTestFailure("the last line is not a result or error line")
+        }
+        return final
     }
 
     /// What `make` wrote to stderr in plain headless mode before its final message: only progress lines.

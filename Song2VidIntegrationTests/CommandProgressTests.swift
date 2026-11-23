@@ -20,7 +20,9 @@ struct CommandProgressTests {
         #expect(status == 0)
         #expect(duration > 2, "the run was too short to prove anything: \(duration) s")
 
-        let lines = CommandStreamingProcess.lines(process.outputSoFar)
+        let chunks = process.outputSoFar
+        #expect(chunks.last?.text.hasSuffix("\n") == true)
+        let lines = CommandStreamingProcess.lines(chunks)
         let parsed = try lines.map { line -> [String: Any] in
             let object = try JSONSerialization.jsonObject(with: Data(line.text.utf8)) as? [String: Any]
             return try #require(object, "not a JSON object: \(line.text)")
@@ -29,7 +31,7 @@ struct CommandProgressTests {
         #expect(process.errorSoFar.isEmpty)
 
         // Exactly one result, and it is last.
-        let types = parsed.compactMap { $0["type"] as? String }
+        let types = parsed.map { $0["type"] as? String }
         #expect(types.last == "result")
         #expect(types.filter { $0 != "progress" } == ["result"])
 
@@ -127,17 +129,44 @@ struct CommandProgressTests {
         #expect(result.stdout.hasPrefix("Made q.mp4"))
     }
 
-    @Test("A run that fails at once shows only its error, with no progress lines")
-    func quickFailureIsQuiet() throws {
+    @Test("JSON output accepts checking progress and requires exactly one final line")
+    func finalJSONLine() throws {
+        let progress = #"{"api_version":"1","type":"progress","stage":"checking","elapsed_seconds":0.158}"# + "\n"
+        let error = #"{"api_version":"1","type":"error","error":{"code":"output_not_mp4"}}"# + "\n"
+        let final = try JSONOutputLine.final(progress + progress + error)
+        #expect(final.child("error")?["code"] as? String == "output_not_mp4")
+
+        for invalid in [progress, error + error, error + progress, progress + "not JSON\n" + error] {
+            #expect(throws: (any Error).self) { try JSONOutputLine.final(invalid) }
+        }
+    }
+
+    @Test("Validation failures only show checking progress after the 0.15 s quiet period")
+    func validationQuietPeriod() throws {
         let workspace = try CommandWorkspace()
         defer { workspace.remove() }
         let song = try workspace.tone(seconds: 1)
-        let plain = try CommandProcess.run(["make", song, workspace.path("missing.png")])
+        let arguments = ["make", song, workspace.path("missing.png")]
+        let plain = try CommandProcess.run(arguments)
         #expect(plain.status == 1)
-        #expect(plain.stderr == "Image file not found.\n" || plain.stderr.hasSuffix("\n") && plain.stderr.split(separator: "\n").count == 1)
-        let json = try CommandProcess.run(["make", song, workspace.path("missing.png"), "--json"])
+        #expect(plain.stdout.isEmpty)
+        let plainLines = plain.stderr.split(separator: "\n", omittingEmptySubsequences: false)
+        #expect(plainLines.suffix(2) == ["The image file was not found.", ""])
+        #expect(plainLines.dropLast(2).allSatisfy { $0.hasPrefix("Checking files (") })
+
+        let json = try CommandProcess.run(arguments + ["--json"])
         #expect(json.status == 1)
-        #expect(try JSONOutputLine(json.stdout)["type"] as? String == "error")
+        #expect(json.stderr.isEmpty)
+        let final = try JSONOutputLine.final(json.stdout)
+        #expect(final["type"] as? String == "error")
+        #expect(final.child("error")?["code"] as? String == "image_not_found")
+        // The filesystem and scheduler can hold validation past the quiet period, even for a missing file.
+        for raw in json.stdout.split(separator: "\n", omittingEmptySubsequences: false).dropLast(2) {
+            let progress = try JSONOutputLine(String(raw) + "\n")
+            #expect(progress["stage"] as? String == "checking")
+            let elapsed = try #require(progress["elapsed_seconds"] as? Double)
+            #expect(elapsed >= 0.15)
+        }
     }
 }
 
