@@ -26,13 +26,14 @@ private func openImage(at url: URL) throws(ExportError) -> (CGImageSource, Pixel
     return (source, PixelSize(width: swapped ? height : width, height: swapped ? width : height))
 }
 
-/// Decodes the image at full size with its orientation applied.
-func decodeImage(at url: URL) throws(ExportError) -> (image: CGImage, size: PixelSize) {
+/// Decodes the oriented image, with an optional cap on its longest side.
+func decodeImage(at url: URL, maxLongSide: Int? = nil) throws(ExportError) -> (image: CGImage, size: PixelSize) {
     let (source, size) = try openImage(at: url)
+    let longSide = max(size.width, size.height)
     let options: [CFString: Any] = [
         kCGImageSourceCreateThumbnailFromImageAlways: true,
         kCGImageSourceCreateThumbnailWithTransform: true,
-        kCGImageSourceThumbnailMaxPixelSize: max(size.width, size.height),
+        kCGImageSourceThumbnailMaxPixelSize: min(longSide, maxLongSide ?? longSide),
         kCGImageSourceShouldCacheImmediately: true,
     ]
     guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {

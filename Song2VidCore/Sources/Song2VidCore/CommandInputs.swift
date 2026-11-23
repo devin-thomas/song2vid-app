@@ -10,14 +10,17 @@ struct CommandInputs: Sendable {
     let image: ImageInfo
 
     /// Looks for both files first (status 1), then reads the audio, then the image (status 3).
-    static func read(audioPath: String, imagePath: String) throws(CommandError) -> CommandInputs {
+    static func read(
+        audioPath: String, imagePath: String, isCancelled: () -> Bool = { false }
+    ) throws(CommandError) -> CommandInputs {
         let audioURL = URL(fileURLWithPath: audioPath)
         let imageURL = URL(fileURLWithPath: imagePath)
         guard FileManager.default.fileExists(atPath: audioURL.path) else { throw .audioNotFound }
         guard FileManager.default.fileExists(atPath: imageURL.path) else { throw .imageNotFound }
 
         // The system readers may log the file's path to the terminal; none of that may reach the output.
-        let audio = withSystemOutputSilenced { try? AudioInfo.read(from: audioURL) }
+        let audio = withSystemOutputSilenced { try? AudioInfo.read(from: audioURL, isCancelled: isCancelled) }
+        if isCancelled() { throw .cancelled }
         guard let audio else { throw .audioUnreadable }
         let image = withSystemOutputSilenced { try? ImageInfo.read(from: imageURL) }
         guard let image else { throw .imageUnreadable }

@@ -2,9 +2,9 @@
 
 Turn one song and one image into a video. Drop them in, click once, and get an MP4.
 
-[Download for Mac](https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.1.0.zip)
+[Download for Mac](https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.2.0.zip)
 
-Free · Version 1.1.0 · Requires macOS 14 or later
+Free · Version 1.2.0 · Requires macOS 14 or later
 
 ## Or ask your agent to do it
 

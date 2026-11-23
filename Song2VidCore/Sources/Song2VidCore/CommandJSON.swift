@@ -1,9 +1,9 @@
 import Foundation
 
-// The command's JSON (SPEC section 14.5): one object per line, every key from a fixed list.
+// The command's JSON (SPEC section 14.5): one object per line, every key from the documented list.
 
 /// Every key the command may write. An object can only be built from these, so a key that is not
-/// listed here cannot reach the output. Keys change only with a new `api_version`.
+/// listed here cannot reach the output. Existing keys and their meanings stay fixed within an `api_version`.
 enum JSONKey: String, CaseIterable, Sendable {
     case apiVersion = "api_version"
     case type
@@ -32,6 +32,14 @@ enum JSONKey: String, CaseIterable, Sendable {
     case latest
     case updateAvailable = "update_available"
     case downloadPage = "download_page"
+    case codec
+    case codecs
+    case h264
+    case hevc
+    case available
+    case encoder
+    case encoderFallback = "encoder_fallback"
+    case source
     case stage
     case percent
     case elapsedSeconds = "elapsed_seconds"

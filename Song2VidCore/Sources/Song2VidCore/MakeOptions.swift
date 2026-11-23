@@ -8,6 +8,8 @@ struct MakeOptions: Sendable {
     let shape: FrameShape
     let resolution: Resolution
     let crop: CropPosition
+    let codec: Codec
+    let cancelOnEOF: Bool
     /// The `--out` value, or nil for the default name.
     let output: String?
     let overwrite: Bool
@@ -47,8 +49,13 @@ struct MakeOptions: Sendable {
             return problem("Crop applies only to the 1:1 and 4:3 shapes.")
         }
 
+        guard let codec = Codec(rawValue: line.value(of: .codec) ?? Codec.h264.rawValue) else {
+            return problem("Codec must be h264 or hevc.")
+        }
+
         return .success(MakeOptions(
             audioPath: line.operands[0], imagePath: line.operands[1], shape: shape, resolution: resolution, crop: crop,
+            codec: codec, cancelOnEOF: line.has(.cancelOnEOF),
             output: line.value(of: .out), overwrite: line.has(.overwrite), dryRun: line.has(.dryRun),
             quiet: line.has(.quiet), json: json
         ))

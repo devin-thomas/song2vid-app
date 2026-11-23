@@ -11,7 +11,9 @@ struct CommandError: Error, Equatable, Sendable {
         case audioUnreadable = "audio_unreadable"
         case imageUnreadable = "image_unreadable"
         case imageTooSmall = "image_too_small"
+        case codecUnavailable = "codec_unavailable"
         case outputExists = "output_exists"
+        case outputInUse = "output_in_use"
         case outputNotWritable = "output_not_writable"
         case outputNotMP4 = "output_not_mp4"
         case diskFull = "disk_full"
@@ -28,8 +30,8 @@ struct CommandError: Error, Equatable, Sendable {
         switch code {
         case .audioNotFound, .imageNotFound: Song2VidCommand.ExitStatus.notFound
         case .usage: Song2VidCommand.ExitStatus.usage
-        case .audioUnreadable, .imageUnreadable, .imageTooSmall: Song2VidCommand.ExitStatus.unreadable
-        case .outputExists, .outputNotWritable, .outputNotMP4, .diskFull: Song2VidCommand.ExitStatus.outputFailed
+        case .audioUnreadable, .imageUnreadable, .imageTooSmall, .codecUnavailable: Song2VidCommand.ExitStatus.unreadable
+        case .outputExists, .outputInUse, .outputNotWritable, .outputNotMP4, .diskFull: Song2VidCommand.ExitStatus.outputFailed
         case .exportFailed, .network: Song2VidCommand.ExitStatus.exportFailed
         case .cancelled: Song2VidCommand.ExitStatus.cancelled
         }

@@ -13,6 +13,10 @@ extension AudioInfo {
     /// The length is counted from the decoded audio, so it is exact even for MP3s whose header only
     /// estimates it. Decoding is fast (minutes of audio per second) but call this off the main thread.
     public static func read(from url: URL) throws(ExportError) -> AudioInfo {
+        try read(from: url, isCancelled: { Task.isCancelled })
+    }
+
+    static func read(from url: URL, isCancelled: () -> Bool) throws(ExportError) -> AudioInfo {
         let file = try openAudio(at: url)
         let format = file.processingFormat
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AudioFeeder.chunkFrames) else {
@@ -20,8 +24,8 @@ extension AudioInfo {
         }
         var frames: Int64 = 0
         while true {
-            // Called from an export, this lets Cancel take effect now instead of after the whole song is read.
-            if Task.isCancelled { throw .unreadableAudio }
+            // Let cancellation take effect before the whole song has been read.
+            if isCancelled() { throw .unreadableAudio }
             do {
                 try file.read(into: buffer, frameCount: AudioFeeder.chunkFrames)
             } catch {

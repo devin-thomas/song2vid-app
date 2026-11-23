@@ -82,14 +82,14 @@ struct CommandSkillAndUpdateTests {
 
     @Test("Up to date, newer available and no network, as text")
     func updateText() throws {
-        let same = try update(["--update"], stub: #"{"tag_name":"v1.1.0"}"#)
+        let same = try update(["--update"], stub: #"{"tag_name":"v1.2.0"}"#)
         #expect(same.status == 0)
-        #expect(same.stdout == "Song2Vid 1.1.0 is up to date.\n")
+        #expect(same.stdout == "Song2Vid 1.2.0 is up to date.\n")
         #expect(same.stderr.isEmpty)
 
-        let newer = try update(["-u"], stub: #"{"tag_name":"v1.2.0"}"#)
+        let newer = try update(["-u"], stub: #"{"tag_name":"v1.3.0"}"#)
         #expect(newer.status == 0)
-        #expect(newer.stdout == "Song2Vid 1.2.0 is available (you have 1.1.0). Download it from https://song2vid.pages.dev.\n")
+        #expect(newer.stdout == "Song2Vid 1.3.0 is available (you have 1.2.0). Download it from https://song2vid.pages.dev.\n")
 
         let offline = try update(["--update"], stub: nil)
         #expect(offline.status == 5)
@@ -100,18 +100,18 @@ struct CommandSkillAndUpdateTests {
 
     @Test("--json gives one result or error line and an empty stderr")
     func updateJSON() throws {
-        let newer = try update(["--update", "--json"], stub: #"{"tag_name":"v1.2.0"}"#)
+        let newer = try update(["--update", "--json"], stub: #"{"tag_name":"v1.3.0"}"#)
         #expect(newer.status == 0)
         #expect(newer.stderr.isEmpty)
         let line = try JSONOutputLine(newer.stdout)
         #expect(line["type"] as? String == "result")
         #expect(line["command"] as? String == "update")
-        #expect(line["current"] as? String == "1.1.0")
-        #expect(line["latest"] as? String == "1.2.0")
+        #expect(line["current"] as? String == "1.2.0")
+        #expect(line["latest"] as? String == "1.3.0")
         #expect(line["update_available"] as? Bool == true)
         #expect(line["download_page"] as? String == "https://song2vid.pages.dev")
 
-        let same = try update(["-u", "-j"], stub: #"{"tag_name":"1.1.0"}"#)
+        let same = try update(["-u", "-j"], stub: #"{"tag_name":"1.2.0"}"#)
         #expect(try JSONOutputLine(same.stdout)["update_available"] as? Bool == false)
 
         let offline = try update(["--update", "--json"], stub: nil)

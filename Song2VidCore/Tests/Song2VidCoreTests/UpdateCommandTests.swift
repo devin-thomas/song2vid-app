@@ -34,8 +34,9 @@ struct UpdateCommandTests {
     @Test("--json is one result line with the fixed keys")
     func json() {
         let current = Song2VidCommand.version
-        let output = UpdateCommand.run(json: true, environment: [:], fetch: release("1.2.0"))
-        #expect(output.stdout == #"{"api_version":"1","type":"result","command":"update","current":"\#(current)","latest":"1.2.0","update_available":true,"download_page":"https://song2vid.pages.dev"}"# + "\n")
+        let latest = "99.0.1"
+        let output = UpdateCommand.run(json: true, environment: [:], fetch: release(latest))
+        #expect(output.stdout == #"{"api_version":"1","type":"result","command":"update","current":"\#(current)","latest":"\#(latest)","update_available":true,"download_page":"https://song2vid.pages.dev"}"# + "\n")
         #expect(output.stderr.isEmpty)
         let same = UpdateCommand.run(json: true, environment: [:], fetch: release("v\(current)"))
         #expect(same.stdout.contains(#""update_available":false"#))

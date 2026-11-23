@@ -147,13 +147,17 @@ song2vid --version</code></pre>
   <section aria-labelledby="commands">
     <h2 id="commands">Commands</h2>
 <pre><code>song2vid check &lt;audio&gt; &lt;image&gt; [-j]
-song2vid make  &lt;audio&gt; &lt;image&gt; [-o &lt;file.mp4&gt;] [-s &lt;shape&gt;] [-r &lt;resolution&gt;] [-c &lt;h,v&gt;] [-w] [-n] [-j] [-q]
+song2vid make  &lt;audio&gt; &lt;image&gt; [-o &lt;file.mp4&gt;] [-s &lt;shape&gt;] [-r &lt;resolution&gt;] [-c &lt;h,v&gt;] [-C &lt;codec&gt;] [-w] [-n] [-j] [-q] [-E]
+song2vid encoders [-j]
+song2vid preview &lt;image&gt; -o &lt;file.png&gt; [-w] [-j] [-E]
 song2vid -h | -v | -S | -R | -u</code></pre>
     <ul>
       <li><code>check</code> reads a song and an image and reports what Song2Vid would make from them. It writes nothing.</li>
       <li><code>make</code> makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.</li>
+      <li><code>encoders</code> reports which Codecs are available on this computer.</li>
+      <li><code>preview</code> writes an oriented PNG within 2048 by 2048 pixels. Smaller images keep their size. Transparency becomes black.</li>
       <li><code>--help</code> prints help. After a command it prints that command's help.</li>
-      <li><code>--version</code> prints the version, for example <code>song2vid 1.1.0</code>.</li>
+      <li><code>--version</code> prints the version, for example <code>song2vid 1.2.0</code>.</li>
       <li><code>--skill</code> prints the <a href="/agent.md">agent instructions</a>.</li>
       <li><code>--repo</code> prints the project address.</li>
       <li><code>--update</code> says whether a newer Song2Vid is out. It downloads and changes nothing; installing it is your step.</li>
@@ -167,17 +171,19 @@ song2vid -h | -v | -S | -R | -u</code></pre>
         <thead><tr><th scope="col">Long</th><th scope="col">Short</th><th scope="col">Applies to</th><th scope="col">Meaning</th></tr></thead>
         <tbody>
           <tr><td data-label="Long"><code>--help</code></td><td data-label="Short"><code>-h</code></td><td data-label="Applies to">all</td><td data-label="Meaning">Help for the command it follows.</td></tr>
-          <tr><td data-label="Long"><code>--version</code></td><td data-label="Short"><code>-v</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints <code>song2vid 1.1.0</code>.</td></tr>
+          <tr><td data-label="Long"><code>--version</code></td><td data-label="Short"><code>-v</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints <code>song2vid 1.2.0</code>.</td></tr>
           <tr><td data-label="Long"><code>--skill</code></td><td data-label="Short"><code>-S</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints the agent skill that ships in the app.</td></tr>
           <tr><td data-label="Long"><code>--repo</code></td><td data-label="Short"><code>-R</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Prints the project address.</td></tr>
           <tr><td data-label="Long"><code>--update</code></td><td data-label="Short"><code>-u</code></td><td data-label="Applies to">alone</td><td data-label="Meaning">Says whether a newer release exists. Works with <code>--json</code>.</td></tr>
           <tr><td data-label="Long"><code>--shape</code></td><td data-label="Short"><code>-s</code></td><td data-label="Applies to">make</td><td data-label="Meaning"><code>16:9</code> (default), <code>9:16</code>, <code>1:1</code>, <code>4:3</code> or <code>original</code>.</td></tr>
           <tr><td data-label="Long"><code>--resolution</code></td><td data-label="Short"><code>-r</code></td><td data-label="Applies to">make</td><td data-label="Meaning"><code>480p</code>, <code>1080p</code> (default) or <code>2160p</code>. Not with <code>original</code>.</td></tr>
           <tr><td data-label="Long"><code>--crop</code></td><td data-label="Short"><code>-c</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Which part a <code>1:1</code> or <code>4:3</code> frame keeps, as two fractions <code>h,v</code> from 0 to 1. Default <code>0.5,0.5</code>, the middle. Values outside 0 to 1 are an error.</td></tr>
-          <tr><td data-label="Long"><code>--out</code></td><td data-label="Short"><code>-o</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Where to save. Default: the song's name with <code>.mp4</code>, in the current folder. The name must end in <code>.mp4</code>.</td></tr>
-          <tr><td data-label="Long"><code>--overwrite</code></td><td data-label="Short"><code>-w</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Replace the output if it exists. Without it, an existing file is an error.</td></tr>
+          <tr><td data-label="Long"><code>--codec</code></td><td data-label="Short"><code>-C</code></td><td data-label="Applies to">make</td><td data-label="Meaning"><code>h264</code> (default) or <code>hevc</code>. Check availability with <code>encoders</code>.</td></tr>
+          <tr><td data-label="Long"><code>--out</code></td><td data-label="Short"><code>-o</code></td><td data-label="Applies to">make, preview</td><td data-label="Meaning">An MP4 for <code>make</code>, which defaults to the song's name in the current folder. <code>preview</code> requires a PNG path.</td></tr>
+          <tr><td data-label="Long"><code>--overwrite</code></td><td data-label="Short"><code>-w</code></td><td data-label="Applies to">make, preview</td><td data-label="Meaning">Replace the output if it exists. Without it, an existing file is an error.</td></tr>
+          <tr><td data-label="Long"><code>--cancel-on-eof</code></td><td data-label="Short"><code>-E</code></td><td data-label="Applies to">make, preview</td><td data-label="Meaning">For programs running the command. Cancel when standard input closes or sends a line containing only <code>cancel</code>. Standard input is read only with this option.</td></tr>
           <tr><td data-label="Long"><code>--dry-run</code></td><td data-label="Short"><code>-n</code></td><td data-label="Applies to">make</td><td data-label="Meaning">Checks everything and reports what would be made. Writes nothing.</td></tr>
-          <tr><td data-label="Long"><code>--json</code></td><td data-label="Short"><code>-j</code></td><td data-label="Applies to">check, make, <code>--update</code></td><td data-label="Meaning">One JSON object per line instead of text.</td></tr>
+          <tr><td data-label="Long"><code>--json</code></td><td data-label="Short"><code>-j</code></td><td data-label="Applies to">check, make, encoders, preview, <code>--update</code></td><td data-label="Meaning">One JSON object per line instead of text.</td></tr>
           <tr><td data-label="Long"><code>--quiet</code></td><td data-label="Short"><code>-q</code></td><td data-label="Applies to">make</td><td data-label="Meaning">No progress output. The result and any error still print.</td></tr>
         </tbody>
       </table>
@@ -216,8 +222,12 @@ song2vid make song.mp3 cover.png -s 1:1 -r 480p -c 0.5,0.2 -o preview.mp4
 # Plan it without writing anything, as JSON
 song2vid make song.mp3 cover.png --dry-run --json
 
-# Replace an earlier video
-song2vid make song.mp3 cover.png -o video.mp4 --overwrite</code></pre>
+# Check HEVC availability, then make an HEVC video
+song2vid encoders --json
+song2vid make song.mp3 cover.png --codec hevc -o video.mp4
+
+# Save a PNG preview from a photo
+song2vid preview photo.heic -o cover.png</code></pre>
   </section>
 
   <section aria-labelledby="progress">
@@ -234,19 +244,24 @@ song2vid make song.mp3 cover.png -o video.mp4 --overwrite</code></pre>
 
   <section aria-labelledby="json">
     <h2 id="json">JSON output</h2>
-    <p>Every line has <code>"api_version":"1"</code> and a <code>"type"</code> of <code>progress</code>, <code>result</code> or <code>error</code>. The last line of a run is exactly one <code>result</code> or <code>error</code>. Keys change only with a new <code>api_version</code>.</p>
-<pre><code>{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8}
-{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false}
+    <p>Every line has <code>"api_version":"1"</code> and a <code>"type"</code> of <code>progress</code>, <code>result</code> or <code>error</code>. The last line of a run is exactly one <code>result</code> or <code>error</code>. New keys, line types and commands may be added within an <code>api_version</code>. Existing keys keep their names and meanings. Consumers ignore unknown keys.</p>
+<pre><code>{"api_version":"1","type":"progress","stage":"encoding","percent":52.0,"elapsed_seconds":4.1,"remaining_seconds":3.8,"encoder":"apple"}
+{"api_version":"1","type":"result","command":"make","output":{"name":"song.mp4","width":1920,"height":1080,"duration_seconds":144.0,"bytes":6153216},"placement":"fit","enlarged":false,"dry_run":false,"codec":"h264","encoder":"apple","encoder_fallback":false}
 {"api_version":"1","type":"error","error":{"code":"output_exists","message":"The output file already exists. Use --overwrite to replace it."}}</code></pre>
     <div class="table" role="region" aria-label="JSON keys">
       <table>
-        <thead><tr><th scope="col">Line</th><th scope="col">Keys</th></tr></thead>
+        <thead><tr><th scope="col">Line</th><th scope="col">Keys</th><th scope="col">Added in</th></tr></thead>
         <tbody>
-          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>stage</code> (<code>checking</code>, <code>preparing</code>, <code>encoding</code>, <code>finishing</code>), <code>percent</code> (0 to 100, or <code>null</code>), <code>elapsed_seconds</code>, <code>remaining_seconds</code> (or <code>null</code>)</td></tr>
-          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>command</code>, <code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>, <code>duration_seconds</code>, <code>bytes</code>), <code>placement</code> (<code>fit</code> or <code>crop</code>), <code>enlarged</code>, <code>dry_run</code>. <code>bytes</code> is <code>null</code> for a dry run.</td></tr>
-          <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code></td></tr>
-          <tr><td data-label="Line"><code>--update</code> result</td><td data-label="Keys"><code>command</code>, <code>current</code>, <code>latest</code>, <code>update_available</code>, <code>download_page</code></td></tr>
-          <tr><td data-label="Line"><code>error</code></td><td data-label="Keys"><code>error</code> (<code>code</code>, <code>message</code>)</td></tr>
+          <tr><td data-label="Line">All lines</td><td data-label="Keys"><code>api_version</code>, <code>type</code></td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>stage</code> (<code>checking</code>, <code>preparing</code>, <code>encoding</code>, <code>finishing</code>), <code>percent</code> (0 to 100, or <code>null</code>), <code>elapsed_seconds</code>, <code>remaining_seconds</code> (or <code>null</code>)</td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>command</code>, <code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>, <code>duration_seconds</code>, <code>bytes</code>), <code>placement</code> (<code>fit</code> or <code>crop</code>), <code>enlarged</code>, <code>dry_run</code>. <code>bytes</code> is <code>null</code> for a dry run.</td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code></td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>--update</code> result</td><td data-label="Keys"><code>command</code>, <code>current</code>, <code>latest</code>, <code>update_available</code>, <code>download_page</code></td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>error</code></td><td data-label="Keys"><code>error</code> (<code>code</code>, <code>message</code>)</td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>encoder</code> from the <code>encoding</code> stage onward</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>codec</code> (<code>h264</code> or <code>hevc</code>), <code>encoder</code> (<code>apple</code> on Mac), <code>encoder_fallback</code> (always <code>false</code> on Mac)</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>encoders</code> result</td><td data-label="Keys"><code>codecs</code> contains <code>h264</code> and <code>hevc</code>, each with <code>available</code> and <code>encoder</code> (<code>null</code> if unavailable)</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>preview</code> result</td><td data-label="Keys"><code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>) and <code>source</code> (oriented <code>width</code> and <code>height</code> before scaling)</td><td data-label="Added in">1.2.0</td></tr>
         </tbody>
       </table>
     </div>
@@ -262,10 +277,10 @@ song2vid make song.mp3 cover.png -o video.mp4 --overwrite</code></pre>
           <tr><td data-label="Status">0</td><td data-label="Meaning">Success, including <code>--dry-run</code> and <code>check</code>.</td><td data-label="Error codes"></td></tr>
           <tr><td data-label="Status">1</td><td data-label="Meaning">An input file does not exist.</td><td data-label="Error codes"><code>audio_not_found</code>, <code>image_not_found</code></td></tr>
           <tr><td data-label="Status">2</td><td data-label="Meaning">Usage error.</td><td data-label="Error codes"><code>usage</code></td></tr>
-          <tr><td data-label="Status">3</td><td data-label="Meaning">An input can't be read or isn't usable.</td><td data-label="Error codes"><code>audio_unreadable</code>, <code>image_unreadable</code>, <code>image_too_small</code></td></tr>
-          <tr><td data-label="Status">4</td><td data-label="Meaning">The output can't be written.</td><td data-label="Error codes"><code>output_exists</code>, <code>output_not_writable</code>, <code>output_not_mp4</code>, <code>disk_full</code></td></tr>
-          <tr><td data-label="Status">5</td><td data-label="Meaning">Making the video failed after it started, or <code>--update</code> could not reach GitHub.</td><td data-label="Error codes"><code>export_failed</code>, <code>network</code></td></tr>
-          <tr><td data-label="Status">130</td><td data-label="Meaning">Cancelled with Ctrl-C or a stop signal. The unfinished file is deleted.</td><td data-label="Error codes"><code>cancelled</code></td></tr>
+          <tr><td data-label="Status">3</td><td data-label="Meaning">An input can't be used or the chosen Codec is unavailable.</td><td data-label="Error codes"><code>audio_unreadable</code>, <code>image_unreadable</code>, <code>image_too_small</code>, <code>codec_unavailable</code></td></tr>
+          <tr><td data-label="Status">4</td><td data-label="Meaning">The output can't be written.</td><td data-label="Error codes"><code>output_exists</code>, <code>output_not_writable</code>, <code>output_not_mp4</code>, <code>disk_full</code>, <code>output_in_use</code> (Windows only)</td></tr>
+          <tr><td data-label="Status">5</td><td data-label="Meaning">Making the video or preview failed, or <code>--update</code> could not reach GitHub.</td><td data-label="Error codes"><code>export_failed</code>, <code>network</code></td></tr>
+          <tr><td data-label="Status">130</td><td data-label="Meaning">Cancelled by a signal or by standard input with <code>--cancel-on-eof</code>. The unfinished file is deleted.</td><td data-label="Error codes"><code>cancelled</code></td></tr>
         </tbody>
       </table>
     </div>

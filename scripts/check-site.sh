@@ -21,8 +21,8 @@ fi
 
 docs="$site/docs/index.html"
 [[ -f "$docs" ]] || { echo "check-site: $docs is missing" >&2; exit 1; }
-# Every "-x | --long" and "-x | --long <value>" spelling in the three help texts.
-options=$( { "$command" --help; "$command" check --help; "$command" make --help; } \
+# Every "-x | --long" and "-x | --long <value>" spelling in the help texts.
+options=$( { "$command" --help; "$command" check --help; "$command" make --help; "$command" encoders --help; "$command" preview --help; } \
   | grep -oE '(^|[[:space:]])-[A-Za-z] \| --[a-z-]+' | tr -d '|' | tr -s ' ' '\n' | grep -E '^-' | sort -u)
 [[ $(printf '%s\n' "$options" | grep -c '^--') -ge 12 ]] || { echo "check-site: found too few options in --help" >&2; exit 1; }
 for option in $options; do

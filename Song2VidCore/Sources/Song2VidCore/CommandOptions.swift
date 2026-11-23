@@ -8,12 +8,16 @@ import Foundation
 enum CommandName: String, CaseIterable, Sendable {
     case check
     case make
+    case encoders
+    case preview
 
     /// Where the options after this command are read.
     var scope: CommandScope {
         switch self {
         case .check: .check
         case .make: .make
+        case .encoders: .encoders
+        case .preview: .preview
         }
     }
 }
@@ -23,6 +27,8 @@ enum CommandScope: Hashable, Sendable {
     case global
     case check
     case make
+    case encoders
+    case preview
 
     /// The command that prints help for this scope, as the usage errors name it.
     var helpCommand: String {
@@ -30,6 +36,8 @@ enum CommandScope: Hashable, Sendable {
         case .global: "song2vid --help"
         case .check: "song2vid check --help"
         case .make: "song2vid make --help"
+        case .encoders: "song2vid encoders --help"
+        case .preview: "song2vid preview --help"
         }
     }
 }
@@ -37,7 +45,7 @@ enum CommandScope: Hashable, Sendable {
 /// The options the command knows.
 enum CommandOption: CaseIterable, Sendable {
     case help, version, repo, skill, update, json
-    case shape, resolution, crop, out, overwrite, dryRun, quiet
+    case shape, resolution, crop, out, overwrite, dryRun, quiet, codec, cancelOnEOF
 }
 
 /// One option: how it is spelled, where it applies and whether a value follows it.
@@ -50,18 +58,20 @@ struct OptionSpec: Sendable {
 
     /// Every option the command knows (SPEC section 14.2).
     static let all: [OptionSpec] = [
-        OptionSpec(option: .help, short: "-h", long: "--help", scopes: [.global, .check, .make], takesValue: false),
+        OptionSpec(option: .help, short: "-h", long: "--help", scopes: [.global, .check, .make, .encoders, .preview], takesValue: false),
         OptionSpec(option: .version, short: "-v", long: "--version", scopes: [.global], takesValue: false),
         OptionSpec(option: .repo, short: "-R", long: "--repo", scopes: [.global], takesValue: false),
         OptionSpec(option: .skill, short: "-S", long: "--skill", scopes: [.global], takesValue: false),
         OptionSpec(option: .update, short: "-u", long: "--update", scopes: [.global], takesValue: false),
-        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.global, .check, .make], takesValue: false),
+        OptionSpec(option: .json, short: "-j", long: "--json", scopes: [.global, .check, .make, .encoders, .preview], takesValue: false),
         OptionSpec(option: .shape, short: "-s", long: "--shape", scopes: [.make], takesValue: true),
         OptionSpec(option: .resolution, short: "-r", long: "--resolution", scopes: [.make], takesValue: true),
         OptionSpec(option: .crop, short: "-c", long: "--crop", scopes: [.make], takesValue: true),
-        OptionSpec(option: .out, short: "-o", long: "--out", scopes: [.make], takesValue: true),
-        OptionSpec(option: .overwrite, short: "-w", long: "--overwrite", scopes: [.make], takesValue: false),
+        OptionSpec(option: .out, short: "-o", long: "--out", scopes: [.make, .preview], takesValue: true),
+        OptionSpec(option: .overwrite, short: "-w", long: "--overwrite", scopes: [.make, .preview], takesValue: false),
         OptionSpec(option: .dryRun, short: "-n", long: "--dry-run", scopes: [.make], takesValue: false),
+        OptionSpec(option: .codec, short: "-C", long: "--codec", scopes: [.make], takesValue: true),
+        OptionSpec(option: .cancelOnEOF, short: "-E", long: "--cancel-on-eof", scopes: [.make, .preview], takesValue: false),
         OptionSpec(option: .quiet, short: "-q", long: "--quiet", scopes: [.make], takesValue: false),
     ]
 

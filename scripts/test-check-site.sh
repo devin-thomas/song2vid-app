@@ -35,7 +35,7 @@ case_ "second canonical" "p=d/'index.html'; p.write_text(p.read_text().replace('
 case_ "no Markdown alternate" "p=d/'index.html'; p.write_text(re.sub(r'<link rel=\"alternate\"[^>]*>\n','',p.read_text()))" "must link its Markdown copy"
 case_ "date differs from sitemap" "p=d/'index.html'; p.write_text(p.read_text().replace('datetime=\"2026-11-22\">22 November 2026','datetime=\"2026-11-23\">23 November 2026'))" "differs from the sitemap lastmod"
 case_ "visible date wrong" "p=d/'docs/index.html'; p.write_text(p.read_text().replace('>22 November 2026<','>1 January 2020<'))" "does not match datetime"
-case_ "version differs" "p=d/'index.html'; p.write_text(p.read_text().replace('Version 1.1.0','Version 1.0.0'))" "shows version 1.0.0 but the command says"
+case_ "version differs" "p=d/'index.html'; p.write_text(re.sub(r'Version [0-9.]+','Version 0.0.0',p.read_text(),count=1))" "shows version 0.0.0 but the command says"
 case_ "free missing" "p=d/'index.html'; p.write_text(p.read_text().replace('Free · ',''))" "does not say that Song2Vid is free"
 case_ "macOS missing" "p=d/'index.html'; p.write_text(p.read_text().replace('Requires macOS 14 or later','Needs a Mac'))" "requires macOS 14 or later"
 case_ "error code missing from docs" "p=d/'docs/index.html'; p.write_text(p.read_text().replace('image_not_found','image_gone'))" "does not contain 'image_not_found'"
