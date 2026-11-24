@@ -1367,7 +1367,11 @@ async function jobGate() {
     if (text !== expected.sentence) fail('job', `${code}: the bar says "${text}", SPEC 27.5 says "${expected.sentence}"`);
     if (seenNow.filled.length !== 1 || seenNow.filled[0] !== expected.filled) fail('job', `${code}: the filled button reads ${JSON.stringify(seenNow.filled)}, expected "${expected.filled}"`);
     // Copy Details copies the developer text, and it is never on screen.
-    await page.getByRole('button', { name: 'Copy Details' }).click();
+    await page.keyboard.press('Control+k');
+    await page.waitForSelector('.palette');
+    await page.keyboard.type('copy details');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => (window.__copied ?? []).length > 0, null, { timeout: 2000 }).catch(() => undefined);
     const copied = await page.evaluate(() => window.__copied.at(-1) ?? '');
     if (!copied || !copied.includes(code === 'something_new' ? 'something_new' : code)) fail('job', `${code}: "Copy Details" copied ${JSON.stringify(copied.slice(0, 60))}`);
     if (copied && seenNow.page.includes(copied.split('\n')[0] ?? copied) && (copied.split('\n')[0] ?? '').length > 1) fail('job', `${code}: the developer text is on screen`);
@@ -1388,7 +1392,6 @@ async function jobGate() {
     if (!/It failed again\./.test(second.text) || second.filled[0] !== 'Copy Details') fail('job', `a repeated failure reads the same or offers the same step: ${JSON.stringify(second)}`);
     // A change of inputs is a new failure, not a repeat.
     await pickShape(page, '1:1');
-    await page.getByRole('button', { name: 'Copy Details' }).first().focus();
     await make(page);
     await waitStatus(page, 'failure');
     const third = await statusText(page);

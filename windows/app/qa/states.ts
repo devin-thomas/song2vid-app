@@ -156,6 +156,7 @@ export const STATES: Record<string, State> = {
       await fill(page, mod);
       await make(page, mod);
       await waitStatus(page, 'running');
+      await page.waitForFunction(() => /^Getting ready/.test(document.querySelector('[data-status-text]')?.textContent ?? ''));
     },
   },
   '19-making-stalled': {

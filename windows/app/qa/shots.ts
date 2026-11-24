@@ -44,6 +44,9 @@ async function capture(dir: string, name: string, state: State, options: PageOpt
     await state.run(page, modFor(platform));
     await park(page);
     await settle(page);
+    // Under forced colours a button that was disabled and enabled again redraws its border one beat after the
+    // animations have ended (it showed in 4 of 130 pictures, a different four each run): wait it out.
+    if (options.forcedColors === 'active') await page.waitForTimeout(400);
     // animations: 'disabled' finishes every CSS animation and transition before the capture, so
     // two runs of the same state give the same picture (an entrance caught mid-way differed by
     // up to 95% between identical runs; qa/visual.ts compares these pictures).

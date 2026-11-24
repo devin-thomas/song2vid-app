@@ -1,4 +1,4 @@
-import { copyDetails, runAction, useApp } from '../state/app';
+import { runAction, useApp } from '../state/app';
 import { statusOf } from '../state/status';
 import { SHORTCUTS, ariaKeys, keysOf } from '../state/shortcuts';
 import { Tip } from './ui';
@@ -35,11 +35,6 @@ export function StatusBar() {
       )}
       {button && (
         <div className="statusbar-actions">
-          {view.kind === 'failure' && button.action !== 'copy-details' && (
-            <button type="button" className="btn btn-secondary statusbar-secondary" onClick={() => void copyDetails()}>
-              Copy Details
-            </button>
-          )}
           {button.action === 'cancel' ? (
             <Tip label="Cancel" keys={keysOf(cancel)}>
               <button type="button" className="btn btn-secondary" aria-keyshortcuts={ariaKeys(cancel)} disabled={button.disabled} onClick={() => void runAction('cancel')}>

@@ -203,13 +203,6 @@
     gap: 8px;
   }
 
-  /* Too narrow for two buttons and a sentence: the sentence and the filled button win; Copy Details stays in the palette. */
-  @container app (max-width: 559.98px) {
-    .statusbar-actions .statusbar-secondary {
-      display: none;
-    }
-  }
-
   /* The 200% zoom case, 280 px wide: the filled button gives way at its end before the sentence does. */
   @container app (max-width: 420px) {
     .statusbar-actions {
