@@ -24,13 +24,14 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
 ```
 song2vid check <audio> <image> [-j]
+song2vid check <file> [-j]
 song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
 song2vid encoders [-j]
 song2vid preview <image> -o <file.png> [-w] [-j] [-E]
 song2vid -h | -v | -S | -R | -u
 ```
 
-- `check` reads a song and an image and reports what Song2Vid would make from them. It writes nothing.
+- `check` reads a song and an image and reports what Song2Vid would make from them. It writes nothing. With one file, it reports only that file: the song's facts, or the image's size and every output size. The kind comes from what is inside the file.
 - `make` makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.
 - `encoders` reports which Codecs are available on this computer.
 - `preview` writes an oriented PNG within 2048 by 2048 pixels. Smaller images keep their size. Transparency becomes black.
@@ -124,7 +125,7 @@ Every line has `"api_version":"1"` and a `"type"` of `progress`, `result` or `er
 | All lines | `api_version`, `type` | 1.1.0 |
 | `progress` | `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (0 to 100, or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`) | 1.1.0 |
 | `make` result | `command`, `output` (`name`, `width`, `height`, `duration_seconds`, `bytes`), `placement` (`fit` or `crop`), `enlarged`, `dry_run`. `bytes` is `null` for a dry run. | 1.1.0 |
-| `check` result | `command`, `audio` (`name`, `duration_seconds`, `sample_rate`, `channels`), `image` (`name`, `width`, `height`), `frames`: one for every shape and resolution with `shape`, `resolution`, `width`, `height`, `placement`, `enlarged`, `too_small` | 1.1.0 |
+| `check` result | `command`, `audio` (`name`, `duration_seconds`, `sample_rate`, `channels`), `image` (`name`, `width`, `height`), `frames`: one for every shape and resolution with `shape`, `resolution`, `width`, `height`, `placement`, `enlarged`, `too_small`. With one file, only that file's keys: `audio`, or `image` and `frames` | 1.1.0; one file 1.2.0 |
 | `--update` result | `command`, `current`, `latest`, `update_available`, `download_page` | 1.1.0 |
 | `error` | `error` (`code`, `message`) | 1.1.0 |
 | `progress` | `encoder` from the `encoding` stage onward | 1.2.0 |
@@ -150,7 +151,7 @@ Everything is checked before anything is made. The video is built in a hidden te
 
 ## The app's window
 
-The window does the same job without Terminal: choose or drop in a song and an image, pick a **Frame Shape** and a **Resolution**, drag the preview to choose the crop, press **Make Video** and choose where to save. It is described step by step, by its control names, in the [agent instructions](https://song2vid.pages.dev/agent.md).
+The window does the same job without Terminal: choose or drop in a song and an image, pick a **Frame Shape**, a **Resolution** and a **Codec**, drag the preview to choose the crop, press **Make Video** and choose where to save. It is described step by step, by its control names, in the [agent instructions](https://song2vid.pages.dev/agent.md).
 
 ## For agents
 

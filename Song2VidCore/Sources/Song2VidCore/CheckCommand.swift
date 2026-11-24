@@ -1,21 +1,48 @@
 import Foundation
+import UniformTypeIdentifiers
 
-/// `song2vid check <audio> <image> [-j]` (SPEC section 14.3): reads both files and reports what would be made.
-/// It writes nothing, and it uses the same readers and frame rules as the app.
+/// `song2vid check <audio> <image> [-j]` (SPEC section 14.3) and `song2vid check <file> [-j]` (section 24.8):
+/// reads the files and reports what would be made. It writes nothing, and it uses the same readers and frame rules as the app.
 enum CheckCommand {
     static func run(operands: [String], json: Bool) -> CommandOutput {
-        guard operands.count == 2 else {
-            let problem = UsageProblem(
-                message: "check needs one audio file and one image file.", suggestion: nil, scope: .check, jsonRequested: json
-            )
-            return .failure(CommandError(problem), json: json)
-        }
         do {
-            let report = CheckReport(try CommandInputs.read(audioPath: operands[0], imagePath: operands[1]))
-            return CommandOutput(stdout: json ? report.jsonValue.line : report.text, status: 0)
+            switch operands.count {
+            case 1: return output(CheckReport(try readOne(operands[0])), json: json)
+            case 2: return output(CheckReport(try CommandInputs.read(audioPath: operands[0], imagePath: operands[1])), json: json)
+            default:
+                let problem = UsageProblem(
+                    message: "check needs one audio file and one image file, or a single file.",
+                    suggestion: nil, scope: .check, jsonRequested: json
+                )
+                return .failure(CommandError(problem), json: json)
+            }
         } catch {
             return .failure(error, json: json)
         }
+    }
+
+    private static func output(_ report: CheckReport, json: Bool) -> CommandOutput {
+        CommandOutput(stdout: json ? report.jsonValue.line : report.text, status: 0)
+    }
+
+    /// Reads a file alone (SPEC section 24.8). Its type comes from its contents, as `make` reads it: a file the audio
+    /// reader accepts is a song, else one the image reader accepts is an image. A file that is neither, or is missing,
+    /// is reported as the kind its extension says (a section 7 audio type means audio, anything else means image).
+    private static func readOne(_ path: String) throws(CommandError) -> CheckReport.Files {
+        let url = URL(fileURLWithPath: path)
+        let extensionIsAudio = UTType(filenameExtension: url.pathExtension)
+            .map { type in SupportedTypes.audio.contains { type.conforms(to: $0) } } ?? false
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw extensionIsAudio ? .audioNotFound : .imageNotFound
+        }
+        // The system readers may log the file's path to the terminal; none of that may reach the output.
+        if let audio = withSystemOutputSilenced({ try? AudioInfo.read(from: url, isCancelled: { false }) }) {
+            return CheckReport.Files(audio: .init(name: url.lastPathComponent, info: audio), image: nil)
+        }
+        if let image = withSystemOutputSilenced({ try? ImageInfo.read(from: url) }) {
+            return CheckReport.Files(audio: nil, image: .init(name: url.lastPathComponent, info: image))
+        }
+        throw extensionIsAudio ? .audioUnreadable : .imageUnreadable
     }
 }
 
@@ -32,61 +59,88 @@ struct CheckReport: Sendable {
         var placement: PlacementKind? { frame.map { PlacementKind(shape: shape, frame: $0) } }
     }
 
-    let inputs: CommandInputs
+    /// The files that were read: both for a two-file check, one of them for a single file (SPEC section 24.8).
+    struct Files: Sendable {
+        struct Audio: Sendable { let name: String; let info: AudioInfo }
+        struct Image: Sendable { let name: String; let info: ImageInfo }
+        let audio: Audio?
+        let image: Image?
+    }
+
+    let files: Files
+    /// The output sizes. Empty when only a song was checked.
     let rows: [Row]
 
-    /// Every Frame Shape at every Resolution, then Original once, using `OutputFrame` for every size.
     init(_ inputs: CommandInputs) {
-        self.inputs = inputs
+        self.init(Files(
+            audio: .init(name: inputs.audioName, info: inputs.audio),
+            image: .init(name: inputs.imageName, info: inputs.image)
+        ))
+    }
+
+    /// Every Frame Shape at every Resolution, then Original once, using `OutputFrame` for every size.
+    init(_ files: Files) {
+        self.files = files
+        guard let image = files.image else {
+            rows = []
+            return
+        }
         var rows: [Row] = []
         for shape in FrameShape.allCases where shape != .original {
             for resolution in Resolution.allCases {
-                let frame = try? OutputFrame(imageSize: inputs.image.size, frameShape: shape, resolution: resolution)
+                let frame = try? OutputFrame(imageSize: image.info.size, frameShape: shape, resolution: resolution)
                 rows.append(Row(shape: shape, resolution: resolution, frame: frame))
             }
         }
         // Resolution does not change Original, so any one stands in for it.
-        let original = try? OutputFrame(imageSize: inputs.image.size, frameShape: .original, resolution: .p1080)
+        let original = try? OutputFrame(imageSize: image.info.size, frameShape: .original, resolution: .p1080)
         rows.append(Row(shape: .original, resolution: nil, frame: original))
         self.rows = rows
     }
 
     // MARK: JSON
 
-    /// The single `result` line (SPEC section 14.5).
+    /// The single `result` line (SPEC section 14.5). A single file leaves out the other file's keys (section 24.8).
     var jsonValue: JSONValue {
-        .line(type: "result", [
-            (.command, .string("check")),
-            (.audio, .object([
-                (.name, .string(inputs.audioName)),
-                (.durationSeconds, .seconds(inputs.audio.duration)),
-                (.sampleRate, .int(Int(inputs.audio.sampleRate.rounded()))),
-                (.channels, .int(inputs.audio.channelCount)),
-            ])),
-            (.image, .object([
-                (.name, .string(inputs.imageName)),
-                (.width, .int(inputs.image.size.width)),
-                (.height, .int(inputs.image.size.height)),
-            ])),
-            (.frames, .array(rows.map(\.jsonValue))),
-        ])
+        var fields: [(JSONKey, JSONValue)] = [(.command, .string("check"))]
+        if let audio = files.audio {
+            fields.append((.audio, .object([
+                (.name, .string(audio.name)),
+                (.durationSeconds, .seconds(audio.info.duration)),
+                (.sampleRate, .int(Int(audio.info.sampleRate.rounded()))),
+                (.channels, .int(audio.info.channelCount)),
+            ])))
+        }
+        if let image = files.image {
+            fields.append((.image, .object([
+                (.name, .string(image.name)),
+                (.width, .int(image.info.size.width)),
+                (.height, .int(image.info.size.height)),
+            ])))
+            fields.append((.frames, .array(rows.map(\.jsonValue))))
+        }
+        return .line(type: "result", fields)
     }
 
     // MARK: Text
 
     var text: String {
-        let audio = inputs.audio
-        let image = inputs.image
-        var lines = [
-            "Audio",
-            "  File:         \(inputs.audioName)",
-            "  Length:       \(Self.clock(audio.duration)) (\(Self.seconds(audio.duration)) seconds)",
-            "  Sample rate:  \(Int(audio.sampleRate.rounded())) Hz",
-            "  Channels:     \(Self.channels(audio.channelCount))",
-            "",
+        var lines: [String] = []
+        if let audio = files.audio {
+            lines += [
+                "Audio",
+                "  File:         \(audio.name)",
+                "  Length:       \(Self.clock(audio.info.duration)) (\(Self.seconds(audio.info.duration)) seconds)",
+                "  Sample rate:  \(Int(audio.info.sampleRate.rounded())) Hz",
+                "  Channels:     \(Self.channels(audio.info.channelCount))",
+            ]
+        }
+        guard let image = files.image else { return lines.joined(separator: "\n") + "\n" }
+        if !lines.isEmpty { lines.append("") }
+        lines += [
             "Image",
-            "  File:         \(inputs.imageName)",
-            "  Size:         \(image.size.width)×\(image.size.height) pixels",
+            "  File:         \(image.name)",
+            "  Size:         \(image.info.size.width)×\(image.info.size.height) pixels",
             "",
             "Output sizes",
         ]

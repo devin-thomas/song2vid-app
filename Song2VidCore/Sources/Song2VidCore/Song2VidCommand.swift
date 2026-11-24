@@ -144,6 +144,7 @@ public enum Song2VidCommand {
 
     Usage:
       song2vid check <audio> <image> [-j]
+      song2vid check <file> [-j]
       song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
       song2vid encoders [-j]
       song2vid preview <image> -o <file.png> [-w] [-j] [-E]
@@ -155,7 +156,7 @@ public enum Song2VidCommand {
                                  Say whether a newer Song2Vid is out. It downloads and changes nothing.
 
     Commands:
-      check    Read a song and an image and report what Song2Vid would make from them.
+      check    Read a song and an image, or one file alone, and report what Song2Vid would make from them.
                Run 'song2vid check --help' for details.
       make     Make the video from a song and an image. Never replaces a file unless told to.
                Run 'song2vid make --help' for details.
@@ -189,11 +190,16 @@ public enum Song2VidCommand {
 
     Usage:
       song2vid check <audio> <image> [-j]
+      song2vid check <file> [-j]
 
     It reports the song's length, sample rate and channels, the image's size after its
     orientation tag, and for every Frame Shape and Resolution the video's size, how the
     image is placed (fit or crop) and whether it would be enlarged. Original has one size,
     or is too small when a side of the image is under 16 pixels.
+
+    With one file, it reports only that file: the song's facts for a song, or the image's size and the
+    output sizes for an image. The kind comes from what is inside the file. A file that is neither is
+    audio_unreadable when its name ends in a song type, and image_unreadable otherwise.
 
     Options:
       -j | --json    Write one JSON line (api_version "1") instead of text.
@@ -203,12 +209,16 @@ public enum Song2VidCommand {
       song2vid check song.mp3 cover.png
       song2vid check song.mp3 cover.png --json
       song2vid check -j song.wav photo.heic
+      song2vid check song.mp3
+      song2vid check cover.png --json
 
     Exit statuses:
       0  Success.
       1  An input file does not exist (audio_not_found, image_not_found).
       2  Usage error (usage).
       3  An input file can't be read or isn't usable (audio_unreadable, image_unreadable).
+
+    A missing single file is audio_not_found when its name ends in a song type, and image_not_found otherwise.
 
     With --json, errors are a JSON line on stdout too, with the error code, and stderr is empty.
 
