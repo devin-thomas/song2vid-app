@@ -6,7 +6,7 @@
   "description": "Turn one song and one image into an MP4 video",
   "storagePrefix": "song2vid",
   "titleBarHeight": 36,
-  "window": { "width": 1280, "height": 800, "minWidth": 720, "minHeight": 540 },
+  "window": { "width": 560, "height": 760, "minWidth": 480, "minHeight": 640 },
   "memory": { "budgetMB": 300, "ceilingMB": 680 },
   "tool": { "name": "song2vid", "binaries": ["song2vid", "ffmpeg", "ffprobe"] },
   "linux": { "categories": "Utility;", "mimeTypes": "" },
