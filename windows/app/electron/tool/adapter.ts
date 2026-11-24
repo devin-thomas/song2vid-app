@@ -1,49 +1,73 @@
-// The adapter's two calls against the tool in docs/TOOL-CONTRACT.md: a short
-// capabilities question, and a job that streams events. No Electron in here,
-// so the tests drive it with the stand-in tool on every system.
+// The adapter's calls against the tool, as SPEC 14, 24 and 27.6 describe them: the launch checks
+// (`--version`, `encoders`), one file's facts (`check`), the picture the video will see
+// (`preview`) and the job (`make`). No Electron in here, so the tests drive it with the stand-in
+// tool (test/standin-tool.ts) on every system.
 //
 // Starting the tool and owning its lifetime is @uppercut-labs/electron-child-process-runner:
 // absolute executable, argument array, no shell and no window; stdin kept open as the cancel
-// channel and closed to cancel; stdout and stderr always drained, with a bounded stderr tail;
-// the process tree killed if it is still there after the grace period (a process group on
-// macOS and Linux, taskkill /T on Windows); ELECTRON_RUN_AS_NODE never reaches the tool.
+// channel (`--cancel-on-eof`) and closed to cancel; stdout and stderr always drained, with a
+// bounded stderr tail; the process tree killed if it is still there after the grace period (a
+// process group on macOS and Linux, taskkill /T on Windows); ELECTRON_RUN_AS_NODE never reaches
+// the tool.
 //
-// What it guarantees the rest of the shell (premium-bar rules 59, 60, 65):
-//   - the tool's stdout is read as a stream of capped lines and every line is
-//     checked; a line that is not JSON, a line over the cap, events out of order
-//     or a first event that is not `hello` end the job as TOOL_PROTOCOL or
-//     TOOL_INCOMPATIBLE, and the pipe is still drained to the end;
+// What it guarantees the rest of the shell (premium-bar rules 59, 60, 65; SPEC 27.6):
+//   - the tool's stdout is read as a stream of capped lines and every line is checked: JSON, an
+//     `api_version` of "1" and a `type`. A line that is not JSON, a line over 1 MiB, or an exit
+//     without exactly one final `result` or `error` line ends the call as `export_failed`, after
+//     the rest of the output has been drained and the tool stopped;
 //   - exactly one outcome per call: ok, cancelled or failed with a code;
-//   - unknown event types and unknown fields are ignored, as the contract asks;
-//   - no hello within `helloMs` is TOOL_STALLED; a job with no event for
-//     `stallMs` is reported as stalled (onStall) but never killed by the adapter:
-//     a slow disk is legitimate, and the person can always cancel.
-import { startProcess } from '@uppercut-labs/electron-child-process-runner';
+//   - unknown keys and line types are ignored (SPEC 24.5);
+//   - no job is ever killed for being silent: after `stallMs` with no line `onStall` says so and
+//     the person can cancel. Only the short questions (version, encoders, check) have a limit;
+//   - a cancel closes stdin, and the tool is killed `graceMs` (3 s) later if it is still there.
+import { createLineReader, startProcess } from '@uppercut-labs/electron-child-process-runner';
 import type { Outcome, RunningProcess } from '@uppercut-labs/electron-child-process-runner';
-import { MAJOR, SCHEMA_CAPABILITIES, SCHEMA_EVENTS } from './contract.ts';
-import { createLineReader } from '@uppercut-labs/electron-child-process-runner';
+import type { EncoderReport } from '../../src/bridge.ts';
+import { API_VERSION, VERSION_LINE, checkArgs, encodersArgs, makeArgs, previewArgs, readAudio, readEncoders, readError, readImage, readMade, readPreview, readVersion, versionArgs } from './contract.ts';
+import type { AudioFacts, ImageFacts, Line, MadeFacts, MakeArgs } from './contract.ts';
 import type { Located } from './locate.ts';
-import type { ToolEvent } from './progress.ts';
-import type { CapabilitiesAnswer, Capabilities, ToolError } from './status.ts';
 
-export { MAJOR, SCHEMA_CAPABILITIES, SCHEMA_EVENTS };
-const TERMINAL = new Set(['result', 'error', 'cancelled']);
-
-export const DEFAULTS = { helloMs: 5000, capabilitiesMs: 10_000, maxLineBytes: 1024 * 1024, maxTotalBytes: 64 * 1024 * 1024, stallMs: 30_000, graceMs: 3000 };
+export const DEFAULTS = {
+  /** `--version` must answer within this. */
+  versionMs: 10_000,
+  /** `encoders` finishes within 5 s (SPEC 26.4); the adapter allows twice that. */
+  encodersMs: 10_000,
+  /** `check` finishes within 3 s on Titan (SPEC 26.4); a slow disk gets ten times that. */
+  checkMs: 30_000,
+  maxLineBytes: 1024 * 1024,
+  maxTotalBytes: 64 * 1024 * 1024,
+  /** SPEC 27.6: after this long with no line the status bar says "Still working…". */
+  stallMs: 30_000,
+  /** SPEC 27.6: the time between closing stdin and killing the process. */
+  graceMs: 3000,
+};
 export type Limits = typeof DEFAULTS;
 
-const majorOf = (version: unknown): number | null => {
-  const match = /^(\d+)\./.exec(String(version ?? ''));
-  return match ? Number(match[1]) : null;
-};
+/** Why the adapter, not the tool, ended a call. `code` is `export_failed` for the last three (SPEC 27.6). */
+export type Fault = 'TOOL_NOT_FOUND' | 'TOOL_INCOMPATIBLE' | 'TOOL_PROTOCOL' | 'TOOL_CRASHED' | 'TOOL_STALLED';
 
-export type JobOutcome = { status: 'ok'; result: ToolEvent } | { status: 'cancelled' } | { status: 'failed'; error: ToolError };
+export interface ToolError {
+  /** A tool error code (SPEC 14.6, 24.6), a code from a newer tool, or a shell code (docs/BRIDGE.md). */
+  code: string;
+  /** Developer text: never shown, only copied. Holds no path. */
+  message: string;
+  /** Set when the adapter, not the tool, made this error. */
+  fault: Fault | null;
+  details: Record<string, unknown>;
+}
 
-export interface JobHooks {
-  onEvent?: (event: ToolEvent) => void;
+/** `killed`: the tool was still there after its grace period (or its limit) and was killed, so it may have left its temporary file. */
+export type CallOutcome<T> = { status: 'ok'; value: T; killed: boolean } | { status: 'cancelled'; killed: boolean } | { status: 'failed'; error: ToolError; killed: boolean };
+
+export interface CallHooks {
+  /** Every line, in order, before the call ends. */
+  onLine?: (line: Line) => void;
   onStall?: (stalled: boolean) => void;
+  /** Aborting it cancels: stdin is closed and the tool is killed after the grace period. */
   signal?: AbortSignal;
 }
+
+export type VersionAnswer = { ok: true; version: string } | { ok: false; error: ToolError };
 
 export interface AdapterOptions {
   located: Extract<Located, { ok: true }>;
@@ -51,6 +75,15 @@ export interface AdapterOptions {
   platform?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
   limits?: Partial<Limits>;
+}
+
+/** The code the page sees for a fault: the three that mean "the tool did not do what it said" are `export_failed` (SPEC 27.6). */
+const codeOfFault = (fault: Fault): string => (fault === 'TOOL_NOT_FOUND' || fault === 'TOOL_INCOMPATIBLE' ? fault : 'export_failed');
+
+/** Replaces each path (and its folder) in `text` with `<path>`, longest first, so Copy Details never carries one. */
+function withoutPaths(text: string, paths: string[]): string {
+  const names = [...new Set(paths.filter((p) => p.length > 3))].sort((a, b) => b.length - a.length);
+  return names.reduce((out, name) => out.split(name).join('<path>'), text);
 }
 
 export function createAdapter(options: AdapterOptions) {
@@ -69,52 +102,45 @@ export function createAdapter(options: AdapterOptions) {
     });
   }
 
-  const detailsOf = (outcome: Outcome, details: Record<string, unknown>) => ({ ...details, exitCode: outcome.exitCode, stderrTail: outcome.stderrTail.slice(-2000) });
+  const pathsIn = (args: string[]): string[] => args.filter((a) => a.includes('/') || a.includes('\\')).flatMap((a) => [a, a.replace(/[\\/][^\\/]*$/, '')]);
 
-  /** One JSON document on stdout, then exit 0. Never longer than `capabilitiesMs`. */
-  async function capabilities(extraArgs: string[] = []): Promise<CapabilitiesAnswer> {
-    const chunks: Buffer[] = [];
-    let bytes = 0;
-    const tool = spawn(['--capabilities', ...extraArgs], (chunk) => {
-      if (bytes < limits.maxLineBytes) chunks.push(chunk);
-      bytes += chunk.length;
-    });
-    const timer = setTimeout(() => tool.kill(), limits.capabilitiesMs);
-    const outcome = await tool.done;
-    clearTimeout(timer);
-    const fail = (code: string, message: string, details: Record<string, unknown> = {}): CapabilitiesAnswer => ({ ok: false, error: { code, message, details: detailsOf(outcome, details) } });
-    if (outcome.spawnError) return fail('TOOL_NOT_FOUND', outcome.spawnError);
-    if (outcome.escalated) return fail('TOOL_STALLED', `no capabilities within ${limits.capabilitiesMs} ms`);
-    if (bytes > limits.maxLineBytes) return fail('TOOL_PROTOCOL', `capabilities answer over ${limits.maxLineBytes} bytes`);
-    let doc: Capabilities | null;
-    try {
-      doc = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Capabilities | null;
-    } catch {
-      return fail('TOOL_INCOMPATIBLE', 'the capabilities answer is not JSON');
-    }
-    if (doc?.schema !== SCHEMA_CAPABILITIES || majorOf(doc.schema_version) !== MAJOR) return fail('TOOL_INCOMPATIBLE', `capabilities schema ${String(doc?.schema)} ${String(doc?.schema_version)}`);
-    if (!Array.isArray(doc.events) || !doc.events.includes(MAJOR)) return fail('TOOL_INCOMPATIBLE', `the tool does not speak events ${MAJOR}`, { events: doc.events });
-    if (outcome.exitCode !== 0) return fail('TOOL_CRASHED', `capabilities exited ${outcome.exitCode}`);
-    return { ok: true, capabilities: doc };
+  const failure = (fault: Fault, message: string, outcome: Outcome | null, args: string[], extra: Record<string, unknown> = {}): ToolError => ({
+    code: codeOfFault(fault),
+    message,
+    fault,
+    details: {
+      fault,
+      ...extra,
+      ...(outcome ? { exitCode: outcome.exitCode, exitSignal: outcome.exitSignal, stderrTail: withoutPaths(outcome.stderrTail.slice(-2000), pathsIn(args)) } : {}),
+    },
+  });
+
+  interface Run {
+    final: Line | null;
+    fault: { fault: Fault; message: string } | null;
+    outcome: Outcome;
+    timedOut: boolean;
+    cancelRequested: boolean;
   }
 
   /**
-   * One job. Resolves with { status: 'ok', result } | { status: 'cancelled' } | { status: 'failed', error }.
-   * `args` are the job's own arguments (paths absolute, inputs after `--`).
+   * One run of the tool whose stdout is JSON Lines. Resolves when the process and its pipes are
+   * done; every fault of the stream is recorded, the tool is stopped and the rest is drained.
    */
-  async function run(args: string[], hooks: JobHooks = {}): Promise<JobOutcome> {
-    let expectSeq = 0;
-    let terminal: ToolEvent | null = null;
-    let problem: { code: string; message: string } | null = null;
-    let helloSeen = false;
+  async function exchange(args: string[], opts: { limitMs?: number; hooks?: CallHooks }): Promise<Run> {
+    const hooks = opts.hooks ?? {};
+    let final: Line | null = null;
+    let problem: { fault: Fault; message: string } | null = null;
     let stallTimer: ReturnType<typeof setTimeout> | undefined;
+    let limitTimer: ReturnType<typeof setTimeout> | undefined;
     let stalled = false;
+    let timedOut = false;
+    let cancelRequested = false;
     let tool: RunningProcess | null = null;
-    let helloTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const fault = (code: string, message: string): void => {
-      if (problem || terminal) return;
-      problem = { code, message };
+    const fault = (kind: Fault, message: string): void => {
+      if (problem) return;
+      problem = { fault: kind, message };
       reader.stop();
       tool?.stop('protocol');
     };
@@ -129,79 +155,147 @@ export function createAdapter(options: AdapterOptions) {
         hooks.onStall?.(true);
       }, limits.stallMs);
     };
-
     const reader = createLineReader({
       maxLineBytes: limits.maxLineBytes,
       maxTotalBytes: limits.maxTotalBytes,
       onOverflow: (kind) => fault('TOOL_PROTOCOL', kind === 'line' ? `a line over ${limits.maxLineBytes} bytes` : `over ${limits.maxTotalBytes} bytes of output`),
-      onLine: (line) => {
-        if (!line.trim()) return;
+      onLine: (text) => {
+        if (!text.trim()) return;
         let parsed: unknown;
         try {
-          parsed = JSON.parse(line);
+          parsed = JSON.parse(text);
         } catch {
-          return fault('TOOL_PROTOCOL', `a line that is not JSON: ${line.slice(0, 80)}`);
+          return fault('TOOL_PROTOCOL', 'a line that is not JSON');
         }
-        if (typeof parsed !== 'object' || parsed === null || typeof (parsed as { type?: unknown }).type !== 'string') return fault('TOOL_PROTOCOL', 'an event without a type');
-        const event = parsed as ToolEvent;
-        if (terminal) return fault('TOOL_PROTOCOL', `"${event.type}" after the terminal event`);
-        if (event.seq !== expectSeq) return fault('TOOL_PROTOCOL', `seq ${String(event.seq)} where ${expectSeq} was due`);
-        expectSeq += 1;
-        if (!helloSeen) {
-          if (event.type !== 'hello') return fault('TOOL_PROTOCOL', `the first event is "${event.type}", not hello`);
-          helloSeen = true;
-          clearTimeout(helloTimer);
-          if (event['schema'] !== SCHEMA_EVENTS || majorOf(event['schema_version']) !== MAJOR) return fault('TOOL_INCOMPATIBLE', `events schema ${String(event['schema'])} ${String(event['schema_version'])}`);
-        }
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed) || typeof (parsed as { type?: unknown }).type !== 'string') return fault('TOOL_PROTOCOL', 'a line without a type');
+        const line = parsed as Line;
+        if (line.api_version === undefined) return fault('TOOL_PROTOCOL', 'a line without api_version');
+        if (line.api_version !== API_VERSION) return fault('TOOL_INCOMPATIBLE', `api_version ${JSON.stringify(line.api_version)}`);
+        if (final) return fault('TOOL_PROTOCOL', `"${line.type}" after the final line`);
         watch();
-        if (TERMINAL.has(event.type)) {
-          terminal = event;
+        if (line.type === 'result' || line.type === 'error') {
+          final = line;
           clearTimeout(stallTimer);
         }
         try {
-          hooks.onEvent?.(event);
+          hooks.onLine?.(line);
         } catch {
           // A consumer fault must not stop the stream.
         }
       },
     });
 
-    const started = spawn(['--events', String(MAJOR), '--stdin-control', ...args], (chunk) => reader.push(chunk));
+    const started = spawn(args, (chunk) => reader.push(chunk));
     tool = started;
-    helloTimer = setTimeout(() => {
-      if (!helloSeen) fault('TOOL_STALLED', `no hello within ${limits.helloMs} ms`);
-    }, limits.helloMs);
-
-    const onAbort = () => started.stop('cancelled');
+    if (opts.limitMs) {
+      limitTimer = setTimeout(() => {
+        timedOut = true;
+        started.kill();
+      }, opts.limitMs);
+    }
+    const onAbort = () => {
+      cancelRequested = true;
+      started.stop('cancelled');
+    };
     if (hooks.signal) {
       if (hooks.signal.aborted) onAbort();
       else hooks.signal.addEventListener('abort', onAbort, { once: true });
     }
+    if (!opts.limitMs) watch();
 
     const outcome = await started.done;
-    clearTimeout(helloTimer);
+    clearTimeout(limitTimer);
     clearTimeout(stallTimer);
     hooks.signal?.removeEventListener('abort', onAbort);
     reader.end();
     if (outcome.stopReason || outcome.exitCode !== 0) started.sweep();
-
-    const fail = (code: string, message: string, details: Record<string, unknown> = {}): JobOutcome => ({ status: 'failed', error: { code, message, details: { ...detailsOf(outcome, details), exitSignal: outcome.exitSignal } } });
-    const found = problem as { code: string; message: string } | null;
-    const end = terminal as ToolEvent | null;
-    if (outcome.spawnError) return fail('TOOL_NOT_FOUND', outcome.spawnError);
-    if (found) return fail(found.code, found.message);
-    if (end?.type === 'result') return { status: 'ok', result: end };
-    if (end?.type === 'cancelled') return { status: 'cancelled' };
-    if (end?.type === 'error') {
-      const details = end['details'];
-      return { status: 'failed', error: { code: String(end['code'] ?? 'UNKNOWN'), message: String(end['message'] ?? ''), details: details !== null && typeof details === 'object' ? (details as Record<string, unknown>) : {} } };
-    }
-    // No terminal event: a cancel we asked for that the tool could not report, or a crash.
-    if (outcome.stopReason === 'cancelled') return { status: 'cancelled' };
-    return fail('TOOL_CRASHED', 'the tool ended without an outcome');
+    return { final, fault: problem, outcome, timedOut, cancelRequested };
   }
 
-  return { capabilities, run };
+  /** The one outcome of a run: the final line, cancelled, or a failure with its code. */
+  function conclude(run: Run, args: string[], limitMs: number | undefined): { kind: 'line'; line: Line; killed: boolean } | { kind: 'cancelled'; killed: boolean } | { kind: 'failed'; error: ToolError; killed: boolean } {
+    const { outcome, final } = run;
+    const killed = outcome.escalated;
+    if (outcome.spawnError) return { kind: 'failed', error: failure('TOOL_NOT_FOUND', outcome.spawnError, null, args), killed };
+    if (run.fault) return { kind: 'failed', error: failure(run.fault.fault, run.fault.message, outcome, args), killed };
+    if (run.timedOut) return { kind: 'failed', error: failure('TOOL_STALLED', `no answer within ${limitMs ?? 0} ms`, outcome, args), killed };
+    if (final?.type === 'result') {
+      if (outcome.exitCode !== 0 && !outcome.escalated) return { kind: 'failed', error: failure('TOOL_CRASHED', `exit ${String(outcome.exitCode ?? outcome.exitSignal)} after a result`, outcome, args), killed };
+      return { kind: 'line', line: final, killed };
+    }
+    if (final?.type === 'error') {
+      const { code, message } = readError(final);
+      if (code === 'cancelled') return { kind: 'cancelled', killed };
+      return { kind: 'failed', error: { code, message, fault: null, details: { exitCode: outcome.exitCode, exitSignal: outcome.exitSignal } }, killed };
+    }
+    // No final line: a cancel we asked for that the tool could not report, or a crash.
+    if (run.cancelRequested) return { kind: 'cancelled', killed };
+    return { kind: 'failed', error: failure('TOOL_CRASHED', 'the tool ended without a final line', outcome, args), killed };
+  }
+
+  /** One call whose answer is one `result` line, read by `read`. A line that lacks what `read` needs is a protocol fault. */
+  async function call<T>(args: string[], read: (line: Line) => T | null, opts: { limitMs?: number; hooks?: CallHooks } = {}): Promise<CallOutcome<T>> {
+    const run = await exchange(args, opts);
+    const done = conclude(run, args, opts.limitMs);
+    if (done.kind === 'cancelled') return { status: 'cancelled', killed: done.killed };
+    if (done.kind === 'failed') return { status: 'failed', error: done.error, killed: done.killed };
+    const value = read(done.line);
+    if (value === null) return { status: 'failed', error: failure('TOOL_PROTOCOL', 'the result lacks keys the shell needs', run.outcome, args), killed: done.killed };
+    return { status: 'ok', value, killed: done.killed };
+  }
+
+  /** Plain stdout for `--version`: whatever it printed (at most one line's worth), and how it ended. */
+  async function plain(args: string[], limitMs: number): Promise<{ text: string; outcome: Outcome; timedOut: boolean; overflow: boolean }> {
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    const tool = spawn(args, (chunk) => {
+      if (bytes < limits.maxLineBytes) chunks.push(chunk);
+      bytes += chunk.length;
+    });
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      tool.kill();
+    }, limitMs);
+    const outcome = await tool.done;
+    clearTimeout(timer);
+    return { text: Buffer.concat(chunks).toString('utf8'), outcome, timedOut, overflow: bytes > limits.maxLineBytes };
+  }
+
+  /**
+   * SPEC 27.6: `--version --json` must say `song2vid 1.2.0`. SPEC 14.2 lists `--json` only for check, make and
+   * `--update`, and the Mac command answers `--version --json` with a usage error, so when the first form gives no
+   * version line at all the plain `--version` is asked. Either form must print exactly the line.
+   */
+  async function version(): Promise<VersionAnswer> {
+    const args = versionArgs(true);
+    let answer = await plain(args, limits.versionMs);
+    const spoken = (text: string) => readVersion(text) !== null;
+    if (!answer.outcome.spawnError && !answer.timedOut && !spoken(answer.text)) answer = await plain(versionArgs(false), limits.versionMs);
+    const { outcome } = answer;
+    const fail = (fault: Fault, message: string): VersionAnswer => ({ ok: false, error: { ...failure(fault, message, outcome, args), code: fault } });
+    if (outcome.spawnError) return fail('TOOL_NOT_FOUND', outcome.spawnError);
+    if (answer.timedOut) return fail('TOOL_STALLED', `no version within ${limits.versionMs} ms`);
+    const said = answer.overflow ? null : readVersion(answer.text);
+    if (said === null) return fail('TOOL_INCOMPATIBLE', answer.overflow ? 'a version answer over the line limit' : 'the answer to --version is not a version line');
+    if (outcome.exitCode !== 0) return fail('TOOL_INCOMPATIBLE', `--version exited ${String(outcome.exitCode ?? outcome.exitSignal)}`);
+    if (said !== VERSION_LINE) return fail('TOOL_INCOMPATIBLE', `the tool says "${said}", the app needs "${VERSION_LINE}"`);
+    return { ok: true, version: said };
+  }
+
+  return {
+    version,
+    /** `encoders --json` (SPEC 24.2). */
+    encoders: (): Promise<CallOutcome<EncoderReport>> => call(encodersArgs(), readEncoders, { limitMs: limits.encodersMs }),
+    /** One-file `check` of a song (SPEC 24.8). A result that has no audio is the tool saying it is not one. */
+    checkAudio: (file: string): Promise<CallOutcome<AudioFacts>> => call(checkArgs([file]), readAudio, { limitMs: limits.checkMs }),
+    /** One-file `check` of an image: its size and the output-size table. */
+    checkImage: (file: string): Promise<CallOutcome<ImageFacts>> => call(checkArgs([file]), readImage, { limitMs: limits.checkMs }),
+    /** `preview` (SPEC 24.3): writes the PNG to `output`. Cancellable. */
+    preview: (image: string, output: string, hooks: CallHooks = {}): Promise<CallOutcome<{ width: number; height: number }>> => call(previewArgs(image, output), readPreview, { hooks }),
+    /** `make` (SPEC 14.4, 24): the job. */
+    make: (args: MakeArgs, hooks: CallHooks = {}): Promise<CallOutcome<MadeFacts>> => call(makeArgs(args), readMade, { hooks }),
+  };
 }
 
 export type Adapter = ReturnType<typeof createAdapter>;

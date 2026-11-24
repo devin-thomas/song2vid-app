@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "publish": true
+    },
+    {
+      "line": {
+        "type": "result",
+        "command": "make"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "vars": {
+    "code": "image_unreadable",
+    "message": "Song2Vid can't read this image file.",
+    "exit": 3
+  },
+  "steps": [
+    {
+      "line": {
+        "type": "error",
+        "error": {
+          "code": "${code}",
+          "message": "${message}"
+        }
+      }
+    },
+    {
+      "exit": "${exit}"
+    }
+  ]
+}

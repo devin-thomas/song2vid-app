@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "line_bytes": 2097152
+    },
+    {
+      "delay_ms": 500
+    }
+  ]
+}

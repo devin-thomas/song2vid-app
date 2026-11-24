@@ -1,0 +1,35 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "progress",
+        "stage": "preparing",
+        "percent": null,
+        "elapsed_seconds": 0.0,
+        "remaining_seconds": null
+      }
+    },
+    {
+      "temp": true,
+      "content": "png"
+    },
+    {
+      "publish": true
+    },
+    {
+      "line": {
+        "type": "result",
+        "command": "preview",
+        "output": {
+          "name": "${out_name}",
+          "width": 2048,
+          "height": 1536
+        },
+        "source": {
+          "width": 4032,
+          "height": 3024
+        }
+      }
+    }
+  ]
+}

@@ -118,6 +118,7 @@ const native = createNative({
   getWindow: () => win,
   system: appShell.platform.SYSTEM,
   projectDir: ROOT,
+  quiet: appShell.quiet,
 });
 
 // ---- diagnostics ----------------------------------------------------------
@@ -250,6 +251,7 @@ function registerIpc(): void {
     platform: appShell.platform.SYSTEM,
     about: { appVersion: app.getVersion(), dataDir: path.join(app.getPath('userData'), 'data') },
     tool: await native.status(),
+    encoders: native.encoders(), // the cached Encoder report, or the fresh one when this launch's check has finished
   }));
   native.registerIpc({ handle, ipcMain, trusted });
   ipcMain.on('app:save-state', (event, key: unknown, json: unknown) => {

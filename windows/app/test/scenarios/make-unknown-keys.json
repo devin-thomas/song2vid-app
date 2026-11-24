@@ -1,0 +1,68 @@
+{
+  "vars": {
+    "encoder": "nvenc",
+    "fallback": false
+  },
+  "steps": [
+    {
+      "line": {
+        "type": "hello-from-the-future",
+        "anything": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "line": {
+        "type": "progress",
+        "stage": "warming-up",
+        "percent": 3.5,
+        "elapsed_seconds": 0.1,
+        "remaining_seconds": null,
+        "gpu_temperature": 61
+      }
+    },
+    {
+      "temp": true
+    },
+    {
+      "line": {
+        "type": "progress",
+        "stage": "encoding",
+        "percent": 50.0,
+        "elapsed_seconds": 0.4,
+        "remaining_seconds": 0.4,
+        "encoder": "${encoder}",
+        "future": {
+          "a": 1
+        }
+      }
+    },
+    {
+      "publish": true
+    },
+    {
+      "line": {
+        "type": "result",
+        "command": "make",
+        "output": {
+          "name": "${out_name}",
+          "width": 1920,
+          "height": 1080,
+          "duration_seconds": 144.0,
+          "bytes": 6153216,
+          "sha": "x"
+        },
+        "placement": "fit",
+        "enlarged": false,
+        "dry_run": false,
+        "codec": "${codec}",
+        "encoder": "${encoder}",
+        "encoder_fallback": "${fallback}",
+        "extra_key": "ignored"
+      }
+    }
+  ]
+}

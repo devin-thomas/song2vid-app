@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "noise_bytes": 10485760,
+      "newline_every": 100
+    },
+    {
+      "delay_ms": 500
+    }
+  ]
+}

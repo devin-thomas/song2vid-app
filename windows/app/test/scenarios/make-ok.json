@@ -1,0 +1,70 @@
+{
+  "vars": {
+    "encoder": "nvenc",
+    "fallback": false
+  },
+  "steps": [
+    {
+      "line": {
+        "type": "progress",
+        "stage": "checking",
+        "percent": null,
+        "elapsed_seconds": 0.0,
+        "remaining_seconds": null
+      }
+    },
+    {
+      "progress": {
+        "stage": "preparing",
+        "from": null,
+        "count": 2,
+        "every_ms": 20
+      }
+    },
+    {
+      "temp": true
+    },
+    {
+      "progress": {
+        "stage": "encoding",
+        "from": 0,
+        "to": 100,
+        "count": 10,
+        "every_ms": 30,
+        "encoder": "${encoder}"
+      }
+    },
+    {
+      "line": {
+        "type": "progress",
+        "stage": "finishing",
+        "percent": 100,
+        "elapsed_seconds": 0.5,
+        "remaining_seconds": 0.0,
+        "encoder": "${encoder}"
+      }
+    },
+    {
+      "publish": true
+    },
+    {
+      "line": {
+        "type": "result",
+        "command": "make",
+        "output": {
+          "name": "${out_name}",
+          "width": 1920,
+          "height": 1080,
+          "duration_seconds": 144.0,
+          "bytes": 6153216
+        },
+        "placement": "fit",
+        "enlarged": false,
+        "dry_run": false,
+        "codec": "${codec}",
+        "encoder": "${encoder}",
+        "encoder_fallback": "${fallback}"
+      }
+    }
+  ]
+}

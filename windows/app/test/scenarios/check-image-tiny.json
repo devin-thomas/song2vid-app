@@ -1,0 +1,134 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "result",
+        "command": "check",
+        "image": {
+          "name": "${name0}",
+          "width": 10,
+          "height": 10
+        },
+        "frames": [
+          {
+            "shape": "16:9",
+            "resolution": "480p",
+            "width": 854,
+            "height": 480,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "16:9",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "16:9",
+            "resolution": "2160p",
+            "width": 3840,
+            "height": 2160,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "9:16",
+            "resolution": "480p",
+            "width": 480,
+            "height": 854,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "9:16",
+            "resolution": "1080p",
+            "width": 1080,
+            "height": 1920,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "9:16",
+            "resolution": "2160p",
+            "width": 2160,
+            "height": 3840,
+            "placement": "fit",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "1:1",
+            "resolution": "480p",
+            "width": 480,
+            "height": 480,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "1:1",
+            "resolution": "1080p",
+            "width": 1080,
+            "height": 1080,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "1:1",
+            "resolution": "2160p",
+            "width": 2160,
+            "height": 2160,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "4:3",
+            "resolution": "480p",
+            "width": 640,
+            "height": 480,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "4:3",
+            "resolution": "1080p",
+            "width": 1440,
+            "height": 1080,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "4:3",
+            "resolution": "2160p",
+            "width": 2880,
+            "height": 2160,
+            "placement": "crop",
+            "enlarged": true,
+            "too_small": false
+          },
+          {
+            "shape": "original",
+            "resolution": null,
+            "width": null,
+            "height": null,
+            "placement": null,
+            "enlarged": null,
+            "too_small": true
+          }
+        ]
+      }
+    }
+  ]
+}
