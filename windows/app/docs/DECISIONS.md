@@ -151,6 +151,7 @@ Recorded here because `src/bridge.ts`, `docs/BRIDGE.md` and `shortcuts.json` cha
 - **The gates added** beyond the starter's: `crop`, `files`, `tool`, `notices`, and a `job` gate that holds the error table to SPEC 27.5 sentence by sentence (written out again in the audit, not read from the page). `AUDIT_ONLY=job,files node qa/audit.ts` runs some gates while one is being worked on; a run without it is the gate.
 - **Rule 6 for a drop-opened dialog.** Focus is inside the question within a frame of its opening and returns where it was; there is no key to be "in the same turn" as.
 - **`qa:typing`** measures the palette only and says the typing rules are N/A (there is no text field); `qa:kill` and the `recover` trial of `qa:crash` use the Codec as the saved state (`--qa-choose-codec`, `--qa-read-codec`); `measure/workload.js` moves the crop, cycles the pickers and opens the palette. They run the stand-in tool (`qa/standin.ts`) in the development shell.
+- **The window against the real tool** (`pnpm qa:real -- --tool-dir <folder>`, `qa/real-tool.ts`): the built page in a headless browser, its bridge the real `electron/tool/service.ts` over a real `song2vid.exe`, the dialogs answered with generated media. For each Frame Shape it drives the keys of a person's route, then has the command make the same video with the same options and compares the pixel size, the length (within 0.1 s), the Codec and the tracks. `--standin` runs the same plumbing against the stand-in tool.
 
 ## Preferences ledger
 
