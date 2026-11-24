@@ -1,0 +1,51 @@
+[package]
+name = "song2vid"
+version = "1.2.0"
+edition = "2021"
+rust-version = "1.88"
+description = "The Song2Vid command for Windows (SPEC sections 14, 24 and 26)"
+license = "MIT"
+publish = false
+build = "build.rs"
+
+[lib]
+name = "song2vid"
+path = "src/lib.rs"
+
+[[bin]]
+name = "song2vid"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.61"
+features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Networking_WinHttp",
+    "Win32_Security",
+    "Win32_Security_Cryptography",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_IO",
+    "Win32_System_JobObjects",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+]
+
+[lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+# The house style writes `-> ()` on procedures (RS001).
+unused_unit = "allow"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
