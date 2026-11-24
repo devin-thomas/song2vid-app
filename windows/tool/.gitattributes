@@ -1,0 +1,5 @@
+# The help texts are compared byte for byte with the Mac command's, so they keep LF line ends on every system.
+src/help/*.txt text eol=lf
+*.rs text eol=lf
+*.sh text eol=lf
+Cargo.lock text eol=lf

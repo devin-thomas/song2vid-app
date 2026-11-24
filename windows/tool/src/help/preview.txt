@@ -1,0 +1,25 @@
+song2vid preview saves an image as a PNG with its orientation applied and transparency filled with
+black. The PNG fits within 2048 by 2048 pixels. Smaller images keep their size.
+
+Usage:
+  song2vid preview <image> -o <file.png> [-w] [-j] [-E]
+
+Options:
+  -o | --out <file.png>       Where to save the PNG (required).
+  -w | --overwrite            Replace the output if it exists.
+  -E | --cancel-on-eof         Cancel at end-of-file on stdin or on a line containing only cancel.
+  -j | --json                 Write one JSON line (api_version "1") instead of text.
+  -h | --help                 Show this help.
+
+Examples:
+  song2vid preview photo.heic -o cover.png
+  song2vid preview photo.jpg --out cover.png --overwrite --json
+
+Exit statuses:
+  0  Success.
+  1  The image does not exist (image_not_found).
+  2  Usage error (usage).
+  3  The image can't be read (image_unreadable).
+  4  The output can't be written (output_exists, output_not_writable, disk_full).
+  5  Writing the image failed (export_failed).
+  130  Cancelled (cancelled). The temporary file is deleted.

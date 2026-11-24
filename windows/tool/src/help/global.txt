@@ -1,0 +1,41 @@
+song2vid turns one song and one image into an MP4 video.
+
+Usage:
+  song2vid check <audio> <image> [-j]
+  song2vid check <file> [-j]
+  song2vid make  <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
+  song2vid encoders [-j]
+  song2vid preview <image> -o <file.png> [-w] [-j] [-E]
+  song2vid -h | --help       Show this help. After a command, help for that command.
+  song2vid -v | --version    Print the version.
+  song2vid -S | --skill      Print the agent skill: how an agent makes a video with Song2Vid.
+  song2vid -R | --repo       Print the project address.
+  song2vid -u | --update [-j]
+                             Say whether a newer Song2Vid is out. It downloads and changes nothing.
+
+Commands:
+  check    Read a song and an image, or one file alone, and report what Song2Vid would make from them.
+           Run 'song2vid check --help' for details.
+  make     Make the video from a song and an image. Never replaces a file unless told to.
+           Run 'song2vid make --help' for details.
+  encoders Report which Codecs this computer can make.
+           Run 'song2vid encoders --help' for details.
+  preview  Save an oriented, scaled PNG from an image.
+           Run 'song2vid preview --help' for details.
+
+Examples:
+  song2vid check song.mp3 cover.png
+  song2vid check song.mp3 cover.png --json
+  song2vid make song.mp3 cover.png
+  song2vid make song.mp3 cover.png -s 1:1 -r 480p -o preview.mp4 --json
+  song2vid --version
+  song2vid --update --json
+
+Exit statuses:
+  0  Success.
+  1  An input file does not exist.
+  2  Usage error: an option or command that song2vid does not know, or a missing file.
+  3  An input file can't be read or isn't usable, or the chosen Codec is unavailable.
+  4  The output can't be written.
+  5  Making the video or preview failed, or --update could not reach GitHub.
+  130  Cancelled by a signal or by stdin with --cancel-on-eof.

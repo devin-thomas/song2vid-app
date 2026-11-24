@@ -1,0 +1,42 @@
+song2vid make turns one song and one image into an MP4 video: the image for the whole length of the song.
+It never changes your song or image, and it never replaces a file unless you say so with --overwrite.
+
+Usage:
+  song2vid make <audio> <image> [-o <file.mp4>] [-s <shape>] [-r <resolution>] [-c <h,v>] [-C <codec>] [-w] [-n] [-j] [-q] [-E]
+
+Everything is checked before anything is made. The video is built in a temporary file beside the output
+and moved into place when it is complete, so a half-made video never has the final name.
+
+Options:
+  -o | --out <file.mp4>       Where to save. Default: the song's name with .mp4, in the current folder.
+                              The name must end in .mp4.
+  -s | --shape <shape>        16:9 (default), 9:16, 1:1, 4:3 or original.
+  -r | --resolution <size>    480p, 1080p (default) or 2160p. Not with the original shape.
+  -c | --crop <h,v>           Which part of the image a crop keeps, as two fractions from 0 to 1.
+                              Default 0.5,0.5 (centred). Only with the 1:1 and 4:3 shapes.
+  -C | --codec <codec>         h264 (default) or hevc. Run 'song2vid encoders' to check availability.
+  -E | --cancel-on-eof         Cancel at end-of-file on stdin or on a line containing only cancel.
+  -w | --overwrite            Replace the output if it exists. Without it, an existing file is an error.
+  -n | --dry-run              Check everything and report what would be made. Writes nothing.
+  -j | --json                 Write JSON Lines (api_version "1") instead of text.
+  -q | --quiet                No progress output. The result and errors still print.
+  -h | --help                 Show this help.
+
+Short options can't be joined: write -w -n, not -wn.
+
+Examples:
+  song2vid make song.mp3 cover.png
+  song2vid make song.mp3 cover.png -s 1:1 -r 480p -c 0.5,0.2 -o preview.mp4
+  song2vid make song.mp3 cover.png --dry-run --json
+  song2vid make song.mp3 cover.png -C hevc -o video.mp4 --overwrite
+
+Exit statuses:
+  0  Success (also --dry-run).
+  1  An input file does not exist (audio_not_found, image_not_found).
+  2  Usage error (usage).
+  3  An input or Codec can't be used (audio_unreadable, image_unreadable, image_too_small, codec_unavailable).
+  4  The output can't be written (output_exists, output_not_writable, output_not_mp4, disk_full).
+  5  Making the video failed after it started (export_failed).
+  130  Cancelled by a signal or by stdin with --cancel-on-eof (cancelled). The temporary file is deleted.
+
+With --json, errors are a JSON line on stdout too, with the error code, and stderr is empty.

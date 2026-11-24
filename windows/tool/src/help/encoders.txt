@@ -1,0 +1,17 @@
+song2vid encoders reports whether this computer can produce H.264 and HEVC.
+It reads and writes no files.
+
+Usage:
+  song2vid encoders [-j]
+
+Options:
+  -j | --json    Write one JSON line (api_version "1") instead of text.
+  -h | --help    Show this help.
+
+Examples:
+  song2vid encoders
+  song2vid encoders --json
+
+Exit statuses:
+  0  Success, even if a Codec is unavailable.
+  2  Usage error (usage).
