@@ -41,11 +41,14 @@ final class FakeExporter: VideoExporting, @unchecked Sendable {
 }
 
 @MainActor
-func readyModel(exporter: FakeExporter, audio: LoadedAudio = song("My Song.mp3"), image: LoadedImage = picture("cover.jpg", 4000, 3000)) async -> MainWindowModel {
+func readyModel(
+    exporter: FakeExporter, audio: LoadedAudio = song("My Song.mp3"), image: LoadedImage = picture("cover.jpg", 4000, 3000),
+    defaults: UserDefaults = .standard, hevc: Bool = true
+) async -> MainWindowModel {
     var stub = StubInspector()
     stub.audio[audio.url.lastPathComponent] = audio
     stub.images[image.url.lastPathComponent] = image
-    let m = MainWindowModel(inspector: stub, exporter: exporter)
+    let m = MainWindowModel(inspector: stub, exporter: exporter, codecDefaults: defaults, isCodecAvailable: { $0 == .h264 || hevc })
     await m.chooseAudio(at: audio.url)
     await m.chooseImage(at: image.url)
     return m

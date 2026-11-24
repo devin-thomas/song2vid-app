@@ -147,12 +147,13 @@ song2vid --version</code></pre>
   <section aria-labelledby="commands">
     <h2 id="commands">Commands</h2>
 <pre><code>song2vid check &lt;audio&gt; &lt;image&gt; [-j]
+song2vid check &lt;file&gt; [-j]
 song2vid make  &lt;audio&gt; &lt;image&gt; [-o &lt;file.mp4&gt;] [-s &lt;shape&gt;] [-r &lt;resolution&gt;] [-c &lt;h,v&gt;] [-C &lt;codec&gt;] [-w] [-n] [-j] [-q] [-E]
 song2vid encoders [-j]
 song2vid preview &lt;image&gt; -o &lt;file.png&gt; [-w] [-j] [-E]
 song2vid -h | -v | -S | -R | -u</code></pre>
     <ul>
-      <li><code>check</code> reads a song and an image and reports what Song2Vid would make from them. It writes nothing.</li>
+      <li><code>check</code> reads a song and an image and reports what Song2Vid would make from them. It writes nothing. With one file, it reports only that file: the song's facts, or the image's size and every output size. The kind comes from what is inside the file.</li>
       <li><code>make</code> makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.</li>
       <li><code>encoders</code> reports which Codecs are available on this computer.</li>
       <li><code>preview</code> writes an oriented PNG within 2048 by 2048 pixels. Smaller images keep their size. Transparency becomes black.</li>
@@ -255,7 +256,7 @@ song2vid preview photo.heic -o cover.png</code></pre>
           <tr><td data-label="Line">All lines</td><td data-label="Keys"><code>api_version</code>, <code>type</code></td><td data-label="Added in">1.1.0</td></tr>
           <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>stage</code> (<code>checking</code>, <code>preparing</code>, <code>encoding</code>, <code>finishing</code>), <code>percent</code> (0 to 100, or <code>null</code>), <code>elapsed_seconds</code>, <code>remaining_seconds</code> (or <code>null</code>)</td><td data-label="Added in">1.1.0</td></tr>
           <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>command</code>, <code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>, <code>duration_seconds</code>, <code>bytes</code>), <code>placement</code> (<code>fit</code> or <code>crop</code>), <code>enlarged</code>, <code>dry_run</code>. <code>bytes</code> is <code>null</code> for a dry run.</td><td data-label="Added in">1.1.0</td></tr>
-          <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code></td><td data-label="Added in">1.1.0</td></tr>
+          <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code>. With one file, only that file's keys: <code>audio</code>, or <code>image</code> and <code>frames</code></td><td data-label="Added in">1.1.0; one file 1.2.0</td></tr>
           <tr><td data-label="Line"><code>--update</code> result</td><td data-label="Keys"><code>command</code>, <code>current</code>, <code>latest</code>, <code>update_available</code>, <code>download_page</code></td><td data-label="Added in">1.1.0</td></tr>
           <tr><td data-label="Line"><code>error</code></td><td data-label="Keys"><code>error</code> (<code>code</code>, <code>message</code>)</td><td data-label="Added in">1.1.0</td></tr>
           <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>encoder</code> from the <code>encoding</code> stage onward</td><td data-label="Added in">1.2.0</td></tr>
@@ -289,7 +290,7 @@ song2vid preview photo.heic -o cover.png</code></pre>
 
   <section aria-labelledby="window">
     <h2 id="window">The app's window</h2>
-    <p>The window does the same job without Terminal: choose or drop in a song and an image, pick a <strong>Frame Shape</strong> and a <strong>Resolution</strong>, drag the preview to choose the crop, press <strong>Make Video</strong> and choose where to save. It is described step by step, by its control names, in the <a href="/agent.md">agent instructions</a>.</p>
+    <p>The window does the same job without Terminal: choose or drop in a song and an image, pick a <strong>Frame Shape</strong>, a <strong>Resolution</strong> and a <strong>Codec</strong>, drag the preview to choose the crop, press <strong>Make Video</strong> and choose where to save. It is described step by step, by its control names, in the <a href="/agent.md">agent instructions</a>.</p>
   </section>
 
   <section aria-labelledby="agents">

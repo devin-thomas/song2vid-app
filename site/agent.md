@@ -62,7 +62,7 @@ Every line has `"api_version":"1"` and a `"type"` of `progress`, `result` or `er
 
 - `progress`: `stage` (`checking`, `preparing`, `encoding`, `finishing`), `percent` (0 to 100, or `null`), `elapsed_seconds`, `remaining_seconds` (or `null`), and `encoder` from the encoding stage onward.
 - `make` `result`: `output` with `name`, `width`, `height`, `duration_seconds`, `bytes`; plus `placement` (`fit` or `crop`), `enlarged`, `dry_run`, `codec`, `encoder`, `encoder_fallback`.
-- `check` `result`: `audio`, `image` and `frames`, one per shape and resolution, with `width`, `height`, `placement`, `enlarged`.
+- `check` `result`: `audio`, `image` and `frames`, one per shape and resolution, with `width`, `height`, `placement`, `enlarged`. `song2vid check <file> --json` with one file gives only that file's keys: `audio` for a song, `image` and `frames` for an image.
 - `encoders` `result`: `codecs` with `h264` and `hevc`, each with `available` and `encoder`.
 - `preview` `result`: `output` has the PNG name and dimensions. `source` has the oriented dimensions before scaling.
 - `error`: `error` with `code` and `message`.
@@ -88,10 +88,10 @@ Is a newer Song2Vid out? `song2vid --update` says so and downloads nothing; inst
 
 ## Route 2: the app's window
 
-1. Open Song2Vid. The window has a song slot, an image slot, a **Frame Shape** picker, a **Resolution** picker, a preview and **Make Video**.
+1. Open Song2Vid. The window has a song slot, an image slot, a **Frame Shape** picker, a **Resolution** picker, a **Codec** picker (H.264 or HEVC), a preview and **Make Video**.
 2. Press **Choose Audio**, pick the song. Press **Choose Image**, pick the picture. (Dropping files on the window works too; when a slot is full, a dialog offers Replace or Keep Current.)
-3. Set **Frame Shape** and **Resolution**. For `1:1` and `4:3`, drag the preview to choose the part that stays; **Reset to Center** undoes it.
+3. Set **Frame Shape** and **Resolution**. For `1:1` and `4:3`, drag the preview to choose the part that stays; **Reset to Center** undoes it. Leave **Codec** on H.264 unless the person asks for HEVC; the window remembers the last choice. If HEVC is greyed out, the note under the picker says "This computer can't make HEVC videos.", so stay on H.264.
 4. Press **Make Video**. In the save dialog, choose the name and folder.
-5. Wait for "Video saved." The progress bar is labelled "Making video" with a percent, and **Cancel** stops it. This step is done when "Video saved." and **Show in Finder** are on screen.
+5. Wait for "Video saved." The progress bar is labelled "Making video" with a percent, and **Cancel** stops it. This step is done when "Video saved." and **Show in Finder** are on screen. The line beside them, "Made as H.264." or "Made as HEVC.", names the Codec.
 
 Tell the person the saved file's name and folder as the dialog showed them.

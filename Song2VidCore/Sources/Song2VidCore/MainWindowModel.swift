@@ -42,6 +42,35 @@ public final class MainWindowModel {
 
     public private(set) var cropPosition: CropPosition = .center
 
+    /// The Codec the person last chose, kept even when this Mac can't make it so it comes back on one that can.
+    private var rememberedCodec: Codec
+
+    /// The Codec of the next video. Changing it changes nothing else (SPEC section 23). It is remembered across launches.
+    /// When the remembered Codec is HEVC and this Mac can't make HEVC, the window starts on H.264 and keeps HEVC remembered.
+    public var codec: Codec {
+        get { rememberedCodec == .hevc && !canMakeHEVC ? .h264 : rememberedCodec }
+        set {
+            guard !isExporting, newValue != codec, newValue == .h264 || canMakeHEVC else { return }
+            rememberedCodec = newValue
+            CodecPreference.write(newValue, to: codecDefaults)
+        }
+    }
+
+    /// False when this Mac can't open an HEVC encoder: the window disables the HEVC choice.
+    public let canMakeHEVC: Bool
+
+    /// The Codec picker can be used: nothing is being made, and there is a choice to make.
+    public var codecPickerEnabled: Bool { !controlsLocked && canMakeHEVC }
+
+    /// Shown under the Codec picker when HEVC is unavailable (SPEC section 23).
+    public var codecNote: String? {
+        canMakeHEVC ? nil : "This computer can't make HEVC videos."
+    }
+
+    /// The Codec of the video last saved, until the next one starts.
+    public private(set) var savedCodec: Codec?
+
+    @ObservationIgnored private let codecDefaults: UserDefaults
     @ObservationIgnored private let inspector: any MediaInspecting
     @ObservationIgnored private let exporter: any VideoExporting
     @ObservationIgnored private var exportTask: Task<ExportOutcome, Never>?
@@ -54,11 +83,16 @@ public final class MainWindowModel {
     public init(
         inspector: any MediaInspecting = SystemMediaInspector(),
         exporter: any VideoExporting = SystemVideoExporter(),
-        lastSaveFolder: URL? = nil
+        lastSaveFolder: URL? = nil,
+        codecDefaults: UserDefaults = .standard,
+        isCodecAvailable: (Codec) -> Bool = CodecSupport.isAvailable
     ) {
         self.inspector = inspector
         self.exporter = exporter
         self.lastSaveFolder = lastSaveFolder
+        self.codecDefaults = codecDefaults
+        rememberedCodec = CodecPreference.read(from: codecDefaults)
+        canMakeHEVC = isCodecAvailable(.hevc)
     }
 
     // MARK: Choosing files
@@ -264,6 +298,11 @@ public final class MainWindowModel {
         savedVideoURL == nil ? nil : "Video saved."
     }
 
+    /// "Made as H.264." or "Made as HEVC.": names the Codec of the video just saved, for the done state and VoiceOver.
+    public var savedCodecMessage: String? {
+        savedVideoURL == nil ? nil : savedCodec.map { "Made as \($0.title)." }
+    }
+
     /// Where the last video was saved, for Show in Finder.
     public var savedVideoURL: URL? {
         if case .saved(let url) = exportState { return url }
@@ -276,7 +315,11 @@ public final class MainWindowModel {
         guard canMakeVideo, let audio, let image, let frame else { return }
         exportState = .making(progress: 0)
         notice = nil
-        let request = ExportRequest(audioURL: audio.url, imageURL: image.url, frame: frame, destinationURL: destination)
+        savedCodec = nil
+        let chosenCodec = codec
+        let request = ExportRequest(
+            audioURL: audio.url, imageURL: image.url, frame: frame, destinationURL: destination, codec: chosenCodec
+        )
         let exporter = exporter
         let task = Task { [weak self] in
             await exporter.export(request) { fraction in
@@ -291,6 +334,7 @@ public final class MainWindowModel {
         switch outcome {
         case .completed(let url):
             lastSaveFolder = url.deletingLastPathComponent()
+            savedCodec = chosenCodec
             exportState = .saved(url)
         case .cancelled:
             exportState = .idle

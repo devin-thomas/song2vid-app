@@ -24,7 +24,11 @@ struct CommandCheckLeakTests {
             ("image unreadable", ["check", audio, workspace.path("fake-picture.png")]),
             ("folder as audio", ["check", workspace.folder.path, image]),
             ("unknown option", ["check", audio, image, "--\(Self.plantedValue)"]),
-            ("wrong number of files", ["check", audio]),
+            ("one file, a song", ["check", audio]),
+            ("one file, an image", ["check", image]),
+            ("one file, unreadable", ["check", workspace.path("fake-song.mp3")]),
+            ("one file, missing", ["check", workspace.path("missing.png")]),
+            ("wrong number of files", ["check"]),
             ("help", ["check", "--help"]),
         ]
     }

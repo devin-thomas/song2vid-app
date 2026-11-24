@@ -158,15 +158,15 @@ struct CommandCheckErrorTests {
         }
     }
 
-    @Test("check needs exactly one audio file and one image file", arguments: [
-        [], ["only-one"], ["one", "two", "three"],
+    @Test("check needs one file, or one audio file and one image file", arguments: [
+        [], ["one", "two", "three"],
     ] as [[String]])
     func wrongNumberOfFiles(files: [String]) throws {
         let result = try CommandProcess.run(["check"] + files)
         #expect(result.status == 2)
         #expect(result.stdout.isEmpty)
-        #expect(result.stderr == "check needs one audio file and one image file. Run 'song2vid check --help'.\n")
-        #expect(!result.stderr.contains("only-one"))
+        #expect(result.stderr == "check needs one audio file and one image file, or a single file. Run 'song2vid check --help'.\n")
+        #expect(!result.stderr.contains("three"))
 
         let json = try CommandProcess.run(["check"] + files + ["-j"])
         #expect(json.status == 2)
@@ -188,7 +188,7 @@ struct CommandCheckErrorTests {
         #expect(result.status == 0)
         #expect(result.stderr.isEmpty)
         for part in [
-            "Usage:", "song2vid check <audio> <image> [-j]", "Examples:", "Exit statuses:", "-j", "--json", "-h", "--help",
+            "Usage:", "song2vid check <audio> <image> [-j]", "song2vid check <file> [-j]", "Examples:", "Exit statuses:", "-j", "--json", "-h", "--help",
             "audio_not_found", "image_not_found", "usage", "audio_unreadable", "image_unreadable",
         ] {
             #expect(result.stdout.contains(part), "check help is missing \(part)")

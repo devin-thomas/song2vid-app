@@ -33,7 +33,7 @@ struct ContentView: View {
             footer
         }
         .padding(20)
-        .frame(minWidth: 560, minHeight: 540)
+        .frame(minWidth: 560, minHeight: 580)
         .fileImporter(
             isPresented: $isPicking,
             allowedContentTypes: picking.types
@@ -125,6 +125,28 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            GridRow(alignment: .firstTextBaseline) {
+                Text("Codec")
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("Codec", selection: $model.codec) {
+                        ForEach(Codec.allCases, id: \.self) { codec in
+                            Text(codec.title).tag(codec)
+                                .disabled(codec == .hevc && !model.canMakeHEVC)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(!model.codecPickerEnabled)
+                    .accessibilityLabel("Codec")
+                    .accessibilityHint(model.codecNote ?? "Chooses how the video is compressed: H.264 or HEVC")
+                    if let note = model.codecNote {
+                        Text(note)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
     }
 
@@ -153,6 +175,10 @@ struct ContentView: View {
                 HStack {
                     Label(saved, systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
+                    if let codec = model.savedCodecMessage {
+                        Text(codec)
+                            .foregroundStyle(.secondary)
+                    }
                     Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
                         .accessibilityHint("Shows the saved video in a Finder window")
                 }
