@@ -99,6 +99,20 @@ Song2Vid for Windows is built from this starter (ADR-022). Before any page work,
 
 Default 560 x 760 and minimum 480 x 640 (SPEC 27.1), in `app.config.json`. The starter's example screen does not fit this width (its title bar overflows at 200% zoom and its two-pane journey fails), which is the reason the window size was changed in a commit of its own after the starter's gates had passed at its own size.
 
+## D-024 The adapter speaks SPEC 14, 24 and 27.6 (S2V-029)
+
+The starter's adapter (`--capabilities`, `--events 1`, `--stdin-control`, a `hello` first line, sequence numbers) is replaced. What was decided where the SPEC or the seam files left room:
+
+- **One contract.** Every line has `api_version: "1"` and a `type`; unknown keys and types are ignored; exactly one final `result` or `error`. A different `api_version` is `TOOL_INCOMPATIBLE`. `make` and `preview` get `--json --cancel-on-eof`; `check` and `encoders` get `--json` only, and never `--cancel-on-eof`, so the tool never reads their stdin. Every path is absolute, so no name can read as an option and `--` is not used.
+- **Faults end the job as `export_failed`** (SPEC 27.6), with the adapter's own name for the fault (`TOOL_PROTOCOL`, `TOOL_CRASHED`, `TOOL_STALLED`) in `Problem.details`. BRIDGE.md had listed `TOOL_CRASHED` and `TOOL_PROTOCOL` as codes the page receives; the page's sentence for them was the generic one either way, so the change is only in the code. `TOOL_NOT_FOUND` and `TOOL_INCOMPATIBLE` stay codes.
+- **`--version --json`.** SPEC 27.6 names it and SPEC 14.2 lists `--json` only for check, make and `--update`. The Mac command refuses `--version --json` with a usage error. The adapter asks `--version --json` first and, when that gives no version line, plain `--version`. Either form must print exactly `song2vid 1.2.0`. S2V-025 should accept `--version --json` or SPEC 27.6 should drop `--json`; the adapter works with both.
+- **Launch.** `--version` first, then `encoders --json` in the background. The last answers are cached by the binaries' size and modified time (`tool/report.json` in the data folder) and shown at once. A failed version check removes the cache. `encoders` that fails keeps the old report.
+- **Temporary files.** The tool does not name its `.song2vid-<32 hex>.tmp` in any line (SPEC 14.5 says no folder path and the key list has no such key), so the job record holds the output folder alone. The next launch removes, directly in each recorded folder, regular files matching `^\.song2vid-[0-9a-fA-F]{32}\.tmp$` and nothing else. After a job the adapter had to kill, or one that broke the contract, the shell removes the matching files that were not in the folder before the job started. Hex digits of either case are accepted because the file name is case-insensitive on Windows and SPEC 26.3 says only "32 hex". A live tool from another program writing into the same folder at that moment is the one case this cannot tell apart; the SPEC's rule has the same limit.
+- **Preview** is returned as a `data:image/png;base64,` address, which the page's Content-Security-Policy already allows. A route on the `app://` scheme would need a change to `electron/main.ts`; S2V-030 may choose it.
+- **The save dialog and `--overwrite`.** `--overwrite` is passed only when the chosen name already ends in `.mp4`, the file exists and the Windows dialog (which asks before replacing) returned it. A name without `.mp4` gets it appended and is never replaced. Try Again (`destination: 'same'`) reuses the last destination and its overwrite answer. The last folder is remembered when a video is saved, not when one fails (`tool/destination.json`).
+- **Dialogs under `--no-activate`** are never opened (D-010); the call answers as if the person had closed the dialog.
+- **Time left** is withheld by the shell until encoding has run 1 second and passed 5% (SPEC 27.4), then taken from the tool, changing at most once a second.
+
 ## Preferences ledger
 
 Every preference the app offers is listed here with the reason a default could not serve. The starter has one: the theme, which starts dark and keeps a person's saved choice (D-020).
