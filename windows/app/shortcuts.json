@@ -1,0 +1,14 @@
+{
+  "about": "The one table of commands and their keys. The page's key handler, the palette, the tooltips, the macOS menu (electron/menu.ts) and the shell check (measure/shell-check.ts) all read this file, so a shortcut cannot exist in one place only. `mod` is Ctrl on Windows and Linux and Command on macOS. A command with null has no shortcut and is listed in qa/journeys.json commandsWithoutShortcut with the reason. None uses a key that edits text or a key the system keeps (Q, W, M, H, X, C, V, A, Z, Y with the modifier; F10 and F11 on Linux). Song2Vid's table is SPEC 27.7: Choose Audio (Ctrl+O), Choose Image (Ctrl+Shift+O), Make Video (Ctrl+Enter), Cancel (Esc, only while making), Reset Crop to Center (Ctrl+0), Show in File Explorer (only after a save; reached through the palette), Light or Dark Theme, About Song2Vid, plus the starter's command palette (Ctrl+K), which is how every command without a key is reached by keyboard alone. The Cancel key is Escape with no modifier; the page runs it only while a video is being made, and a dialog or the palette takes Esc first.",
+  "commands": {
+    "command-palette": { "key": "k", "mod": true },
+    "choose-audio": { "key": "o", "mod": true },
+    "choose-image": { "key": "o", "mod": true, "shift": true },
+    "make-video": { "key": "Enter", "mod": true },
+    "cancel": { "key": "Escape" },
+    "reset-crop": { "key": "0", "mod": true },
+    "show-in-folder": null,
+    "toggle-theme": { "key": "l", "mod": true, "shift": true },
+    "about": null
+  }
+}

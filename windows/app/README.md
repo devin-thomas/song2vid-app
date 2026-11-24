@@ -1,0 +1,157 @@
+# Content-app starter for Windows, macOS and Linux
+
+A starting point for a content app: a React page in an Electron shell, with the app's logic in a command-line tool or core that ships inside the app, built from one codebase for Windows, macOS and Linux. It is the media converter build of 2026-11-15 (build 2 of this class) with everything about audio removed, on top of round 1's page, tokens and audit from the mail app (build 1). The rules it is built to are in the desktop-app skill's `references/premium-bar.md`; the stack, the shell recipe per system and the counter-evidence are in `references/content-app.md`; the tool seam in `references/tool-contract.md`; packages and installs in `references/packaging.md`. Each part says how many builds it rests on. `PROVENANCE.md` says where every file came from.
+
+## What to ask for
+
+Bring these to the build. Each has a recommended answer.
+
+| Question | Recommended answer |
+| --- | --- |
+| Product name, exe name, app id, company | Set all four in `app.config.json`. The exe name has no spaces; the app id is reverse-DNS, and on Linux it is also the desktop entry's name |
+| Which systems? | All three from this one codebase. A Mac-only app is SwiftUI instead (the skill's macOS branch) |
+| Default and minimum window | Set `window` in `app.config.json`. The shell creates the window at these sizes and the audit lays the page out at exactly these, plus 125% scale and 200% zoom |
+| Where does the logic live? | A command-line tool bundled inside the app, one binary per system and processor (`tool.name` and `tool.binaries`), started by absolute path. A long-lived core only when the app makes many small calls against warm state |
+| What does the tool say to the app? | Write `docs/TOOL-CONTRACT.md` before anyone builds, following `references/tool-contract.md`: a capabilities call, newline-delimited JSON events, cancel by closing stdin, a published list of error codes |
+| What can the page ask of the shell? | Write `src/bridge.ts` and `docs/BRIDGE.md` before anyone builds. The page never sees a path |
+| What are the essential journeys and their step budgets? | Five to fifteen, in `docs/JOURNEYS.md` and `qa/journeys.json`, before any component is chosen |
+| Which words may a person never see? | Start `qa/banned-terms.json` from the spec's glossary, the tool's field names and its error codes |
+| Does the app bundle third-party programs? | Build your own minimal copies when the published ones are big (build 2's FFmpeg: 7 MB instead of 264 MB) and ship their notices from About |
+| How is it released? | Per-user install on Windows; an ad-hoc signed, unnotarized bundle on macOS for Apple silicon with short instructions for other people; a `.deb` and a portable tarball on Linux  |
+
+## What is decided for you
+
+- **Stack:** Electron 45, React 19 with the React Compiler, TypeScript, Tailwind v4 tokens in OKLCH, Base UI primitives, TanStack Virtual, lucide icons, Inter Variable. Versions are pinned in `package.json` and `pnpm-lock.yaml`.
+- **Strict TypeScript everywhere (D-013 to D-017):** the main process is `electron/**/*.ts`, bundled by rolldown (`scripts/build-electron.ts`) into `dist/electron/main.mjs` (the kits inside it, no `node_modules` in the package) and a sandboxed `dist/electron/preload.cjs`; the page builds to `dist/page/`. Scripts, measurements, QA and tests are `.ts` run by Node's type stripping (Node 24 or later). The three plain-Node scripts the installed checks run by name (`scripts/control.cjs`, `installed-helpers.cjs`, `installed-diagnostics.cjs`) are built from `.ts` by `pnpm emit:plain` and committed; a test fails when one is stale. `measure/workload.js` stays JavaScript and is type-checked with the page.
+- **Shared code from the kits (D-018):** the menus, the tool runner, the QA measurements, the stand-in bridge, the audit's server and browser, the icons and the frame-time harness are packages, listed under "Shared code" below. `test/kit-only.test.ts` fails if a hand-rolled copy comes back.
+- **One platform module (`electron/platform.ts`):** the only file that asks which system this is. It returns the window options for each system, a short list of named facts (closing the last window quits or not, whether a window can be shown without focus, which keys the shell handles itself), the app's identity to the system, and how the window is first shown. On Linux it restarts the app on Wayland when a Wayland session did not say so.
+- **Window (`electron/window.ts`):** created hidden in the theme's colour (dark unless the person saved light, D-020) and shown at first paint (on Linux also at the end of the page load), with a 3 s fallback; the system's own window buttons over a page-drawn title bar on every system, reported to the page through `env(titlebar-area-*)`; traffic lights centred in the bar on macOS; size and position remembered where the system allows.
+- **Life cycle (`electron/shell.ts`):** one instance per data folder; commands for the running app (`--diagnostics`, `--capture`, `--show-about`, `--menu-command`, `--full-screen`, `--close-window`, `--quit`); files opened with the app; closing and quitting as each system expects; a quit right after a person's second launch waits for it to be acknowledged. The app counts second launches and control requests in its diagnostics (`shell.lifecycle`).
+- **Control channel (`electron/control.ts`):** the only way a script reaches the running app. An app started with `--no-activate` or `--control` serves a named pipe (Windows) or a Unix socket (macOS, Linux) and writes where to `control.json` in its data folder; an app a person started serves none. Clients: `ask()` in `scripts/lib/launch.ts`, `scripts/control.cjs` (plain Node, or the installed app acting as Node) and `scripts/control.ps1` (PowerShell, starts no program). The executable started with a command flag forwards it through the channel and ends without asking for the single-instance lock, so it never becomes a second instance: on Windows a second instance hands the running app the right to take the foreground before any app code runs (Chromium's process singleton). Every check that asks the app anything expects its count of second launches to be 0.
+- **Network service in the main process (`electron/main.ts`, `NETWORK_SERVICE_IN_PROCESS`):** on by default, only for a page that makes no network request (`connect-src 'none'`; the shell check fails the switch otherwise). Build 2 measured 304.4 MB idle on Windows installed before, 243.2 MB after; an app that talks to a server turns it off and records why.
+- **Menu (`electron/menu.ts`):** a full menu bar and a Dock menu on macOS, built from the one shortcut table (`shortcuts.json`); none on Windows and Linux. Menu items dim exactly when the page says their command cannot run.
+- **Memory (`electron/memory.ts`, `scripts/memory-tree.*`):** private memory by each system's definition, summed over the process tree. Budget 300 MB after idle, ceiling 680 MB, in `app.config.json`.
+- **Errors:** under `--no-activate` a main-process error goes to stderr and the app ends; diagnostics are written with synchronous file calls so asking does not change the memory figure.
+- **Tool adapter (`electron/tool/`):** line reader, runner (`@uppercut-labs/electron-child-process-runner`: cancel by closing stdin, escalate after 3 s), locator (one folder per system and processor, never PATH when packaged), capabilities cache, job records with launch reconciliation, progress model, and the adapter itself. All plain Node, tested against the stand-in tool.
+- **Page parts:** title bar, command palette and one command registry with ids from `shortcuts.json`, platform-aware key labels, toasts with Undo, tooltips that show shortcuts, a virtualized list, a status bar with one height in every state, and the token set in `tokens/design-tokens.json`. The page learns the system from the shell and sets `data-platform` on the root.
+- **Stand-ins:** `src/bridge.fake.ts` (the shell, for the page) chosen by the address's fragment; `test/standin-tool.ts` (the tool, for the adapter) replaying scenarios.
+- **Launch rules (`scripts/lib/launch.ts`):** every scripted launch uses absolute paths, passes `pnpm shell:check` first, runs with `--no-activate`, a throwaway data folder and a time limit, talks to the app only through the control channel (`app.ask()`), quits it through the channel when the limit passes, and then ends only the process it started, by its id.
+- **Windowless scripts on Windows (`scripts/run-as-user.ps1`):** anything handed to Explorer runs PowerShell under `conhost.exe --headless`, a console with no window. A visible console (even a Minimized shortcut, once Windows Terminal is the default terminal) takes the foreground and, when it closes, hands it to whatever app is entitled to it.
+- **Crash recovery and window restoration (`electron/window.ts`, `electron/bounds.ts`, rules 104 and 105):** a crashed or killed renderer is reloaded in the same process into the page's saved state, and more than 3 crashes in 60 s stop the reloads, keep the work and tell the person (never under `--no-activate`). The window opens on the display it was saved on when that display is still connected, else centred on the primary one; it always fits the work area, and one saved maximized opens maximized (not on Windows under `--no-activate`, where maximizing activates). The placement is a pure function, `initialBounds` in `electron/bounds.ts`.
+- **Security boundary (`electron/boundary.ts`, `electron/main.ts`, rules 106 and 107):** every window keeps context isolation, the sandbox and web security; before the first window the boundary denies every permission but a short allow-list with a reason (the starter allows clipboard writing, for Copy details) and refuses navigation away, new windows and `<webview>`; the page's policy allows no eval; every IPC listener checks its sender. `measure/shell-check.ts` reads all of it from the source.
+- **Fuses (`scripts/lib/fuses.ts`, `scripts/package.ts`, rule 108):** flipped on the freshly extracted Electron before signing: no `NODE_OPTIONS`, no `--inspect`, the app only from `app.asar`, integrity validation on macOS, no extra file-protocol privileges. `RunAsNode` stays on with a written reason (`RUN_AS_NODE_REASON`): the installed checks run the app's own binary as Node.
+- **Contrast themes, colour tokens and screenshot baselines (rules 109 to 111):** the audit checks focus under forced colours (`forced`) and that colour comes only from the token layer (`tokens`); `qa/visual.ts` compares every screenshot with the accepted baseline for the system.
+- **Checks that prove themselves (`qa/planted-breaks.ts`):** `pnpm qa:planted` makes one break per rule 104 to 111 in a throwaway copy and requires the check to fail. A check that stops failing is as broken as the rule it guards.
+- **Decisions already recorded:** `docs/DECISIONS.md`, D-001 to D-021.
+
+## What you still choose
+
+The screens, the journeys, the banned terms, the accent colour and product mark, the tool and its contract, the fixtures for every state, which preferences exist, and the per-system known-gaps list (start from the one in `electron/platform.ts`).
+
+## From request to delivery
+
+1. Copy this folder to the project, outside any Git checkout of this template. Edit `app.config.json`, the `name` and `productName` in `package.json`, the title in `index.html` and `build/icon.svg`.
+2. `pnpm install --frozen-lockfile`, then `pnpm electron:install`. Electron 45 has no install script, so its binary is absent until this runs; the real-shell scripts need it. On a Mac without pnpm, `npx pnpm@11.9.0`.
+3. `pnpm typecheck`, `pnpm build`, `pnpm test`, `pnpm shell:check`, `pnpm qa:audit`. All five pass on the untouched starter (about 2 minutes for the audit on an Apple silicon Mac). This is the baseline: a later failure is from the app's own change. Then `pnpm qa:crash` (it starts the real shell without focus, so on the owner's machine only when he has said it is free).
+4. Write `docs/TOOL-CONTRACT.md`, `src/bridge.ts` with `docs/BRIDGE.md`, `docs/JOURNEYS.md` with `qa/journeys.json`, and `shortcuts.json`, before any builder starts. Builders change none of them.
+5. Replace the example: the screen in `src/App.tsx` and `src/components/StatusBar.tsx`, the job in `src/state/job.ts` and `electron/tool/index.ts`, the contract names in `electron/tool/contract.ts`, the stand-in scenarios in `test/scenarios/` and fixtures in `src/bridge.fake.ts`, the menu in `electron/menu.ts`, and the marked blocks in `qa/audit.ts` (states, journey scripts, shortcut effects, job fixtures), `qa/shots.ts`, `qa/lib.ts` (`fill()`), `electron/qa.ts` and `measure/workload.js`.
+6. `pnpm qa:visual --update` once the screens are reviewed, then `pnpm qa:visual` on every change: commit `qa/baselines/<system>/` and delete the `qa/baselines/` line in `.gitignore`. Baselines are per system, because fonts are drawn differently on each. After packaging, `pnpm fuses:check <target>` on the target's own system. When a check is changed, `pnpm qa:planted` shows it still fails on its break.
+7. `pnpm qa:shots`, hand the screenshots alone to a critic that did not build the app, fix, and turn each class of finding into an audit gate. Repeat until a round has no must-fix item.
+8. Run the real shell on each system. Linux: `scripts/linux-container/run.sh` on a Mac with Docker. macOS: `pnpm shell:evidence` on a Mac nobody is using. Windows: `pnpm qa:typing`, `pnpm qa:kill`, `pnpm shell:evidence` and `uv run measure/run.py` only when the owner has said the machine is free, because each opens a window. Before any claim about focus on Windows, run `pnpm measure:focus -- --work <folder> --first explorer --route explorer` (also when he has said the machine is free): launches from an agent's own session cannot show the problem, because that session holds no right to the foreground.
+9. Build the tool for each target and stage it (`node scripts/stage.ts tool <target> <file>`, or the placeholder in `tool/placeholder/`), then `pnpm icon` and `pnpm package:win`, `pnpm package:mac`, `pnpm package:linux-arm64`, `pnpm package:linux-x64` on the machine for each.
+10. Install and check each (below), then hand over each system's launcher path, the evidence folders, the verdict per premium-bar group and per system, and what was not verified. The owner's use decides whether it is premium.
+
+## Checks
+
+Every check is a pnpm command that exits non-zero when its rule is broken. The rules are in the skill's `references/premium-bar.md`.
+
+| Command | Rules | What it proves | Opens a window |
+| --- | --- | --- | --- |
+| `pnpm typecheck` | style | strict TypeScript for the page, the main process, the scripts and the QA code | no |
+| `pnpm test` | 105, 106 and the tool adapter | window placement against every display change (`test/bounds.test.ts`), the permission decision (`test/boundary.test.ts`), the adapter against the stand-in tool, the control channel, the dark default, the kit-only rules | no |
+| `pnpm shell:check` | 106, 107, 108 and the shell's rules | the shell read from its source: sandbox and isolation on, the boundary installed before the first window, the page's policy, every IPC listener checking its sender, the fuse configuration, focus taken only in reviewed places | no |
+| `pnpm qa:audit` | 109, 110 and the page's rules | the page, headless, in every state and both themes, including focus under forced colours and the token layer | headless browser |
+| `pnpm qa:crash` | 104, 105, 106 | the real shell through its control channel: a crashed renderer reloaded with the typed text back, a crash loop stopped, the page's view of its permissions, a window saved maximized and one saved on a missing display | yes, without focus |
+| `pnpm qa:visual` | 111 | every screenshot against the accepted baseline for this system | headless browser |
+| `pnpm fuses:check <target>` | 108 | the fuse wire read back from the packaged app; on the app's own system each closed door tried | no window (command launches) |
+| `pnpm qa:planted` | 104 to 111 | one break per rule in a throwaway copy; each must fail its check | as the checks it runs |
+| `pnpm qa:kill`, `pnpm qa:typing` | 44, 25 | text survives a kill; typing latency | yes, without focus |
+| `pnpm shell:evidence` | the shell's seams | the real shell on this system, reached only through its control channel | yes, without focus |
+
+## Shared code
+
+Extend a kit package rather than copy its code into the app. These are the packages, and the test that keeps them the only source (`test/kit-only.test.ts`) names the one to use when a copy appears.
+
+| Job | Package | Used in |
+| --- | --- | --- |
+| Menus and Dock menu from the shortcut table | `@uppercut-labs/electron-command-menu` (npm) | `electron/menu.ts` |
+| Starting and stopping the bundled tool, and splitting its output into capped lines | `@uppercut-labs/electron-child-process-runner` (npm) | `electron/tool/adapter.ts` |
+| The control channel between scripts and the running app | `@uppercut-labs/electron-control-channel` (npm) | `electron/control.ts`, `scripts/control.ts` |
+| Private memory of the running app by each system's definition | `@uppercut-labs/electron-private-memory` (npm) | `electron/memory.ts` |
+| Typing, palette, launch marks and the kill test, measured inside the app | `@uppercut-labs/electron-qa-measurements` (npm) | `electron/qa.ts` |
+| The stand-in bridge's call log, menu hook, storage and timers | `@uppercut-labs/electron-bridge-test-double` (npm) | `src/bridge.fake.ts` |
+| Serving the build and launching a headless browser for the audit | `@uppercut-labs/browser-qa-harness` (npm) | `qa/lib.ts` |
+| Every icon from `build/icon.svg` | `@uppercut-labs/app-icon-generator` (npm) | `scripts/make-icon.ts` |
+| A picture of one window without bringing it forward | `uppercut-windows-window-capture` (PyPI) | `measure/run.py` |
+
+`measure/run.py` declares its Python package in its own header, so `uv run measure/run.py` installs it. One piece waits for its package: the PresentMon capture and its summary (`measure/run.py`, `measure/analyze.py`) move to `uppercut-presentmon-measure` once it reads displayed-frame times and starts a delayed capture on a chosen process.
+
+## Install and check the installed app
+
+| System | Install | Check |
+| --- | --- | --- |
+| Windows | `scripts\run-as-user.ps1 install` (through Explorer, in a windowless console, because an agent inside a packaged desktop app has its AppData writes redirected) | Start `measure\foreground-sampler.ps1 -Out <file.jsonl> -StopFile <file> -Seconds <n> -App <installed exe>` in your own shell first (in the background), then `scripts\run-as-user.ps1 installed-check -Step list`, then `helpers`, `launch -Option no-activate, empty-path, "data-dir=<folder>"`, `memory`, `collect -Option "data-dir=<folder>"`, `quit -Option "data-dir=<folder>"`, `uninstall`; then write the stop file. The sampler fails if the app's window was ever in front |
+| macOS | `sh scripts/install.sh` with `INSTALL_TO` on the internal disk | `sh scripts/installed-check.sh list`, then `helpers`, `launch`, `memory`, `collect`, `quit`, `uninstall` (`NO_ACTIVATE=1 EMPTY_PATH=1 DATA_DIR=<folder>`) |
+| Linux | `scripts/linux/container-check.sh deb` (or `portable`) in a clean Debian or Ubuntu container | the same steps, inside the container |
+
+`collect`, `about` and `quit` reach the running app through its control channel (never a second launch, which in build 2 brought the window forward on Windows), found through `control.json` in the data folder, so they need the same data folder `launch` used, and `launch` must have had `no-activate` (or, on Linux from the desktop entry, `LAUNCH_EXTRA=--control`). `collect` also fails if the app counted a second launch. `install.ps1` stops if the installed app is running instead of asking it to quit.
+
+## Layout
+
+```
+app.config.json        names, window sizes, storage prefix, title bar height, memory budget, tool and binaries
+shortcuts.json         the one command and shortcut table: page, palette, tooltips, macOS menu, shell check
+electron/main.ts      app:// protocol, saved state, IPC, diagnostics, quitting while a job runs, what kind of launch this is
+electron/control.ts   the control channel: the server in the app, the client for scripts (plain Node)
+electron/platform.ts  the one place that knows which system this is
+electron/window.ts    the window recipe and crash recovery; shell.ts life cycle; menu.ts menus; memory.ts memory
+electron/bounds.ts    where the window opens, from what was saved and the displays connected now (pure)
+electron/boundary.ts  what the page may ask Chromium for, and what any web contents may become
+electron/preload.ts   the page's only bridge
+electron/tool/         the tool adapter (plain Node) and its Electron glue (index.ts)
+electron/qa.ts        development-only instrumentation (typing, kill, marks, workload); not packaged
+src/                   the starter screen, the stand-in bridge and the reusable parts
+tokens/                design-tokens.json and the generator for src/styles/tokens.css
+qa/                    audit, screenshots, screenshot baselines, crash test, planted breaks, typing latency, kill test, journeys, banned terms
+measure/               shell check, shell evidence, PresentMon and memory harness, foreground sampler, focus and
+                       memory experiments (Windows)
+scripts/               launch rules, control channel clients, windowless runner, icon, stage, package, fuses and their check, install,
+                       installed checks, memory per system, Linux packaging templates, macOS entitlements, the Linux
+                       container harness
+test/                  adapter tests against the stand-in tool, the host-kill test, the bridge check, the control channel
+tool/placeholder/      a placeholder tool to package before the real one exists
+third-party/           the notices file (a stub until the app bundles a third-party program)
+docs/                  DECISIONS, JOURNEYS, BRIDGE, TOOL-CONTRACT
+```
+
+## What has and has not been run
+
+Run on the untouched starter on 2026-11-15, Windows 11, from a fresh copy outside this repository: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test` (29 pass, including the host-kill test), `pnpm shell:check`, `pnpm qa:audit` (passed: 30 state and theme runs, 0 axe violations, 60 layout cases at 4 sizes, journeys and shortcuts on both key families). No Electron window was opened.
+
+Run again after the control channel and the other fixes from the media converter were brought in, the same evening, Windows 11, a fresh copy outside this repository, headless only: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test` (32 pass, including the 5 control-channel tests, which serve the channel from a Node process and send through `electron/control.ts` and `scripts/control.cjs`), `pnpm shell:check` (rules 8 and 9 included; each also shown to fail on a planted violation), `pnpm qa:audit` (passed, as above). `scripts/control.ps1` was run against a channel served from Node (an answered request, and exit code 2 with none running), and `measure/foreground-sampler.ps1 -App` for 2 s. No Electron window was opened, so neither the electron install step nor any part of the starter's own Electron side ran.
+
+Carried over from the media converter without a run here, where they ran and passed on the systems named: the control channel inside the app, command launches forwarded through it and the second-launch count (`electron/main.ts`, `shell.ts`; Windows, where build 2's `measure/final.mjs` summary records 7 requests through the channel and 0 second launches, and by the app's `docs/MEMORY.md` macOS and a Linux container, whose post-fix `final.mjs` runs reach the app only through it); the windowless runner and the install change (`scripts/run-as-user.ps1`, `install.ps1`; Windows, installed); the installed check through the channel on Windows (`scripts/installed-check.ps1`). `scripts/installed-check.sh` (macOS and Linux) was changed the same way in the app, but no installed run on macOS or Linux after that change is recorded there; `measure/focus-experiment.ts` and `measure/memory-experiment.ts` (Windows; here adapted to `scripts/lib/launch.ts`, without a run); the network service in the main process (all three). Also carried over without a run here, as before: the shell modules (all three), `measure/shell-evidence.ts` and `scripts/linux-container/` (Linux containers; macOS), `scripts/package.ts` (all three), `scripts/install.*` and `scripts/installed-check.*` (all three), `scripts/installed-helpers.cjs` (rewritten for any tool; the original ran on all three), `scripts/memory-tree.*` (all three), `scripts/linux/` (Linux containers), `scripts/mac/` (macOS). Carried over from round 1 without a run here: `qa/typing.ts`, `qa/kill-test.ts` (now through `scripts/lib/launch.ts`), `measure/run.py`, `pnpm icon`. The placeholder tool has not been compiled. Expect to fix small things the first time each one runs.
+
+Run again on 2026-11-21 after the strict TypeScript conversion and the move to the kit packages, on a fresh app made from the starter as step 1 says (renamed "Proof Notes", exe `ProofNotes`, app id `com.example.proofnotes`), outside this repository:
+
+- macOS 27 on Apple silicon: `pnpm install --frozen-lockfile`, `electron:install`, `typecheck`, `build`, `test` (42 pass, including `test/kit-only.test.ts` and the plain-script check), `shell:check`, `qa:audit` (passed), `shell:evidence` (the real window shown without focus, 0 second launches, memory 138 MB), the placeholder tool built and staged, `icon`, `package:mac` (signed ad hoc, verified).
+- Windows 11 (a second PC, headless): `install --frozen-lockfile`, `electron:install`, `typecheck`, `build`, `test` (42 pass, including the named-pipe control test and the host-kill test), `shell:check`, `qa:audit` (passed), the placeholder tool (cross-built with MinGW) staged, `icon`, `package:win`. No window was opened and nothing was installed there.
+
+Run again on 2026-11-21 on this folder exactly as published in the beta, after the dark-by-default change, on a fresh app made the same way, with no private package installed (`node_modules` held only the published `@uppercut-labs` packages), macOS 27 on Apple silicon, Node 26: `pnpm install --frozen-lockfile`, `electron:install`, `typecheck`, `build`, `test` (49 pass, including the four dark-default tests: a fresh profile renders dark with the system set to light and set to dark, and a saved light choice is kept), `shell:check`, `qa:audit` (passed: 0 axe violations in 30 state and theme runs, 60 layout cases at 4 sizes). Then the placeholder tool built and staged, `icon`, `package:mac`, `install.sh` into a folder on the internal disk, and `scripts/installed-check.sh` through `list` (no failures, with a space in the product name), `helpers`, `launch` (the app was not in front, PATH empty), `memory` (147 MB, within budget), `collect` (reached through the control channel only, 0 second launches), `quit` and `uninstall`.
+
+Run on 2026-11-21 after rules 104 to 111 were ported (premium-bar "Trust, restoration and visual baselines"), on a fresh app made from the starter as step 1 says (renamed "Proof Notes"), with no private package installed:
+
+- macOS 27 on Apple silicon, Node 26: `typecheck`, `build`, `test` (64 pass, including the window-placement and permission tests), `shell:check` (rule 10 included), `qa:audit` (passed: 224 focus checks under forced colours in 30 state and theme runs, the token gate over 2,645 lines), `qa:crash` (recovery in the same process, the crash loop, permission states, a window saved maximized, one saved on a missing display), `qa:kill`, `qa:typing`, `qa:shots` (150 pictures), `qa:visual` (60 pictures; three identical runs pass, largest difference 0.015%), `shell:evidence`, the placeholder tool, `icon`, `package:mac` with `fuses:check darwin-arm64` (the wire and every probe, including the changed `app.asar`), and `qa:planted` (all 14 breaks caught).
+- Windows 10 (a second PC, over ssh in a session with no desktop, so no window could take focus), Node 24: `typecheck`, `build`, `test` (64 pass), `shell:check`, `qa:crash` (the `maximized` trial expects the Windows exception), `qa:kill`, `qa:typing`, `qa:audit` (passed, Edge), `qa:visual` (60 pictures, 0.000%), a stand-in tool staged, `icon`, `package:win` with `fuses:check win32-x64` (the wire and every probe), and `qa:planted` for rules 104 to 108 and 111 (all 12 breaks caught).
+
+Not run: the Linux container and `fuses:check` for Linux, the Windows installed check, `measure:focus`, `measure:memory`, `uv run measure/run.py` beyond resolving its package, `qa:planted` rules 109 and 110 on Windows (the page gates run the same browser code on every system).

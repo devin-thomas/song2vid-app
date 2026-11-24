@@ -34,7 +34,8 @@ PATTERNS=(
   'private key|-----BEGIN [A-Z ]*PRIVATE KEY-----'
   'hard-coded secret|(api[_-]?key|secret|token|passw(or)?d)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"'][^"'"'"'[:space:]]{12,}["'"'"']'
 )
-EMAIL_PATTERN='[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+'
+# The top-level part must be letters, so a package pin such as name@1.2.3 in a lock file is not an address.
+EMAIL_PATTERN='[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'
 BAD_PATHS='(^|/)\.env($|\.)|\.(pem|p12|key|mobileprovision)$'
 
 # What a commit message must not carry (CLAUDE.md: no AI or other co-author lines). Matched ignoring case.
@@ -65,7 +66,12 @@ scan_text() { # label textfile
   local label="$1" real="$2" entry name pattern hits line
   for entry in "${PATTERNS[@]}"; do
     name="${entry%%|*}"; pattern="${entry#*|}"
-    if hits=$(grep -nE -e "$pattern" "$real" 2>/dev/null); then
+    if [[ "$name" == "IP address" ]]; then
+      # The loopback address names no one's network (a local dev server binds it), so it is allowed.
+      if hits=$(grep -noE -e "$pattern" "$real" 2>/dev/null | grep -vE ':127\.0\.0\.1$'); then
+        while IFS= read -r line; do fail "$label:${line%%:*}: $name"; done <<< "$hits"
+      fi
+    elif hits=$(grep -nE -e "$pattern" "$real" 2>/dev/null); then
       while IFS= read -r line; do fail "$label:${line%%:*}: $name"; done <<< "$hits"
     fi
   done

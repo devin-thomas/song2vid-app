@@ -1,0 +1,28 @@
+# Song2Vid: the repository's root .gitignore ignores every folder named build/; this folder holds build/icon.svg, the app's one icon source.
+!/build/
+
+node_modules/
+dist/
+out/
+build/icon.ico
+build/icon.icns
+build/icon.png
+build/icon-*.png
+build/icons/
+src/styles/tokens.css
+
+# Helper binaries for the packager (scripts/stage.mjs) and the tool's own builds.
+staging/
+tool/dist/
+tool/build/
+
+# QA and measurement output.
+qa/shots/
+qa/evidence/
+qa/audit.json
+qa/data/
+measure/out/
+*.log
+qa/visual/
+# Screenshot baselines (qa/visual.ts). The starter keeps none; an app deletes this line and commits its own.
+qa/baselines/
