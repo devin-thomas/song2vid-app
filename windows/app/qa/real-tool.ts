@@ -9,11 +9,12 @@
 //   node qa/real-tool.ts --tool-dir <folder with song2vid.exe, ffmpeg.exe, ffprobe.exe>
 //   node qa/real-tool.ts --standin          the stand-in tool, to check this script's own plumbing (no video is made)
 //
-// Needs a `make` that works (S2V-026). Writes qa/evidence/real-tool.json; exits 1 on any difference.
+// Needs a `make` that works (S2V-026). The media is generated here (a tone as a WAV, flat-coloured PNGs). Writes qa/evidence/real-tool.json; exits 1 on any difference.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { deflateSync } from 'node:zlib';
 import type { DesktopBridge, DropResult, JobUpdate } from '../src/bridge.ts';
 import { makeArgs } from '../electron/tool/contract.ts';
 import type { Located } from '../electron/tool/locate.ts';
@@ -33,21 +34,73 @@ fs.mkdirSync(videos, { recursive: true });
 fs.mkdirSync(dataDir, { recursive: true });
 const exe = (name: string) => path.join(toolDir ?? '', `${name}${process.platform === 'win32' ? '.exe' : ''}`);
 
-// ---- the media: made with the bundled FFmpeg, nothing from outside the repository ----------------
-const song = path.join(work, 'Song.mp3');
-const pictures = { wide: path.join(work, 'Wide.png'), tall: path.join(work, 'Tall.png'), square: path.join(work, 'Square.png') };
-if (!standin) {
-  const ff = (...a: string[]) => {
-    const run = spawnSync(exe('ffmpeg'), ['-y', '-loglevel', 'error', ...a], { encoding: 'utf8' });
-    if (run.status !== 0) throw new Error(`ffmpeg ${a.join(' ')}: ${run.stderr}`);
-  };
-  ff('-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-c:a', 'libmp3lame', song);
-  ff('-f', 'lavfi', '-i', 'testsrc2=size=1600x900:rate=1', '-frames:v', '1', pictures.wide);
-  ff('-f', 'lavfi', '-i', 'testsrc2=size=900x1600:rate=1', '-frames:v', '1', pictures.tall);
-  ff('-f', 'lavfi', '-i', 'testsrc2=size=1200x1200:rate=1', '-frames:v', '1', pictures.square);
-} else {
-  for (const file of [song, ...Object.values(pictures)]) fs.writeFileSync(file, 'x');
+// ---- the media: generated here, from numbers, so nothing from outside the repository is used --------
+/** A 16-bit mono WAV of a sine tone: a song Song2Vid reads (SPEC 7). */
+function wav(seconds: number, hz = 440, rate = 22050): Buffer {
+  const samples = Math.round(seconds * rate);
+  const data = Buffer.alloc(samples * 2);
+  for (let i = 0; i < samples; i++) data.writeInt16LE(Math.round(Math.sin((2 * Math.PI * hz * i) / rate) * 12000), i * 2);
+  const head = Buffer.alloc(44);
+  head.write('RIFF', 0);
+  head.writeUInt32LE(36 + data.length, 4);
+  head.write('WAVEfmt ', 8);
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(rate, 24);
+  head.writeUInt32LE(rate * 2, 28);
+  head.writeUInt16LE(2, 32);
+  head.writeUInt16LE(16, 34);
+  head.write('data', 36);
+  head.writeUInt32LE(data.length, 40);
+  return Buffer.concat([head, data]);
 }
+
+const crcTable = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+const crc = (buf: Buffer): number => {
+  let c = 0xffffffff;
+  for (const byte of buf) c = (crcTable[(c ^ byte) & 0xff] ?? 0) ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+};
+/** An 8-bit RGB PNG of four flat colour blocks and a disc, so a crop and a fit show different parts. */
+function png(width: number, height: number): Buffer {
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const at = y * (width * 3 + 1) + 1 + x * 3;
+      const inside = (x - width / 2) ** 2 + (y - height / 2) ** 2 < (Math.min(width, height) * 0.3) ** 2;
+      const color = inside ? [244, 196, 74] : x < width / 2 ? (y < height / 2 ? [52, 96, 170] : [38, 142, 128]) : y < height / 2 ? [196, 74, 92] : [92, 68, 148];
+      rows[at] = color[0] ?? 0;
+      rows[at + 1] = color[1] ?? 0;
+      rows[at + 2] = color[2] ?? 0;
+    }
+  }
+  const chunk = (type: string, body: Buffer): Buffer => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(body.length);
+    const typed = Buffer.concat([Buffer.from(type), body]);
+    const check = Buffer.alloc(4);
+    check.writeUInt32BE(crc(typed));
+    return Buffer.concat([length, typed, check]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]);
+}
+
+const song = path.join(work, 'Song.wav');
+const pictures = { wide: path.join(work, 'Wide.png'), tall: path.join(work, 'Tall.png'), square: path.join(work, 'Square.png') };
+fs.writeFileSync(song, wav(3));
+fs.writeFileSync(pictures.wide, png(1600, 900));
+fs.writeFileSync(pictures.tall, png(900, 1600));
+fs.writeFileSync(pictures.square, png(1200, 1200));
 
 const located: Located = standin
   ? { ok: true, command: process.execPath, prefixArgs: [path.join(root, 'test', 'standin-tool.ts')], binary: path.join(root, 'test', 'standin-tool.ts'), source: 'override', helpers: {} }
