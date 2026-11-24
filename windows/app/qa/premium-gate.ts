@@ -10,6 +10,8 @@ import type { PaletteResult, Stats, TypingResult } from '@uppercut-labs/electron
 
 export interface GateInput {
   typing: Record<string, TypingResult>;
+  /** The reason there is no typing run (an app with no text field): the rules for typing are then N/A and the gate says why. */
+  typingNotApplicable?: string;
   palette: PaletteResult;
   windowFocusedAfterTyping?: boolean;
 }
@@ -50,7 +52,7 @@ export function judgePublished(input: GateInput): Omit<GateResult, 'judgedBy' | 
       : { name: 'palette', passed: false, reason: open.samples ? `slowest open ${open.max} ms over ${PUBLISHED.paletteMaxMs} ms` : 'the palette never opened' },
   );
   if (input.windowFocusedAfterTyping !== undefined) checks.push(input.windowFocusedAfterTyping ? { name: 'window never focused', passed: false, reason: 'the window had focus after typing' } : { name: 'window never focused', passed: true });
-  if (!Object.keys(input.typing).length) checks.push({ name: 'typing', passed: false, reason: 'no typing run' });
+  if (!Object.keys(input.typing).length) checks.push(input.typingNotApplicable ? { name: 'typing', passed: true, reason: `not applicable: ${input.typingNotApplicable}` } : { name: 'typing', passed: false, reason: 'no typing run' });
   const reasons = checks.filter((c) => !c.passed).map((c) => `${c.name}: ${c.reason ?? 'failed'}`);
   return { passed: reasons.length === 0, checks, reasons };
 }

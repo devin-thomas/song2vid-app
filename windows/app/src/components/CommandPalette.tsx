@@ -197,7 +197,7 @@ export function CommandPalette({
           ) : (
             <div className="px-4 py-6 text-center">
               <p className="text-fg-2">No command matches “{query.trim()}”.</p>
-              <p className="mt-1 text-small text-fg-3">Try “theme”, “clear” or “about”.</p>
+              <p className="mt-1 text-small text-fg-3">Try “crop”, “theme” or “about”.</p>
             </div>
           )}
         </Dialog.Popup>

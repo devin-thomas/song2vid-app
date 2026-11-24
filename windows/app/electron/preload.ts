@@ -37,10 +37,16 @@ contextBridge.exposeInMainWorld('desktop', {
   chooseImage: () => ipcRenderer.invoke('file:choose-image') as Promise<Result<'chooseImage'>>,
   /** The one place a dropped file's location is read: here, and sent straight to the main process. */
   dropFiles: (files) => ipcRenderer.invoke('file:drop', Array.from(files, (file) => webUtils.getPathForFile(file))) as Promise<Result<'dropFiles'>>,
-  onFilesOpened: (listener) => subscribe('file:opened', listener),
+  /** Subscribes, then tells the main process the page is listening, so files that arrived while the page loaded are sent now. */
+  onFilesOpened: (listener) => {
+    const off = subscribe('file:opened', listener);
+    ipcRenderer.send('file:listening');
+    return off;
+  },
   releaseFiles: (ids) => ipcRenderer.send('file:release', ids),
   previewImage: (imageId) => ipcRenderer.invoke('file:preview', imageId) as Promise<Result<'previewImage'>>,
   onEncoders: (listener) => subscribe('tool:encoders', listener),
+  onToolStatus: (listener) => subscribe('tool:status', listener),
 
   /** Open the save dialog (or reuse the last destination) and start the job; resolves as soon as it is recorded. */
   makeVideo: (request) => ipcRenderer.invoke('job:make', request) as Promise<Result<'makeVideo'>>,

@@ -4,7 +4,7 @@ This is Song2Vid for Windows' page, written before any component was chosen (SPE
 
 ## Essential journeys
 
-Four things a person comes to Song2Vid to do (SPEC 28, process step 1), each as one sentence and a step budget. They are in `qa/journeys.json`; each needs a script in `qa/audit.ts` (S2V-030 writes them against the screens).
+Four things a person comes to Song2Vid to do (SPEC 28, process step 1), each as one sentence and a step budget. They are in `qa/journeys.json`; each has a script in `qa/audit.ts` (S2V-030, `JOURNEY_SCRIPTS`), which waits for what a step started (a file dialog answers at once) without counting the wait as a step.
 
 | Id | Journey | Step budget | Why this many |
 | --- | --- | --- | --- |
@@ -23,11 +23,11 @@ Each named interaction has a budget. `qa/typing.ts` opens a real window, so it r
 
 | Interaction | Budget | How it is measured |
 | --- | --- | --- |
-| Key press to the frame that shows it, main text field | Not applicable: no text entry (rules 27, 29, 41, 41b and 44 are N/A) | |
+| Key press to the frame that shows it, main text field | Not applicable: no text entry (rules 27, 29, 41, 41b and 44 are N/A) | `pnpm qa:typing` says so in its verdict |
 | The palette shortcut to the palette | 50 ms target, 100 ms limit | `pnpm qa:typing` (opens a window: DeskMini only) |
 | List scroll, 10,000 rows | Not applicable: Song2Vid has no list (rules 25 and 26 are N/A in `windows/docs/PREMIUM-LEDGER.md`) | |
 | Cancel to the bar leaving its running state | "Cancelling" on the next frame; "Cancelled. Nothing was saved." when the tool exits (SPEC 27.4) | `pnpm qa:audit` (job gate) |
-| Crop drag to the frame that moves the image | The pointer's own frame, no lag behind it (rule 75) | `pnpm qa:audit` once S2V-030 adds the check |
+| Crop drag to the frame that moves the image | The pointer's own frame, no lag behind it (rule 75) | `pnpm qa:audit`, gate `crop`: a 40 px drag moves the image 40 px, and the value text changes, before the next frame |
 
 ## Memory budget
 
@@ -51,4 +51,4 @@ The app is not called premium until the owner has done real work in it. Until th
 
 ## Not verified
 
-Kept current per run in `windows/docs/PREMIUM-LEDGER.md`. Nothing is verified yet for the screens: they do not exist (S2V-030). Not verified so far, in plain words: everything that needs the real shell on Windows (`qa:crash`, `shell:evidence`, `measure:focus`, the installed check), which runs on the DeskMini; screen reader, IME, key-to-photon with a camera, cold start after a reboot, real fractional scaling, a downloaded (quarantined) build, Intel's hardware encoder, Windows on Arm, and each failure of the tool that was only simulated.
+Kept current per run in `windows/docs/PREMIUM-LEDGER.md`. The screens exist (S2V-030) and the headless gates run against them (`pnpm qa:audit`, `pnpm qa:visual`; `windows/docs/PREMIUM-LEDGER.md` has the verdicts). Not verified so far, in plain words: everything that needs the real shell on Windows (`qa:crash`, `shell:evidence`, `measure:focus`, the installed check), which runs on the DeskMini; screen reader, IME, key-to-photon with a camera, cold start after a reboot, real fractional scaling, a downloaded (quarantined) build, Intel's hardware encoder, Windows on Arm, and each failure of the tool that was only simulated.

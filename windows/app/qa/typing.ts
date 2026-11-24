@@ -1,9 +1,8 @@
-// Typing latency in the real shell. Starts the development shell without
-// taking focus, sends 220 real key events into the main text field on an empty
-// document and again with 20,000 characters loaded, and times the palette shortcut to the
-// palette. Measured by @uppercut-labs/electron-qa-measurements inside the app
-// (electron/qa.ts) and judged by qa/premium-gate.ts against the published premium bar (95th
-// percentile 50 ms or less, no key over 100 ms, palette within 50 ms, the window never focused).
+// Latency in the real shell. Starts the development shell without taking focus and times the
+// palette shortcut to the palette. Song2Vid has no text field, so there is no typing run (SPEC 28:
+// rules 27, 29, 41, 41b and 44 are N/A, and the gate says so). Measured by
+// @uppercut-labs/electron-qa-measurements inside the app (electron/qa.ts) and judged by
+// qa/premium-gate.ts against the published premium bar (palette within 50 ms, the window never focused).
 //
 // The times run from the key event's timestamp to the end of the frame that
 // rendered the change, on the page's clock. They leave out the compositor and
@@ -15,14 +14,13 @@
 // Usage: node qa/typing.ts   (writes qa/evidence/typing.json)
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PaletteResult, Stats, TypingResult } from '@uppercut-labs/electron-qa-measurements';
+import type { PaletteResult } from '@uppercut-labs/electron-qa-measurements';
 import type { GateResult } from './premium-gate.ts';
 import { launchDev, root } from '../scripts/lib/launch.ts';
+import { standinEnv } from './standin.ts';
 
 interface Report {
   display: { hz: number; scale: number };
-  emptyDraft: TypingResult;
-  longDraft: TypingResult;
   palette: PaletteResult;
   gate: GateResult;
   passed: boolean;
@@ -36,7 +34,7 @@ const out = join(evidence, 'typing.json');
 mkdirSync(evidence, { recursive: true });
 rmSync(out, { force: true });
 rmSync(dataDir, { recursive: true, force: true });
-const app = launchDev({ args: [`--qa-typing=${out}`], dataDir, timeoutMs: 120_000 });
+const app = launchDev({ args: [`--qa-typing=${out}`], dataDir, timeoutMs: 120_000, env: standinEnv() });
 await app.exited;
 rmSync(dataDir, { recursive: true, force: true });
 
@@ -45,10 +43,7 @@ if (report.error) {
   console.error(`typing run FAILED inside the app: ${report.error}`);
   process.exit(1);
 }
-const line = (name: string, s: Stats) => `${name.padEnd(22)} p50 ${s.p50} ms, p95 ${s.p95} ms, max ${s.max} ms over ${s.samples} keys`;
 console.log(`display ${report.display.hz} Hz at ${report.display.scale}x`);
-console.log(line('empty document', report.emptyDraft.latency));
-console.log(line('20,000 characters', report.longDraft.latency));
 console.log(`palette open           p50 ${report.palette.open.p50} ms, max ${report.palette.open.max} ms over ${report.palette.open.samples} opens`);
 console.log(report.gate.summary);
 if (!report.passed) {

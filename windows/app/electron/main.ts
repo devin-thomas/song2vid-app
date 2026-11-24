@@ -36,6 +36,7 @@ import * as boundary from './boundary.ts';
 import type { Boundary } from './boundary.ts';
 import * as control from './control.ts';
 import type { Channel, Reply } from './control.ts';
+import { linkFor, readNotices, readPreferences, writePreferences } from './app-data.ts';
 import { ROOT } from './paths.ts';
 import type { Colours } from './platform.ts';
 import * as appShell from './shell.ts';
@@ -75,6 +76,8 @@ const ORIGIN = 'app://local';
 const COLOURS: Colours = { chrome: { light: '#f6f5f3', dark: '#141413' }, symbol: { light: '#1c1c1b', dark: '#f1f1f0' } };
 
 let win: BrowserWindow | null = null;
+/** The page has subscribed to files opened with the app (the preload tells the main process when it does). */
+let pageListening = false;
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -98,6 +101,13 @@ function writeState(patch: Record<string, unknown>): void {
   } catch {
     // Window state is a convenience; losing it is harmless.
   }
+}
+
+/** Files opened with the app (a second launch, Open with) wait in the shell; the page gets them, judged as a drop is, once it listens. */
+function deliverOpenedFiles(): void {
+  if (!pageListening) return;
+  const paths = appShell.takeOpenedFiles();
+  if (paths.length) void native.openFiles(paths);
 }
 
 // ---- IPC ------------------------------------------------------------------
@@ -204,12 +214,13 @@ async function handleCommands(argv: string[]): Promise<boolean> {
 }
 
 // ---- saved state ----------------------------------------------------------
-// The page's unsaved work is a small JSON document per key. It is written here,
-// synchronously and atomically, so a kill right after a save loses nothing.
-// Add a key here for each document the page saves.
+// A page that saves a document asks for it by key; the main process writes it here, synchronously
+// and atomically, so a kill right after a save loses nothing. Song2Vid saves no document (its
+// remembered choices are the Codec in app-data.ts, the theme and the window's place in
+// window.json, and the last save folder in tool/): STATE_KEYS is empty on purpose (D-025).
+// Add a key here for each document a page saves.
 
-const DRAFT_KEY = `${config.storagePrefix}.draft.v1`;
-const STATE_KEYS = new Set([DRAFT_KEY]);
+const STATE_KEYS = new Set<string>();
 const stateDir = () => path.join(app.getPath('userData'), 'data', 'state');
 
 function writeSavedState(key: unknown, json: unknown): void {
@@ -249,11 +260,27 @@ function registerIpc(): void {
   handle('app:bootstrap', async () => ({
     stored: readSavedState(),
     platform: appShell.platform.SYSTEM,
+    preferences: readPreferences(app.getPath('userData')),
     about: { appVersion: app.getVersion(), dataDir: path.join(app.getPath('userData'), 'data') },
     tool: await native.status(),
     encoders: native.encoders(), // the cached Encoder report, or the fresh one when this launch's check has finished
   }));
   native.registerIpc({ handle, ipcMain, trusted });
+  // What the page keeps, where it goes and what About shows (src/bridge.ts, electron/app-data.ts).
+  ipcMain.on('app:preferences', (event, update: unknown) => {
+    if (trusted(event)) writePreferences(app.getPath('userData'), update);
+  });
+  ipcMain.on('app:open-link', (event, which: unknown) => {
+    const address = linkFor(which);
+    if (trusted(event) && address) void shell.openExternal(address);
+  });
+  handle('app:notices', () => readNotices({ packaged: app.isPackaged, resourcesPath: process.resourcesPath, projectDir: ROOT }));
+  // The page is listening for files opened with the app: hand it those that arrived while it loaded.
+  ipcMain.on('file:listening', (event) => {
+    if (!trusted(event)) return;
+    pageListening = true;
+    deliverOpenedFiles();
+  });
   ipcMain.on('app:save-state', (event, key: unknown, json: unknown) => {
     if (trusted(event)) writeSavedState(key, json);
   });
@@ -281,6 +308,7 @@ function createWindow({ inactive = appShell.quiet() }: { inactive?: boolean } = 
     inactive,
   });
   win = target;
+  pageListening = false; // the new page says so when it subscribes
 
   // A running job's outcome would be lost by closing: ask first (on every system).
   target.on('close', (event) => {
@@ -308,7 +336,7 @@ function createWindow({ inactive = appShell.quiet() }: { inactive?: boolean } = 
     const launchedAt = Date.now();
     target.webContents.once('did-finish-load', () => {
       const qa = pathToFileURL(path.join(ROOT, 'dist', 'electron', 'qa.mjs')).href;
-      void (import(qa) as Promise<typeof import('./qa.ts')>).then((module) => module.run(target, writeSavedState, { launchedAt, draftKey: DRAFT_KEY, system: appShell.platform.SYSTEM }));
+      void (import(qa) as Promise<typeof import('./qa.ts')>).then((module) => module.run(target, writeSavedState, { launchedAt, system: appShell.platform.SYSTEM }));
     });
   }
   return target;
@@ -346,7 +374,7 @@ function start(): void {
     return;
   }
   // Second launches, files opened with the app, the Dock, closing and quitting.
-  appShell.start({ app, config, getWindow: () => win, createWindow, handleCommands, diagnostics });
+  appShell.start({ app, config, getWindow: () => win, createWindow, handleCommands, diagnostics, filesWaiting: deliverOpenedFiles });
 
   void app.whenReady().then(() => {
     // Before any web contents exists: permissions denied but the allowed few, no navigation

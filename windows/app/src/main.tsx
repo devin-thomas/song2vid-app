@@ -3,10 +3,9 @@ import { createRoot } from 'react-dom/client';
 import config from '../app.config.json';
 import { App } from './App';
 import { boot, desktop, platform } from './desktop';
-import { startJobs } from './state/job';
+import { startApp } from './state/app';
 import { installWindowTracking } from './state/modality';
 import { setShortcutPlatform } from './state/shortcuts';
-import { configureStorage } from './state/storage';
 import './styles/app.css';
 
 installWindowTracking();
@@ -17,9 +16,9 @@ document.documentElement.dataset.platform = platform;
 setShortcutPlatform(platform);
 
 // Everything the first screen needs is ready before the first paint, so there
-// is no loading state to flash: saved work, the system and the tool's status.
-configureStorage(desktop.saveState.bind(desktop), boot.stored);
-startJobs(desktop, boot.tool);
+// is no loading state to flash: the system, the remembered Codec, the tool's status and the
+// Encoder report.
+startApp(desktop, boot);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

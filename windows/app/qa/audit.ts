@@ -9,7 +9,8 @@
 //   motion     the same limits on animations that actually ran; popovers grow from their
 //              trigger; no motion for keyboard actions; no transform motion under
 //              prefers-reduced-motion [13, 15, 18, 20, 22]
-//   list       DOM rows in the 10,000-row list stay near the visible count [26]
+//   list       no list over 50 rows is drawn: Song2Vid has none (rules 25 and 26 are N/A, so the gate
+//              checks the page never grows one) [26]
 //   axe        zero violations in both themes, every state [37]
 //   focus      every keyboard-focusable element changes appearance on focus [5]
 //   names      every interactive element has an accessible name that contains its visible
@@ -29,7 +30,8 @@
 //              does not pass this by hiding the spill [81]
 //   stable     at each of those sizes, the title bar, the work area and the status bar sit in
 //              the same place in every state, and the status bar has one height [74]
-//   restore    unsaved work survives a reload and corrupt storage [44, page level only]
+//   restore    the Codec survives a reload and corrupt storage; a remembered HEVC starts on H.264 on a
+//              computer that cannot make it and comes back where it can [23, 44, page level only]
 //   journeys   each journey in qa/journeys.json runs by keyboard alone within its step
 //              budget, once with Ctrl (Windows and Linux) and once with Command (macOS) [6, 47]
 //   shortcuts  every command is in the palette with its shortcut written as the system writes
@@ -39,19 +41,29 @@
 //              every keyboard-focusable element in every state still changes on focus [109]
 //   tokens     no colour literal or palette colour in src/ outside the token layer, and every
 //              theme defines the same colour names [110]
-//   job        cancel is acknowledged at once; each failure's filled button can succeed for
-//              its cause; "Copy details" copies the developer text without showing it, into
-//              a clipboard the audit captures (never the machine's) [50, 58, 65, 73]
+//   job        cancel is acknowledged at once; each row of SPEC 27.5's table says its sentence and its
+//              filled button can succeed for its cause; "Copy Details" copies the developer text
+//              without showing it, into a clipboard the audit captures (never the machine's);
+//              progress never goes back and time left follows its rules [50, 58, 65, 66, 69]
+//   crop       the crop follows the pointer in the same frame, the arrow keys step 5% and 25% with
+//              Shift, and the control reads as a slider with its value text [75, 67]
+//   files      a drop fills empty slots at once, asks before replacing (Keep Current is the default,
+//              Esc keeps, focus comes back), is refused while a video is made, and a rejected drop
+//              changes nothing [4a, 88]
+//   tool       a tool that is missing, or turns out wrong after launch, is the one blocking state [59]
+//   notices    the banned-terms gate leaves out the third-party notices text and nothing else [49, 64]
 //
-// The states, the journey scripts, the shortcut effects and the job fixtures below
-// describe the starter screen. Rewrite those blocks for the app; the gates stay.
+// The states are in qa/states.ts (one list for this audit and for qa/shots.ts); the journey scripts,
+// shortcut effects and job fixtures below are Song2Vid's.
 import { AxeBuilder } from '@axe-core/playwright';
 import { readdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Page } from 'playwright-core';
-import { fill, launch, load, openPage, park, readConfig, root, serve, settle } from './lib.ts';
+import { launch, load, openPage, park, readConfig, root, serve, settle } from './lib.ts';
 import type { MotionRecord, PageOptions } from './lib.ts';
+import { AUDITED, PICTURE, SONG, STATES, cropValue, drop, fill, make, openPalette, pickCodec, pickShape, waitStatus } from './states.ts';
+import type { Mod } from './states.ts';
 
 /** One entry of qa/journeys.json. */
 interface Journey {
@@ -84,9 +96,8 @@ const SIZES: [label: string, options: PageOptions][] = [
   [`${W.width}x${W.height} at 200% zoom`, { width: Math.round(W.width / 2), height: Math.round(W.height / 2), scale: 2 }],
 ];
 const VIEW: PageOptions = { width: W.width, height: W.height, scale: 1 };
-const DRAFT_KEY = `${config.storagePrefix}.draft.v1`;
+const PREFS_KEY = `${config.storagePrefix}.preferences.v1`;
 
-type Run = (page: Page) => Promise<unknown>;
 interface CssDeclaration {
   selector: string;
   name: string;
@@ -99,12 +110,6 @@ interface MotionGate {
   keyboard: Record<string, string[]>;
   reducedMotion: { ran?: string[] };
   tooltipTransformOrigin?: { x: number; y: number; width: number; height: number };
-}
-interface ListSample {
-  domRows: number;
-  visibleRows: number;
-  totalRows: number;
-  scrollHeight: number;
 }
 interface AxeState {
   violations: { id: string; impact: string | null | undefined; nodes: number; first: string | undefined }[];
@@ -123,7 +128,7 @@ type JobGate = { cancelAcknowledged?: string | null | undefined; secondFailure?:
 interface Gates {
   css?: { selfTest: string; declarationsRead: number; longestMs: number; longestSheetMs: number; violations: string[] };
   motion?: MotionGate;
-  list?: { top: ListSample; middle: ListSample; end: ListSample };
+  list?: { notApplicable: string; rowsSeen: number };
   axe?: { statesChecked: number; violations: number; incompleteRules: string[]; byState: Record<string, AxeState> };
   text?: { smallestTextPx: number };
   focus?: { focusableElementsChecked: number };
@@ -132,13 +137,17 @@ interface Gates {
   desktop?: { statesChecked: number };
   overflow?: Record<string, { scrollWidth: number; clientWidth: number; outside: number; spill: number }>;
   stable?: { sizes: string[]; anchors: string[]; statesPerSize: number };
-  restore?: { restoredAfterReload: boolean; survivesCorruptStorage: boolean };
+  restore?: { restoredAfterReload: boolean; survivesCorruptStorage: boolean; hevcStartsOnH264Where: boolean; hevcComesBack: boolean };
   journeys?: Record<string, { name: string; steps: number; stepBudget: number; passed: boolean }>;
   shortcuts?: Record<string, ShortcutResult>;
   forced?: { stateAndThemeRuns: number; focusableElementsChecked: number };
   tokens?: { filesRead: number; linesRead: number; themes: string[] };
   overlay?: Record<string, { query: string | null; body: string }>;
   job?: JobGate;
+  crop?: Record<string, unknown>;
+  files?: Record<string, unknown>;
+  tool?: Record<string, unknown>;
+  notices?: Record<string, unknown>;
 }
 interface Report {
   generatedFor: string;
@@ -159,83 +168,13 @@ report.browser = { channel, version: browser.version() };
 
 // ---------------------------------------------------------------- states ---
 
-const openPalette = async (page: Page): Promise<void> => {
-  await page.keyboard.press('Control+k');
-  await page.waitForSelector('.palette');
-};
-
-// The shortcut shows the list first, which matters when the window is too narrow to dock it.
-const filterItems = async (page: Page, text: string): Promise<void> => {
-  await page.keyboard.press('Control+Shift+R');
-  await page.waitForFunction(() => document.activeElement?.id === 'rail-filter');
-  await page.keyboard.type(text);
-};
-
-// Name: the stand-in fixture it opens on and the steps that reach it. Every one is
-// checked with axe in both themes and laid out at all four sizes.
-const STATES: Record<string, { fixture: string; run: Run }> = {
-  empty: { fixture: 'default', run: async () => {} },
-  filled: { fixture: 'default', run: async (page) => fill(page) },
-  filtered: {
-    fixture: 'default',
-    run: async (page) => {
-      await fill(page);
-      await filterItems(page, 'cedar');
-    },
-  },
-  'no-match': { fixture: 'default', run: async (page) => filterItems(page, 'zzq') },
-  palette: {
-    fixture: 'default',
-    run: async (page) => {
-      await fill(page);
-      await openPalette(page);
-    },
-  },
-  'palette-no-match': {
-    fixture: 'default',
-    run: async (page) => {
-      await openPalette(page);
-      await page.keyboard.type('zzq');
-    },
-  },
-  about: {
-    fixture: 'default',
-    run: async (page) => {
-      await openPalette(page);
-      await page.keyboard.type('about');
-      await page.keyboard.press('Enter');
-      await page.waitForSelector('.dialog');
-    },
-  },
-  toast: {
-    fixture: 'default',
-    run: async (page) => {
-      await fill(page);
-      await page.click('#action-clear');
-      await page.waitForSelector('.toast');
-    },
-  },
-  'job-running': { fixture: 'job-running', run: async (page) => runJob(page, 'running') },
-  'job-unknown-total': { fixture: 'job-unknown-total', run: async (page) => runJob(page, 'running') },
-  'job-done': { fixture: 'job-done', run: async (page) => runJob(page, 'done') },
-  'job-stopped': { fixture: 'job-cancelled', run: async (page) => runJob(page, 'stopped') },
-  'job-failed-retry': { fixture: 'job-failed-OUTPUT_IN_USE', run: async (page) => runJob(page, 'failed') },
-  'job-failed-unknown': { fixture: 'job-failed-SOMETHING_NEW', run: async (page) => runJob(page, 'failed') },
-  'tool-damaged': { fixture: 'damaged', run: async () => {} },
-};
-
-async function runJob(page: Page, until: string): Promise<void> {
-  await page.keyboard.press('Control+Shift+E');
-  await page.waitForSelector(`[data-status-bar][data-job="${until}"]`, { timeout: 5000 });
-}
-
 async function inState<T>(name: string, options: PageOptions, run: (page: Page) => Promise<T>): Promise<T> {
   const { context, page, errors } = await openPage(browser, options);
   try {
     const state = STATES[name];
     if (!state) throw new Error(`no state named ${name}`);
-    await load(page, url, state.fixture);
-    await state.run(page);
+    await load(page, url, state.fixture, state.extra ?? '');
+    await state.run(page, 'Control');
     await park(page);
     await settle(page);
     return await run(page);
@@ -432,7 +371,7 @@ async function motionGate() {
     await drain(page);
     const steps: [string, () => Promise<void>][] = [
       ['hover and press a button', async () => {
-        await page.hover('#action-clear');
+        await page.hover('#choose-audio');
         await page.mouse.down();
         await page.waitForTimeout(160);
         await page.mouse.move(300, 4);
@@ -445,20 +384,34 @@ async function motionGate() {
         await page.mouse.move(300, 4);
         await page.waitForTimeout(200);
       }],
-      ['clear and undo', async () => {
-        await page.click('#action-clear');
-        await page.waitForTimeout(350);
-        await page.getByRole('button', { name: 'Undo' }).click();
-        await page.waitForTimeout(450);
+      ['choose a Frame Shape and a Codec', async () => {
+        await pickShape(page, '1:1');
+        await page.waitForTimeout(300);
+        await pickCodec(page, 'hevc');
+        await page.waitForTimeout(300);
+      }],
+      ['drag the crop', async () => {
+        const box = await page.locator('[role="slider"]').boundingBox();
+        if (!box) throw new Error('the crop control is not on the page');
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 4 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
       }],
       ['open and close a dialog', async () => {
         await page.getByRole('button', { name: /Commands/ }).click();
         await page.waitForSelector('.palette');
         await page.getByRole('option', { name: /^About/ }).click();
-        await page.waitForSelector('.dialog');
+        await page.waitForSelector('[data-about]');
         await page.waitForTimeout(350);
         await page.getByRole('button', { name: 'Close' }).click();
         await page.waitForTimeout(350);
+      }],
+      ['make a video', async () => {
+        await page.locator('#make-video').click();
+        await waitStatus(page, 'done', 8000);
+        await page.waitForTimeout(300);
       }],
     ];
     for (const [label, run] of steps) {
@@ -493,9 +446,7 @@ async function motionGate() {
     const { context, page } = await openPage(browser, { width: 1280, height: 800 });
     await page.addInitScript(RECORDER);
     await load(page, url);
-    await fill(page);
-    await page.locator('#field-body').focus();
-    await page.keyboard.press('End');
+    await page.locator('#choose-audio').focus();
     await drain(page);
     const steps: [string, () => Promise<void>][] = [
       ['Ctrl+K opens the palette', async () => {
@@ -508,14 +459,29 @@ async function motionGate() {
         await page.keyboard.press('Escape');
         await page.waitForTimeout(200);
       }],
-      ['arrow keys move through the list', async () => {
-        await page.getByRole('listbox', { name: 'All items' }).focus();
-        for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowDown');
-        await page.waitForTimeout(150);
+      ['Ctrl+O and Ctrl+Shift+O choose the files', async () => {
+        await fill(page);
+        await page.waitForTimeout(300);
       }],
-      ['a shortcut that shows a toast', async () => {
-        await page.keyboard.press('Control+Shift+D');
-        await page.waitForSelector('.toast');
+      ['arrow keys choose a Frame Shape, a Resolution and a Codec', async () => {
+        await page.locator('[data-group="shape"] [aria-checked="true"]').focus();
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('ArrowRight');
+        await page.waitForTimeout(300);
+      }],
+      ['arrow keys move the crop', async () => {
+        await page.locator('[role="slider"]').focus();
+        for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('Shift+ArrowRight');
+        await page.waitForTimeout(200);
+      }],
+      ['Ctrl+Enter makes the video', async () => {
+        await make(page);
+        await waitStatus(page, 'done', 8000);
         await page.waitForTimeout(300);
       }],
     ];
@@ -540,9 +506,11 @@ async function motionGate() {
     await drain(page);
     await page.hover(themeButton);
     await page.waitForTimeout(700);
-    await page.click('#action-clear');
+    await pickShape(page, '4:3');
     await page.waitForTimeout(300);
-    await page.getByRole('button', { name: 'Undo' }).click();
+    await page.getByRole('button', { name: /Commands/ }).click();
+    await page.waitForSelector('.palette');
+    await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
     const records = (await drain(page)).filter((r) => r.duration > 0);
     out.reducedMotion.ran = records.map((r) => `${r.name} ${r.duration}ms on ${r.target}`);
@@ -557,31 +525,15 @@ async function motionGate() {
 // ----------------------------------------------------------------- list ---
 
 async function listGate() {
+  // Song2Vid has no list (SPEC 28: rules 25 and 26 are N/A). This keeps it that way: no state draws a list of
+  // more than 50 rows without the page being given a virtualised list and the rules back.
   const { context, page } = await openPage(browser, { width: 1280, height: 800 });
   await load(page, url);
-  const list = page.getByRole('listbox', { name: 'All items' });
-  const measure = () =>
-    list.evaluate((el) => ({
-      domRows: el.querySelectorAll('[data-row]').length,
-      visibleRows: Math.ceil(el.clientHeight / 40),
-      totalRows: Number(el.querySelector('[data-row]')?.getAttribute('aria-setsize') ?? 0),
-      scrollHeight: el.scrollHeight,
-    }));
-  const top = await measure();
-  await list.evaluate((el) => (el.scrollTop = el.scrollHeight / 2));
-  await page.waitForTimeout(150);
-  const middle = await measure();
-  await list.evaluate((el) => (el.scrollTop = el.scrollHeight));
-  await page.waitForTimeout(150);
-  const end = await measure();
-  const samples = { top, middle, end };
+  await fill(page);
+  const rowsSeen = await page.evaluate(() => document.querySelectorAll('[role="option"], li, [data-row]').length);
   await context.close();
-  report.gates.list = samples;
-  for (const [where, s] of Object.entries(samples)) {
-    if (s.totalRows !== 10000) fail('list', `${where}: list reports ${s.totalRows} rows, expected 10000`);
-    if (s.domRows > s.visibleRows + 16) fail('list', `${where}: ${s.domRows} DOM rows for ${s.visibleRows} visible`);
-    if (s.domRows < s.visibleRows) fail('list', `${where}: only ${s.domRows} DOM rows for ${s.visibleRows} visible`);
-  }
+  report.gates.list = { notApplicable: 'Song2Vid has no list (SPEC 28: rules 25 and 26 are N/A)', rowsSeen };
+  if (rowsSeen > 50) fail('list', `${rowsSeen} rows are drawn: a list over 50 rows must be virtualised (rule 26) and its scroll measured (rule 25)`);
 }
 
 // -------------------------------------------------- per-state page checks ---
@@ -633,6 +585,9 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
     for (let node = words.nextNode(); node; node = words.nextNode()) {
       const el = node.parentElement;
       if (!el || !visible(el) || el.closest('script,style')) continue;
+      // The one exemption (SPEC 27.5, 27.8): About's third-party notices name the program that does the work. Only the element
+      // that carries them is left out; the heading above them, the buttons and every other word stay covered.
+      if (el.closest('[data-notices]')) continue;
       if (BANNED.test(node.textContent ?? '')) banned.push(`"${(node.textContent ?? '').trim().slice(0, 70)}"`);
     }
     for (const el of document.querySelectorAll('[placeholder],[aria-label]')) {
@@ -780,12 +735,24 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
   // -- horizontal overflow
   const vw = document.documentElement.clientWidth;
   const outside: string[] = [];
+  // What a person can see of an element is what its clipping ancestors leave of it: a picture placed past the edge of
+  // the frame that holds it (the crop) is cut by the frame, not outside the window.
+  const shown = (el: Element): DOMRect => {
+    let box = el.getBoundingClientRect();
+    for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+      const style = getComputedStyle(up);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const clip = up.getBoundingClientRect();
+      box = new DOMRect(Math.max(box.left, clip.left), Math.max(box.top, clip.top), Math.max(0, Math.min(box.right, clip.right) - Math.max(box.left, clip.left)), Math.max(0, Math.min(box.bottom, clip.bottom) - Math.max(box.top, clip.top)));
+    }
+    return box;
+  };
   for (const el of document.body.querySelectorAll('*')) {
     if (!visible(el)) continue;
-    const box = el.getBoundingClientRect();
+    const box = shown(el);
     if (box.right > vw + 1 || box.left < -1) outside.push(`${describe(el)} spans ${Math.round(box.left)}..${Math.round(box.right)} of ${vw}`);
   }
-  const action = document.querySelector('[data-primary-action], #action-clear');
+  const action = document.querySelector('[data-primary-action]');
   const actionBox = action?.getBoundingClientRect();
 
   // -- spill: nothing a person operates spills out of its region or the window, and regions
@@ -855,7 +822,7 @@ async function stateGates() {
   const targets = new Set<string>();
 
   for (const theme of ['light', 'dark'] as const) {
-    for (const name of Object.keys(STATES)) {
+    for (const name of AUDITED) {
       await inState(name, { ...VIEW, theme }, async (page) => {
         const result = await new AxeBuilder({ page }).analyze();
         axe[`${name}/${theme}`] = {
@@ -912,7 +879,7 @@ async function forcedGate(): Promise<void> {
   let checked = 0;
   let states = 0;
   for (const theme of (['light', 'dark'] as const)) {
-    for (const name of Object.keys(STATES)) {
+    for (const name of AUDITED) {
       await inState(name, { ...VIEW, theme, forcedColors: 'active' }, async (page) => {
         states += 1;
         const active = await page.evaluate(() => matchMedia('(forced-colors: active)').matches);
@@ -992,7 +959,7 @@ async function overflowGate() {
   const none: BannedTerms = { terms: [], exact: [] };
   for (const [label, options] of SIZES) {
     let reference: { name: string; g: Geometry } | null = null;
-    for (const name of Object.keys(STATES)) {
+    for (const name of AUDITED) {
       await inState(name, options, async (page) => {
         const c = await page.evaluate(PAGE_CHECKS, none);
         out[`${label}/${name}`] = { scrollWidth: c.scrollWidth, clientWidth: c.clientWidth, outside: c.outside.length, spill: c.spill.length };
@@ -1013,75 +980,143 @@ async function overflowGate() {
     }
   }
   report.gates.overflow = out;
-  report.gates.stable = { sizes: SIZES.map(([l]) => l), anchors: ANCHORS, statesPerSize: Object.keys(STATES).length };
+  report.gates.stable = { sizes: SIZES.map(([l]) => l), anchors: ANCHORS, statesPerSize: AUDITED.length };
 }
 
 // -------------------------------------------------------------- restore ---
+// What Song2Vid remembers is the Codec (SPEC 23, 27.7). It survives a reload and corrupt storage, and a
+// remembered HEVC starts the picker on H.264 where this computer cannot make HEVC, without forgetting it.
 
 async function restoreGate() {
   const { context, page } = await openPage(browser, { width: 1280, height: 800 });
+  const checked = () => page.locator('[data-group="codec"] [aria-checked="true"]').getAttribute('data-value');
   await load(page, url);
-  await fill(page);
-  const read = () =>
-    page.evaluate(() => ({ title: (document.querySelector('#field-title') as HTMLInputElement).value, body: (document.querySelector('#field-body') as HTMLTextAreaElement).value }));
-  const before = await read();
+  await pickCodec(page, 'hevc');
+  const before = await checked();
   await page.reload();
   await page.waitForSelector('.app');
-  const after = await read();
-  const same = JSON.stringify(before) === JSON.stringify(after) && before.body.length > 0;
-  if (!same) fail('restore', `work differs after reload: ${JSON.stringify(before)} vs ${JSON.stringify(after)}`);
+  const restored = before === 'hevc' && (await checked()) === 'hevc';
+  if (!restored) fail('restore', `the Codec after a reload is ${await checked()}, not the HEVC that was chosen`);
+
+  // A computer that cannot make HEVC: the picker starts on H.264, says why, and keeps HEVC remembered.
+  await load(page, url, 'no-hevc');
+  await page.reload();
+  await page.waitForSelector('.app');
+  const startsOnH264 = (await checked()) === 'h264' && (await page.locator('[data-group="codec"] [data-value="hevc"]').isDisabled()) && /can't make HEVC videos/.test(await page.locator('[data-hevc-note]').textContent().then((t) => t ?? '', () => ''));
+  if (!startsOnH264) fail('restore', 'on a computer that cannot make HEVC the picker did not start on H.264 with HEVC disabled and the note under it');
+  const remembered = await page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { codec?: string }).codec, PREFS_KEY);
+  if (remembered !== 'hevc') fail('restore', `the remembered Codec became ${remembered} on a computer that cannot make HEVC`);
+  await load(page, url, 'default');
+  await page.reload();
+  await page.waitForSelector('.app');
+  const comesBack = (await checked()) === 'hevc';
+  if (!comesBack) fail('restore', 'HEVC did not come back on a computer that can make it');
 
   // Broken storage must not break the app.
-  await page.evaluate((key) => localStorage.setItem(key, '{not json'), DRAFT_KEY);
+  await page.evaluate((key) => localStorage.setItem(key, '{not json'), PREFS_KEY);
   await page.reload();
-  const usable = await page.waitForSelector('#field-body', { timeout: 3000 }).then(() => true, () => false);
+  const usable = await page.waitForSelector('#choose-audio', { timeout: 3000 }).then(() => true, () => false);
   if (!usable) fail('restore', 'the app did not render with corrupt stored data');
   await context.close();
-  report.gates.restore = { restoredAfterReload: same, survivesCorruptStorage: usable };
+  report.gates.restore = { restoredAfterReload: restored, survivesCorruptStorage: usable, hevcStartsOnH264Where: startsOnH264 && remembered === 'hevc', hevcComesBack: comesBack };
 }
 
 // ------------------------------------------------------------- journeys ---
-// Each journey in qa/journeys.json has a script here: an array of steps, each
-// one thing a person does (type a run of text, or press one key combination),
-// and a check of the result. No pointer is used. The step count may not pass
-// the journey's budget. Every journey runs twice: with Ctrl (the stand-in says
-// Windows) and with Command (the stand-in says macOS). "Mod" in a key names the
-// family's modifier.
+// Each journey in qa/journeys.json has a script here: an array of steps, each one thing a person does
+// (one key combination; the drop is the one step no key can make and is sent as the page receives a real
+// one), and a check of the result. The step count may not pass the journey's budget. Every journey runs
+// twice: with Ctrl (the stand-in says Windows) and with Command (the stand-in says macOS). "Mod" in a key
+// names the family's modifier. A step may wait for what it started (a file dialog answers at once; the
+// check that follows takes a moment): waiting is not a step.
 
-const KEY_FAMILIES: ['windows' | 'macos', 'Control' | 'Meta'][] = [
+const KEY_FAMILIES: ['windows' | 'macos', Mod][] = [
   ['windows', 'Control'],
   ['macos', 'Meta'],
 ];
 /** One thing a person does in a journey. */
 interface Step {
   label: string;
-  run: (page: Page, mod: string) => Promise<void>;
+  run: (page: Page, mod: Mod) => Promise<void>;
 }
-const type = (text: string): Step => ({ label: `type "${text.slice(0, 24)}"`, run: (page) => page.keyboard.type(text) });
-const press = (keys: string): Step => ({ label: `press ${keys}`, run: (page, mod) => page.keyboard.press(keys.replace('Mod', mod)) });
+const press = (keys: string, until?: string): Step => ({
+  label: `press ${keys}`,
+  run: async (page, mod) => {
+    await page.keyboard.press(keys.replace('Mod', mod));
+    if (until) await page.waitForSelector(until, { timeout: 5000 });
+  },
+});
+
+/** Made and saved: the status bar says it, and the page asked the shell for exactly one video. */
+const saved = async (page: Page): Promise<string | null> => {
+  const done = await waitStatus(page, 'done', 8000).then(() => true, () => false);
+  if (!done) return 'the video was not saved';
+  const text = await page.locator('[data-status-text]').textContent();
+  if (!/^Saved Song\.mp4 to Videos\./.test(text ?? '')) return `the status bar says "${text}"`;
+  const makes = await page.evaluate(() => (window.__desktopCalls ?? []).filter((c) => c.name === 'makeVideo').length);
+  return makes === 1 ? null : `${makes} requests to make a video`;
+};
+
+const lastMake = (page: Page): Promise<Record<string, unknown> | undefined> =>
+  page.evaluate(() => ((window.__desktopCalls ?? []).filter((c) => c.name === 'makeVideo').at(-1)?.args[0]) as Record<string, unknown> | undefined);
 
 const JOURNEY_SCRIPTS: Record<string, { fixture: string; steps: Step[]; check: (page: Page) => Promise<string | null> }> = {
-  'note-with-item': {
+  'choose-and-make': {
     fixture: 'default',
-    steps: [type('Plan for the week'), press('Tab'), type('First line of the note.'), press('Mod+Shift+R'), type('cedar'), press('Tab'), press('Enter')],
+    steps: [press('Mod+o', '[data-file="audio"]'), press('Mod+Shift+o', '[data-preview-state="ready"]'), press('Mod+Enter')],
+    check: saved,
+  },
+  'drop-and-make': {
+    fixture: 'default',
+    steps: [
+      {
+        label: 'drop a song and an image on the window',
+        run: async (page) => {
+          await drop(page, [SONG, PICTURE]);
+          await page.waitForSelector('[data-preview-state="ready"]', { timeout: 5000 });
+        },
+      },
+      press('Mod+Enter'),
+    ],
+    check: saved,
+  },
+  'crop-square': {
+    fixture: 'default',
+    steps: [
+      press('Mod+o', '[data-file="audio"]'),
+      press('Mod+Shift+o', '[data-preview-state="ready"]'),
+      press('Tab'), // Frame Shape
+      press('ArrowRight'), // 9:16
+      press('ArrowRight'), // 1:1
+      press('Tab'), // Resolution
+      press('Tab'), // Codec
+      press('Tab'), // Crop position
+      press('ArrowLeft'), // a 5% nudge
+      press('Mod+Enter'),
+    ],
     check: async (page) => {
-      await page.waitForTimeout(350);
-      const state = await page.evaluate(() => ({
-        title: (document.querySelector('#field-title') as HTMLInputElement).value,
-        body: (document.querySelector('#field-body') as HTMLTextAreaElement).value,
-        status: (document.querySelector('[data-footer-status]') as Element).textContent ?? '',
-      }));
-      const ok = state.title === 'Plan for the week' && state.body.startsWith('First line of the note.') && /Cedar/.test(state.body) && /^Saved at/.test(state.status);
-      return ok ? null : `unexpected result ${JSON.stringify(state)}`;
+      const problem = await saved(page);
+      if (problem) return problem;
+      const request = (await lastMake(page)) as { shape?: string; crop?: { h: number; v: number }; codec?: string } | undefined;
+      return request?.shape === '1:1' && request.crop?.h === 0.55 && request.crop.v === 0.5 && request.codec === 'h264' ? null : `the request was ${JSON.stringify(request)}`;
     },
   },
-  'run-example': {
+  'hevc-remembered': {
     fixture: 'default',
-    steps: [press('Mod+Shift+E')],
-    check: async (page) => {
-      const done = await page.waitForSelector('[data-status-bar][data-job="done"]', { timeout: 5000 }).then(() => true, () => false);
-      return done ? null : 'the example did not finish';
-    },
+    steps: [
+      press('Tab'), // Choose Image (focus starts on Choose Audio)
+      press('Tab'), // Frame Shape
+      press('Tab'), // Resolution
+      press('Tab'), // Codec
+      press('ArrowRight'), // HEVC
+      {
+        label: 'restart the app',
+        run: async (page) => {
+          await page.reload();
+          await page.waitForSelector('.app');
+        },
+      },
+    ],
+    check: async (page) => ((await page.locator('[data-group="codec"] [aria-checked="true"]').getAttribute('data-value')) === 'hevc' ? null : 'HEVC was not chosen after the restart'),
   },
 };
 
@@ -1096,8 +1131,13 @@ async function journeyGate() {
     for (const [platform, mod] of KEY_FAMILIES) {
       const { context, page, errors } = await openPage(browser, VIEW);
       await load(page, url, script.fixture, `platform=${platform}`);
-      for (const step of script.steps) await step.run(page, mod);
-      const problem = await script.check(page);
+      let problem: string | null = null;
+      try {
+        for (const step of script.steps) await step.run(page, mod);
+        problem = await script.check(page);
+      } catch (error) {
+        problem = `a step failed: ${String(error).split('\n')[0]}`;
+      }
       out[`${journey.id}/${platform}`] = { name: journey.name, steps: script.steps.length, stepBudget: journey.stepBudget, passed: !problem };
       if (problem) fail('journeys', `${journey.id} (${platform} keys): ${problem}`);
       if (script.steps.length > journey.stepBudget) fail('journeys', `${journey.id}: ${script.steps.length} steps, budget ${journey.stepBudget}`);
@@ -1109,30 +1149,44 @@ async function journeyGate() {
 }
 
 // ------------------------------------------------------------ shortcuts ---
-// What each shortcut must visibly do, by the label of its palette row. A row
-// with no shortcut must be listed in qa/journeys.json `commandsWithoutShortcut`
-// with the reason it is not a repeated action. Each label is one string written
-// as the system writes it ("Ctrl+Shift+D"; "⇧⌘D"), and each key works on both
+// What each shortcut must visibly do, by the label of its palette row. A row with no shortcut must be
+// listed in qa/journeys.json `commandsWithoutShortcut` with the reason it is not a repeated action. Each
+// label is one string written as the system writes it ("Ctrl+Shift+L"; "⇧⌘L"), and each key works on both
 // families.
 
+const seen = (page: Page, selector: string): Promise<boolean> => page.waitForSelector(selector, { timeout: 1500 }).then(() => true, () => false);
 const SHORTCUT_EFFECTS: Record<string, (page: Page) => Promise<boolean>> = {
-  Title: (page) => page.evaluate(() => document.activeElement?.id === 'field-title'),
-  Note: (page) => page.evaluate(() => document.activeElement?.id === 'field-body'),
-  'All 10,000 items': (page) => page.evaluate(() => document.activeElement?.id === 'rail-filter'),
-  'Clear note': (page) => page.waitForSelector('.toast', { timeout: 1500 }).then(() => true, () => false),
-  'Run the example': (page) => page.waitForSelector('[data-status-bar][data-job="running"], [data-status-bar][data-job="done"]', { timeout: 1500 }).then(() => true, () => false),
+  'Choose Audio…': (page) => seen(page, '[data-file="audio"]'),
+  'Choose Image…': (page) => seen(page, '[data-file="image"]'),
   'Use the dark theme': (page) => page.evaluate(() => document.documentElement.dataset.theme === 'dark'),
   'Use the light theme': (page) => page.evaluate(() => document.documentElement.dataset.theme === 'light'),
 };
 // A command that only applies in another state is set up first.
-const SHORTCUT_SETUP: Record<string, { fixture: string; setup: (page: Page, mod: string) => Promise<void>; effect: (page: Page) => Promise<boolean> }> = {
-  'Cancel the example': {
-    fixture: 'job-running',
+const SHORTCUT_SETUP: Record<string, { fixture: string; setup: (page: Page, mod: Mod) => Promise<void>; effect: (page: Page) => Promise<boolean> }> = {
+  'Make Video': {
+    fixture: 'default',
+    setup: async (page, mod) => fill(page, mod),
+    effect: (page) => seen(page, '[data-status-bar][data-job="starting"], [data-status-bar][data-job="running"], [data-status-bar][data-job="done"]'),
+  },
+  Cancel: {
+    fixture: 'make-hold',
     setup: async (page, mod) => {
-      await page.keyboard.press(`${mod}+Shift+E`);
-      await page.waitForSelector('[data-status-bar][data-job="running"]');
+      await fill(page, mod);
+      await make(page, mod);
+      await waitStatus(page, 'running');
     },
-    effect: (page) => page.waitForSelector('[data-status-bar][data-job="stopped"]', { timeout: 1500 }).then(() => true, () => false),
+    effect: (page) => seen(page, '[data-status-bar][data-job="cancelling"], [data-status-bar][data-job="cancelled"]'),
+  },
+  'Reset Crop to Center': {
+    fixture: 'default',
+    setup: async (page, mod) => {
+      await fill(page, mod);
+      await pickShape(page, '1:1');
+      await page.locator('[role="slider"]').focus();
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+    },
+    effect: async (page) => (await cropValue(page)) === '50% across, 50% down',
   },
 };
 const LABEL_FORMAT: Record<string, RegExp> = { windows: /^(Ctrl\+)?(Alt\+)?(Shift\+)?[^+\s]+$/, macos: /^⌥?⇧?⌘?[^+\s⌘⇧⌥]+$/ };
@@ -1140,9 +1194,9 @@ const toPlaywright = (label: string, platform: string): string => {
   if (platform === 'macos') {
     const mods = [...label].filter((ch) => '⌥⇧⌘'.includes(ch)).map((ch) => (({ '⌥': 'Alt', '⇧': 'Shift', '⌘': 'Meta' }) as Record<string, string>)[ch]);
     const key = [...label].filter((ch) => !'⌥⇧⌘'.includes(ch)).join('');
-    return [...mods, key === '↩' ? 'Enter' : key].join('+');
+    return [...mods, key === '↩' ? 'Enter' : key === '⎋' ? 'Escape' : key].join('+');
   }
-  return label.replace('Ctrl', 'Control');
+  return label.replace('Ctrl', 'Control').replace(/\+?Esc$/, (m) => (m.startsWith('+') ? '+Escape' : 'Escape'));
 };
 
 async function shortcutsGate() {
@@ -1151,7 +1205,7 @@ async function shortcutsGate() {
   for (const [platform, mod] of KEY_FAMILIES) {
     const { context, page } = await openPage(browser, VIEW);
     await load(page, url, 'default', `platform=${platform}`);
-    await fill(page);
+    await fill(page, mod);
     await page.keyboard.press(`${mod}+k`);
     await page.waitForSelector('.palette');
     const rows = await page.evaluate(() =>
@@ -1179,9 +1233,8 @@ async function shortcutsGate() {
       }
       const run = await openPage(browser, VIEW);
       await load(run.page, url, special?.fixture ?? 'default', `platform=${platform}`);
-      await fill(run.page);
-      await special?.setup?.(run.page, mod);
-      await run.page.locator('#field-body').focus();
+      if (special) await special.setup(run.page, mod);
+      await run.page.locator('#choose-audio').focus().catch(() => undefined);
       await run.page.keyboard.press(toPlaywright(keys, platform));
       await run.page.waitForTimeout(120);
       if (await effect(run.page)) result.worked.push(row.label);
@@ -1202,105 +1255,448 @@ async function shortcutsGate() {
 }
 
 // -------------------------------------------------------------- overlay ---
-// Keys typed straight after the key that opens an overlay land in it: the overlay
-// takes focus in the same turn as the key (build 2 found focus a frame late).
+// Keys typed straight after the key that opens an overlay land in it: the overlay takes focus in the same
+// turn as the key (build 2 found focus a frame late).
 
 async function overlayGate() {
   const out: NonNullable<Gates['overlay']> = {};
   for (const [platform, mod] of KEY_FAMILIES) {
     const { context, page } = await openPage(browser, VIEW);
     await load(page, url, 'default', `platform=${platform}`);
-    await page.locator('#field-body').focus();
+    await page.locator('#choose-audio').focus();
     await page.keyboard.press(`${mod}+k`);
     await page.keyboard.type('abo', { delay: 0 });
-    const state = await page.evaluate(() => ({ query: document.querySelector<HTMLInputElement>('.palette input')?.value ?? null, body: (document.querySelector('#field-body') as HTMLTextAreaElement).value }));
+    const state = await page.evaluate(() => ({ query: document.querySelector<HTMLInputElement>('.palette input')?.value ?? null, body: document.activeElement?.tagName ?? '' }));
     out[platform] = state;
-    if (state.query !== 'abo' || state.body.includes('abo')) fail('overlay', `${platform}: keys typed after opening the palette went elsewhere: ${JSON.stringify(state)}`);
+    if (state.query !== 'abo') fail('overlay', `${platform}: keys typed after opening the palette went elsewhere: ${JSON.stringify(state)}`);
     await context.close();
   }
   report.gates.overlay = out;
 }
 
 // ------------------------------------------------------------------ job ---
-// The status bar's job, from the stand-in's fixtures. Cancel is acknowledged at
-// once; each failure says the work is safe and its filled button is an action
-// that can succeed for its cause; "Copy details" copies the developer text, which
-// never appears on screen.
+// The job, from the stand-in's fixtures. Cancel is acknowledged at once; each row of SPEC 27.5's table says
+// its sentence and its filled button can succeed for its cause; "Copy Details" copies the developer text,
+// which never appears on screen; progress never goes back and never reads 100% before the outcome.
+
+/** SPEC 27.5, written out again here on purpose: the audit does not read the page's own table. */
+const TABLE: Record<string, { sentence: string; filled: string }> = {
+  audio_not_found: { sentence: 'The song file is no longer where it was.', filled: 'Choose Audio…' },
+  image_not_found: { sentence: 'The image file is no longer where it was.', filled: 'Choose Image…' },
+  audio_unreadable: { sentence: "Song2Vid can't read this audio file.", filled: 'Choose Audio…' },
+  image_unreadable: { sentence: "Song2Vid can't read this image file.", filled: 'Choose Image…' },
+  image_too_small: { sentence: 'This image is too small. Each side needs at least 16 pixels.', filled: 'Choose Image…' },
+  codec_unavailable: { sentence: "This computer can't make HEVC videos.", filled: 'Use H.264' },
+  output_not_writable: { sentence: "Couldn't save to that folder. Nothing was saved.", filled: 'Choose Another Folder…' },
+  disk_full: { sentence: 'Not enough disk space. Nothing was saved.', filled: 'Choose Another Folder…' },
+  output_in_use: { sentence: 'Another app is using that file. Close it, then try again.', filled: 'Try Again' },
+  output_exists: { sentence: "A file with that name appeared while the video was being made. It was kept, and the new video wasn't saved.", filled: 'Save As…' },
+  export_failed: { sentence: "The video couldn't be made. Your files are unchanged.", filled: 'Try Again' },
+  something_new: { sentence: "The video couldn't be made. Your files are unchanged.", filled: 'Try Again' },
+};
+
+const callsOf = (page: Page, name: string): Promise<{ args: unknown[] }[]> => page.evaluate((n) => (window.__desktopCalls ?? []).filter((c) => c.name === n), name);
+const statusText = (page: Page): Promise<string> =>
+  page.evaluate(() => [...document.querySelectorAll('[data-status-text] p')].map((p) => (p.textContent ?? '').trim()).filter(Boolean).join(' '));
 
 async function jobGate() {
   const out: JobGate = {};
+  // Cancel is acknowledged in the same task as the click, and the tool's exit is then waited for.
   {
     const { context, page } = await openPage(browser, VIEW);
-    await load(page, url, 'job-running');
-    await page.keyboard.press('Control+Shift+E');
-    await page.waitForSelector('[data-status-bar][data-job="running"]');
-    // Acknowledged in the same task as the click: read the state after the task's microtasks
-    // (where React applies a discrete update) and before any timer or frame can run.
+    await load(page, url, 'make-hold');
+    await fill(page);
+    await make(page);
+    await waitStatus(page, 'running');
+    // Read the state after the task's microtasks (where React applies a discrete update) and before any timer or frame can run.
     const after = await page.evaluate(async () => {
       document.querySelector<HTMLElement>('[data-status-bar] button')?.click();
       for (let i = 0; i < 3; i++) await new Promise<void>((r) => queueMicrotask(() => r()));
-      return document.querySelector('[data-status-bar]')?.getAttribute('data-job');
+      return { kind: document.querySelector('[data-status-bar]')?.getAttribute('data-job'), text: document.querySelector('[data-status-text]')?.textContent ?? '' };
     });
-    out.cancelAcknowledged = after;
-    if (after !== 'stopped') fail('job', `cancel was not acknowledged at once: the bar says "${after}"`);
+    out.cancelAcknowledged = after.kind;
+    if (after.kind !== 'cancelling' || !/^Cancelling/.test(after.text)) fail('job', `cancel was not acknowledged at once: the bar says "${after.kind}": ${after.text}`);
+    await waitStatus(page, 'cancelled', 3000).catch(() => fail('job', 'the job did not end as cancelled'));
+    const end = await statusText(page);
+    if (end !== 'Cancelled. Nothing was saved.') fail('job', `after cancelling the bar says "${end}"`);
+    const controls = await page.evaluate(() => [...document.querySelectorAll<HTMLButtonElement>('#choose-audio, #choose-image, #make-video')].map((b) => b.disabled));
+    if (controls.some(Boolean)) fail('job', `a control stayed disabled after the job ended: ${controls}`);
     await context.close();
   }
-  for (const [fixture, filled] of [
-    ['job-failed-OUTPUT_IN_USE', 'Try again'],
-    ['job-failed-SOMETHING_NEW', 'Copy details'],
-    ['damaged', 'Copy details'],
-  ] as const) {
+  // Progress: never back, under 100 before the outcome; time left only once encoding has run 1 s and passed 5%.
+  {
     const { context, page } = await openPage(browser, VIEW);
-    await load(page, url, fixture);
-    if (fixture !== 'damaged') {
-      await page.keyboard.press('Control+Shift+E');
-      await page.waitForSelector('[data-status-bar][data-job="failed"]');
+    await load(page, url);
+    await fill(page);
+    await page.evaluate(() => {
+      const seen: { percent: number | null; text: string; kind: string }[] = [];
+      new MutationObserver(() => {
+        const bar = document.querySelector('[data-status-bar]');
+        const value = bar?.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow');
+        seen.push({ percent: value === null || value === undefined ? null : Number(value), text: (bar?.querySelector('[data-status-text]')?.textContent ?? '').trim(), kind: bar?.getAttribute('data-job') ?? '' });
+      }).observe(document.querySelector('[data-status-bar]') as Element, { subtree: true, childList: true, attributes: true, characterData: true });
+      (window as unknown as { __seen: typeof seen }).__seen = seen;
+    });
+    await make(page);
+    await waitStatus(page, 'done', 8000);
+    const trail = await page.evaluate(() => (window as unknown as { __seen: { percent: number | null; text: string; kind: string }[] }).__seen);
+    let high = -1;
+    for (const point of trail) {
+      if (point.percent === null) continue;
+      if (point.percent < high) fail('job', `progress went back from ${high} to ${point.percent}`);
+      if (point.percent >= 100 && point.kind !== 'done') fail('job', `progress read ${point.percent}% before the outcome`);
+      high = Math.max(high, point.percent);
+      if (/left/.test(point.text) && point.percent <= 5) fail('job', `time left shown at ${point.percent}%: ${point.text}`);
     }
-    const seen = await page.evaluate(() => ({
-      text: document.querySelector('[data-status-text]')?.textContent ?? '',
+    out.progress = { points: trail.length, highest: high, timeLeftSeen: trail.some((t) => /left/.test(t.text)) };
+    if (!trail.some((t) => /left/.test(t.text))) fail('job', 'time left was never shown on a job that ran past 5% after 1 s');
+    await context.close();
+  }
+  // Every row of SPEC 27.5's table, and a code the page does not know.
+  for (const [code, expected] of Object.entries(TABLE)) {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, `make-fail-${code}`);
+    await fill(page);
+    await make(page);
+    await waitStatus(page, 'failure');
+    const seenNow = await page.evaluate(() => ({
       filled: [...document.querySelectorAll('[data-status-bar] .btn-primary')].map((b) => (b.textContent ?? '').trim()),
       page: document.body.innerText,
     }));
-    if (!/safe/.test(seen.text)) fail('job', `${fixture}: the message does not say the work is safe: "${seen.text}"`);
-    if (seen.filled[0] !== filled) fail('job', `${fixture}: the filled button reads ${JSON.stringify(seen.filled)}, expected "${filled}"`);
-    await page.getByRole('button', { name: 'Copy details' }).click();
+    const text = await statusText(page);
+    if (text !== expected.sentence) fail('job', `${code}: the bar says "${text}", SPEC 27.5 says "${expected.sentence}"`);
+    if (seenNow.filled.length !== 1 || seenNow.filled[0] !== expected.filled) fail('job', `${code}: the filled button reads ${JSON.stringify(seenNow.filled)}, expected "${expected.filled}"`);
+    // Copy Details copies the developer text, and it is never on screen.
+    await page.getByRole('button', { name: 'Copy Details' }).click();
     const copied = await page.evaluate(() => window.__copied.at(-1) ?? '');
-    if (!copied) fail('job', `${fixture}: "Copy details" copied nothing`);
-    if (copied && seen.page.includes(copied.split('\n')[0] ?? copied)) fail('job', `${fixture}: the developer text is on screen`);
-    out[fixture] = { text: seen.text, filled: seen.filled, copiedChars: copied.length };
+    if (!copied || !copied.includes(code === 'something_new' ? 'something_new' : code)) fail('job', `${code}: "Copy Details" copied ${JSON.stringify(copied.slice(0, 60))}`);
+    if (copied && seenNow.page.includes(copied.split('\n')[0] ?? copied) && (copied.split('\n')[0] ?? '').length > 1) fail('job', `${code}: the developer text is on screen`);
+    out[`row:${code}`] = { text, filled: seenNow.filled, copiedChars: copied.length };
     await context.close();
   }
-  // A second failure of the same kind says so and offers a different step.
+  // A second failure with the same inputs says so and offers a different step.
   {
     const { context, page } = await openPage(browser, VIEW);
-    await load(page, url, 'job-failed-OUTPUT_IN_USE');
-    await page.keyboard.press('Control+Shift+E');
-    await page.waitForSelector('[data-status-bar][data-job="failed"]');
-    await page.getByRole('button', { name: 'Try again' }).click();
-    await page.waitForFunction(() => /again/.test(document.querySelector('[data-status-text]')?.textContent ?? ''), null, { timeout: 3000 }).catch(() => {});
-    const second = await page.evaluate(() => ({ text: document.querySelector('[data-status-text]')?.textContent ?? '', filled: [...document.querySelectorAll('[data-status-bar] .btn-primary')].map((b) => (b.textContent ?? '').trim()) }));
+    await load(page, url, 'make-fail-output_in_use');
+    await fill(page);
+    await make(page);
+    await waitStatus(page, 'failure');
+    await page.getByRole('button', { name: 'Try Again' }).click();
+    await page.waitForFunction(() => /failed again/.test(document.querySelector('[data-status-text]')?.textContent ?? ''), null, { timeout: 3000 }).catch(() => {});
+    const second = { text: await statusText(page), filled: await page.evaluate(() => [...document.querySelectorAll('[data-status-bar] .btn-primary')].map((b) => (b.textContent ?? '').trim())) };
     out.secondFailure = second;
-    if (!/again/.test(second.text) || second.filled[0] === 'Try again') fail('job', `a repeated failure reads the same and offers the same step: ${JSON.stringify(second)}`);
+    if (!/It failed again\./.test(second.text) || second.filled[0] !== 'Copy Details') fail('job', `a repeated failure reads the same or offers the same step: ${JSON.stringify(second)}`);
+    // A change of inputs is a new failure, not a repeat.
+    await pickShape(page, '1:1');
+    await page.getByRole('button', { name: 'Copy Details' }).first().focus();
+    await make(page);
+    await waitStatus(page, 'failure');
+    const third = await statusText(page);
+    if (/failed again/.test(third)) fail('job', `a failure with different inputs said it failed again: ${third}`);
+    await context.close();
+  }
+  // Each filled button can succeed for its cause.
+  for (const [code, label, check] of [
+    ['audio_not_found', 'Choose Audio…', async (page: Page) => (await callsOf(page, 'chooseAudio')).length === 2],
+    ['image_unreadable', 'Choose Image…', async (page: Page) => (await callsOf(page, 'chooseImage')).length === 2],
+    ['codec_unavailable', 'Use H.264', async (page: Page) => (await page.locator('[data-group="codec"] [aria-checked="true"]').getAttribute('data-value')) === 'h264' && (await callsOf(page, 'setPreferences')).length === 2 && (await statusText(page)) !== TABLE['codec_unavailable']?.sentence],
+    ['output_not_writable', 'Choose Another Folder…', async (page: Page) => (await callsOf(page, 'makeVideo')).at(-1)?.args[0] instanceof Object && ((await callsOf(page, 'makeVideo')).at(-1)?.args[0] as { destination: string }).destination === 'ask'],
+    ['output_exists', 'Save As…', async (page: Page) => ((await callsOf(page, 'makeVideo')).at(-1)?.args[0] as { destination: string }).destination === 'ask'],
+    ['output_in_use', 'Try Again', async (page: Page) => ((await callsOf(page, 'makeVideo')).at(-1)?.args[0] as { destination: string }).destination === 'same'],
+  ] as const) {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, `make-fail-${code}`);
+    await fill(page);
+    if (code === 'codec_unavailable') await pickCodec(page, 'hevc');
+    await make(page);
+    await waitStatus(page, 'failure');
+    await page.locator('[data-status-bar] .btn-primary').click();
+    await page.waitForTimeout(300);
+    if (!(await check(page))) fail('job', `${code}: "${label}" did not do what it says`);
+    await context.close();
+  }
+  // A drop while a video is made is refused in words for 3 seconds and changes nothing.
+  {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, 'make-hold');
+    await fill(page);
+    await make(page);
+    await waitStatus(page, 'running');
+    await drop(page, [SONG, PICTURE]);
+    await waitStatus(page, 'notice');
+    const refused = await statusText(page);
+    const dropCalls = (await callsOf(page, 'dropFiles')).length;
+    if (!/^Wait for the current video to finish\./.test(refused) || dropCalls !== 0) fail('job', `a drop during a job said "${refused}" and asked the shell ${dropCalls} times`);
+    const cancelStill = await page.locator('[data-status-bar] button', { hasText: 'Cancel' }).count();
+    if (cancelStill !== 1) fail('job', 'Cancel disappeared while the drop was refused');
+    await page.waitForTimeout(3300);
+    const after = await page.locator('[data-status-bar]').getAttribute('data-job');
+    if (after !== 'running') fail('job', `the refusal stayed longer than 3 seconds (the bar says ${after})`);
+    out.dropRefused = { text: refused };
+    await context.close();
+  }
+  // The save dialog closed without a choice changes nothing.
+  {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, 'make-dismissed');
+    await fill(page);
+    await make(page);
+    await page.waitForTimeout(300);
+    const kind = await page.locator('[data-status-bar]').getAttribute('data-job');
+    if (kind !== 'idle') fail('job', `a dismissed save dialog left the bar saying ${kind}`);
     await context.close();
   }
   report.gates.job = out;
 }
 
+// ----------------------------------------------------------------- crop ---
+// The crop control (SPEC 27.2, premium bar rules 67 and 75): a slider to assistive technology with a spoken
+// value, arrow keys of 5% and Shift of 25%, Home, End, Page Up and Page Down, a drag that moves the image
+// with the pointer in the same frame, and Reset to Center.
+
+async function cropGate() {
+  const out: Record<string, unknown> = {};
+  const { context, page } = await openPage(browser, VIEW);
+  await load(page, url);
+  await fill(page);
+  const hidden = await page.locator('[role="slider"]').count();
+  if (hidden !== 0) fail('crop', 'Crop position is offered for a Fit shape, where there is nothing to crop');
+  await pickShape(page, '1:1');
+  const slider = page.locator('[role="slider"][aria-label="Crop position"]');
+  const attrs = await slider.evaluate((el) => ({ min: el.getAttribute('aria-valuemin'), max: el.getAttribute('aria-valuemax'), now: el.getAttribute('aria-valuenow'), text: el.getAttribute('aria-valuetext'), tab: (el as HTMLElement).tabIndex }));
+  out.attributes = attrs;
+  if (attrs.min !== '0' || attrs.max !== '100' || attrs.now !== '50' || attrs.text !== '50% across, 50% down' || attrs.tab !== 0) fail('crop', `the Crop position control reads ${JSON.stringify(attrs)}`);
+
+  const expectKey = async (keys: string, text: string) => {
+    await page.keyboard.press(keys);
+    const got = await cropValue(page);
+    if (got !== text) fail('crop', `${keys}: the value reads "${got}", expected "${text}"`);
+  };
+  await slider.focus();
+  await expectKey('ArrowLeft', '55% across, 50% down');
+  await expectKey('Shift+ArrowLeft', '80% across, 50% down');
+  await expectKey('ArrowUp', '80% across, 50% down'); // nothing to crop that way: unchanged
+  await expectKey('ArrowRight', '75% across, 50% down');
+  await expectKey('PageUp', '100% across, 50% down');
+  await expectKey('Home', '0% across, 50% down');
+  await expectKey('End', '100% across, 50% down');
+  await expectKey('PageDown', '75% across, 50% down');
+  await page.keyboard.press('Control+0');
+  if ((await cropValue(page)) !== '50% across, 50% down') fail('crop', 'Ctrl+0 did not reset the crop to the centre');
+
+  // A drag moves the image with the pointer: 40 screen pixels move it 40 screen pixels, in the same task.
+  const frameBox = await page.locator('.frame').boundingBox();
+  const imageBefore = await page.locator('.frame img').boundingBox();
+  if (!frameBox || !imageBefore) throw new Error('no frame to drag');
+  await page.mouse.move(frameBox.x + frameBox.width / 2, frameBox.y + frameBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(frameBox.x + frameBox.width / 2 - 40, frameBox.y + frameBox.height / 2);
+  const imageDuring = await page.locator('.frame img').boundingBox();
+  const textDuring = await cropValue(page);
+  await page.mouse.up();
+  const moved = imageDuring && imageBefore ? imageDuring.x - imageBefore.x : NaN;
+  out.drag = { moved, textDuring };
+  if (!(Math.abs(moved - -40) <= 1)) fail('crop', `a 40 px drag moved the image ${moved} px`);
+  if (!/^[6-9]\d% across, 50% down$/.test(textDuring ?? '')) fail('crop', `during the drag the value reads "${textDuring}"`);
+  // Past the edge it stops.
+  await page.mouse.move(frameBox.x + 200, frameBox.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(frameBox.x - 5000 + 200, frameBox.y + 100, { steps: 3 });
+  await page.mouse.up();
+  const edge = await cropValue(page);
+  if (edge !== '100% across, 50% down') fail('crop', `dragged far past the edge, the value reads "${edge}"`);
+  // Reset to Center, by its button.
+  await page.getByRole('button', { name: 'Reset to Center' }).click();
+  if ((await cropValue(page)) !== '50% across, 50% down') fail('crop', 'Reset to Center did not restore 50% across, 50% down');
+  // A new Frame Shape or a new image starts from the centre; a new Resolution keeps the position.
+  await slider.focus();
+  await page.keyboard.press('ArrowLeft');
+  await pickShape(page, '4:3');
+  if ((await cropValue(page)) !== '50% across, 50% down') fail('crop', 'a new Frame Shape did not start from the centre');
+  await page.keyboard.press('Tab').catch(() => undefined);
+  await slider.focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.locator('[data-group="resolution"] [data-value="2160p"]').click();
+  if ((await cropValue(page)) !== '55% across, 50% down') fail('crop', 'a new Resolution did not keep the crop position');
+  await context.close();
+  report.gates.crop = out;
+}
+
+// ---------------------------------------------------------------- files ---
+// SPEC 4a and 27.3, by what a person sees: an empty slot fills at once, a filled one asks (Keep Current is the
+// default; Esc keeps; focus returns), a rejected drop changes nothing and says why, and only a drop that could
+// be used lights the window.
+
+async function filesGate() {
+  const out: Record<string, unknown> = {};
+  const names = (page: Page) => page.evaluate(() => ({ audio: document.querySelector('[data-file="audio"]')?.textContent ?? null, image: document.querySelector('[data-file="image"]')?.textContent ?? null }));
+  const { context, page, errors } = await openPage(browser, VIEW);
+  await load(page, url);
+  // Into empty slots: filled at once, no question.
+  await drop(page, [SONG, PICTURE]);
+  await page.waitForSelector('[data-file="image"]');
+  const filled = await names(page);
+  if (filled.audio !== SONG.name || filled.image !== PICTURE.name || (await page.locator('[data-replace]').count()) !== 0) fail('files', `a drop into empty slots gave ${JSON.stringify(filled)} or asked a question`);
+  // Onto filled slots: asked first, in the Mac app's words; Keep Current is the default.
+  await page.locator('#choose-image').focus();
+  await drop(page, [{ name: 'Other Song.mp3', type: 'audio/mpeg' }]);
+  await page.waitForSelector('[data-replace]');
+  await page.waitForFunction(() => document.activeElement?.textContent === 'Keep Current', null, { timeout: 1000 }).catch(() => undefined);
+  const dialog = await page.evaluate(() => ({ title: document.querySelector('[data-replace]')?.textContent ?? '', focused: document.activeElement?.textContent ?? '', buttons: [...document.querySelectorAll('[data-replace] button')].map((b) => b.textContent?.trim()) }));
+  out.question = dialog;
+  if (!dialog.title.startsWith('Replace the current song?') || dialog.focused !== 'Keep Current' || dialog.buttons.join() !== 'Replace,Keep Current') fail('files', `the Replace question reads ${JSON.stringify(dialog)}`);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('[data-replace]'));
+  const kept = await names(page);
+  const back = await page.evaluate(() => document.activeElement?.id ?? '');
+  if (kept.audio !== SONG.name) fail('files', `Esc did not keep the current song: ${JSON.stringify(kept)}`);
+  if (back !== 'choose-image') fail('files', `after the question focus is on "${back}", not where it was (choose-image)`);
+  const released = await page.evaluate(() => (window as unknown as { __released: string[] }).__released.length);
+  if (released < 1) fail('files', 'the dropped file that was not kept was not released');
+  // Replace uses the dropped files, and a song and an image together ask one question.
+  await drop(page, [{ name: 'Other Song.mp3', type: 'audio/mpeg' }, { name: 'Other Cover.png', type: 'image/png' }]);
+  await page.waitForSelector('[data-replace]');
+  const both = await page.locator('[data-replace]').textContent();
+  if (!/^Replace the current song and image\?/.test(both ?? '')) fail('files', `a song and an image asked "${both}"`);
+  await page.getByRole('button', { name: 'Replace', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('[data-file="audio"]')?.textContent === 'Other Song.mp3');
+  await page.waitForFunction(() => !document.querySelector('[data-replace]'));
+  const replaced = await names(page);
+  if (replaced.image !== 'Other Cover.png') fail('files', `Replace did not use both dropped files: ${JSON.stringify(replaced)}`);
+  // A drop that fills an empty slot while the other is dropped onto a filled one: the empty slot is filled whichever way the person answers.
+  // Rejected drops change nothing and say why.
+  const before = await names(page);
+  for (const [label, files, words] of [
+    ['two songs', [SONG, { name: 'B.mp3', type: 'audio/mpeg' }], /Drop one song, one image, or one of each\./],
+    ['three files', [SONG, PICTURE, { name: 'C.png', type: 'image/png' }], /Drop no more than two files/],
+    ['an unreadable type', [{ name: 'notes.txt', type: 'text/plain' }], /can't read this kind of file/],
+  ] as const) {
+    await drop(page, [...files]);
+    await waitStatus(page, 'notice');
+    const said = await statusText(page);
+    if (!words.test(said)) fail('files', `${label}: the message says "${said}"`);
+    if (JSON.stringify(await names(page)) !== JSON.stringify(before) || (await page.locator('[data-replace]').count()) !== 0) fail('files', `${label}: the drop changed something`);
+    await page.waitForTimeout(150);
+  }
+  // The highlight: only for a drop that could be used.
+  await drop(page, [SONG], { phase: 'over' });
+  const lit = await page.locator('.drop-veil').getAttribute('data-active');
+  await drop(page, [SONG, PICTURE, { name: 'C.png', type: 'image/png' }], { phase: 'over' });
+  const litForThree = await page.locator('.drop-veil').getAttribute('data-active');
+  out.highlight = { valid: lit, three: litForThree };
+  if (lit !== 'true' || litForThree !== 'false') fail('files', `the highlight is ${lit} for a valid drop and ${litForThree} for three files`);
+  // A file opened with the app (a second launch) is judged as a drop is.
+  await page.evaluate(() => (window as unknown as { __openFiles: (names: string[]) => void }).__openFiles(['Handed Over.mp3']));
+  await page.waitForSelector('[data-replace]');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('[data-replace]'));
+  if (errors.length) fail('page', `files: ${errors.join(' | ')}`);
+  await context.close();
+  // Choosing with a button replaces without a question, since it is a deliberate choice (SPEC 4).
+  {
+    const second = await openPage(browser, VIEW);
+    await load(second.page, url);
+    await fill(second.page);
+    await second.page.locator('#choose-audio').click();
+    await second.page.waitForTimeout(150);
+    if ((await second.page.locator('[data-replace]').count()) !== 0) fail('files', 'choosing a file with its button asked a question');
+    await second.context.close();
+  }
+  report.gates.files = out;
+}
+
+// ----------------------------------------------------------------- tool ---
+async function toolGate() {
+  const out: Record<string, unknown> = {};
+  {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, 'tool-damaged');
+    const seenNow = await page.evaluate(() => ({ text: [...document.querySelectorAll('[data-blocked] p')].map((p) => p.textContent).join(' '), filled: [...document.querySelectorAll('.btn-primary')].map((b) => b.textContent?.trim()), make: document.querySelectorAll('#make-video').length, rows: document.querySelectorAll('.row').length }));
+    out.missing = seenNow;
+    if (seenNow.text !== 'Song2Vid is missing part of itself. Reinstall it to keep making videos.' || seenNow.filled.join() !== 'Open Download Page' || seenNow.make !== 0 || seenNow.rows !== 0) fail('tool', `the missing-tool state reads ${JSON.stringify(seenNow)}`);
+    await page.getByRole('button', { name: 'Open Download Page' }).click();
+    const links = await callsOf(page, 'openLink');
+    if (links.length !== 1 || links[0]?.args[0] !== 'download-page') fail('tool', `Open Download Page asked the shell for ${JSON.stringify(links)}`);
+    await page.keyboard.press('Control+o');
+    await page.waitForTimeout(100);
+    if ((await callsOf(page, 'chooseAudio')).length !== 0) fail('tool', 'Ctrl+O chose a file with the tool missing');
+    await context.close();
+  }
+  {
+    const { context, page } = await openPage(browser, VIEW);
+    await load(page, url, 'tool-damaged-late');
+    await fill(page);
+    const blocked = await page.waitForSelector('[data-blocked]', { timeout: 3000 }).then(() => true, () => false);
+    out.turnsMissing = blocked;
+    if (!blocked) fail('tool', 'a tool that failed its version check after launch did not show the blocking state');
+    await context.close();
+  }
+  report.gates.tool = out;
+}
+
+// -------------------------------------------------------------- notices ---
+// The banned-terms gate leaves out the third-party notices text and nothing else. A planted banned word is
+// caught anywhere but there, and no element but About's notices carries the exemption.
+
+async function noticesGate() {
+  const out: Record<string, unknown> = {};
+  const { context, page } = await openPage(browser, VIEW);
+  await load(page, url);
+  await STATES['42-about']?.run(page, 'Control');
+  await park(page);
+  const bannedNow = async () => (await page.evaluate(PAGE_CHECKS, bannedTerms)).banned;
+  const none = await bannedNow();
+  const text = await page.locator('[data-notices]').textContent();
+  out.noticesNameTheProgram = /FFmpeg/.test(text ?? '');
+  if (!/FFmpeg/.test(text ?? '')) fail('notices', 'the notices do not name FFmpeg, so this gate would prove nothing');
+  if (none.length) fail('notices', `About reports banned terms: ${none.join(', ')}`);
+  await page.evaluate(() => {
+    const planted = document.createElement('p');
+    planted.id = 'planted';
+    planted.textContent = 'FFmpeg and ffprobe, planted';
+    document.querySelector('[data-about] dl')?.after(planted);
+  });
+  const outside = await bannedNow();
+  out.plantedOutside = outside.length;
+  if (!outside.some((t) => /planted/.test(t))) fail('notices', 'a banned word planted in About outside the notices was not caught');
+  await page.evaluate(() => document.getElementById('planted')?.remove());
+  await page.evaluate(() => {
+    const planted = document.createElement('p');
+    planted.id = 'planted-in';
+    planted.textContent = 'ffprobe, planted';
+    document.querySelector('[data-notices]')?.append(planted);
+  });
+  const inside = await bannedNow();
+  if (inside.length) fail('notices', 'the exemption does not cover the notices text');
+  await context.close();
+  report.gates.notices = out;
+}
+
 // ------------------------------------------------------------------ run ---
 
+// AUDIT_ONLY=job,files runs just those gates while one is being worked on; a full run, with it unset, is the gate.
+const only = process.env['AUDIT_ONLY']?.split(',').filter(Boolean);
+const gate = async (name: string, run: () => unknown): Promise<void> => {
+  if (!only || only.includes(name)) await run();
+};
+
 try {
-  await cssGate();
-  await motionGate();
-  await listGate();
-  await stateGates();
-  await forcedGate();
-  tokensGate();
-  await overflowGate();
-  await restoreGate();
-  await journeyGate();
-  await shortcutsGate();
-  await overlayGate();
-  await jobGate();
+  await gate('css', cssGate);
+  await gate('motion', motionGate);
+  await gate('list', listGate);
+  await gate('states', stateGates);
+  await gate('forced', forcedGate);
+  await gate('tokens', tokensGate);
+  await gate('overflow', overflowGate);
+  await gate('restore', restoreGate);
+  await gate('journeys', journeyGate);
+  await gate('shortcuts', shortcutsGate);
+  await gate('overlay', overlayGate);
+  await gate('job', jobGate);
+  await gate('crop', cropGate);
+  await gate('files', filesGate);
+  await gate('tool', toolGate);
+  await gate('notices', noticesGate);
 } catch (error) {
   fail('audit', `the audit itself failed: ${(error instanceof Error ? (error.stack ?? error.message) : String(error)).split('\n').slice(0, 3).join(' ')}`);
 } finally {
@@ -1314,17 +1710,21 @@ await writeFile(join(root, 'qa', 'audit.json'), JSON.stringify(report, null, 2))
 
 const g = report.gates;
 console.log(`css        ${g.css?.declarationsRead ?? 0} declarations, longest ${g.css?.longestMs ?? '?'} ms, self-test ${g.css?.selfTest ?? 'not run'}`);
-console.log(`list       ${g.list ? `${g.list.top.domRows} to ${g.list.end.domRows} DOM rows of ${g.list.top.totalRows}` : 'not run'}`);
+console.log(`list       ${g.list ? `not applicable: ${g.list.rowsSeen} rows drawn` : 'not run'}`);
 console.log(`axe        ${g.axe ? `${g.axe.violations} violations in ${g.axe.statesChecked} state and theme runs` : 'not run'}`);
 console.log(`focus      ${g.focus?.focusableElementsChecked ?? 0} focus checks; names ${g.names?.interactiveElementsChecked ?? 0}; smallest text ${g.text?.smallestTextPx ?? '?'} px`);
 console.log(`forced     ${g.forced ? `${g.forced.focusableElementsChecked} focus checks in ${g.forced.stateAndThemeRuns} state and theme runs under forced colours` : 'not run'}`);
 console.log(`tokens     ${g.tokens ? `${g.tokens.linesRead} lines in ${g.tokens.filesRead} files, themes ${g.tokens.themes.join(', ')}` : 'not run'}`);
 console.log(`overflow   ${g.overflow ? Object.keys(g.overflow).length : 0} layout cases at ${SIZES.length} sizes, spill and stable checked in each`);
-console.log(`restore    ${g.restore ? `reload ${g.restore.restoredAfterReload}, corrupt storage ${g.restore.survivesCorruptStorage}` : 'not run'}`);
+console.log(`restore    ${g.restore ? `reload ${g.restore.restoredAfterReload}, corrupt storage ${g.restore.survivesCorruptStorage}, HEVC where it cannot be made ${g.restore.hevcStartsOnH264Where}, comes back ${g.restore.hevcComesBack}` : 'not run'}`);
 console.log(`journeys   ${g.journeys ? Object.entries(g.journeys).map(([id, j]) => `${id} ${j.steps}/${j.stepBudget} steps`).join(', ') : 'not run'}`);
 console.log(`shortcuts  ${g.shortcuts ? Object.entries(g.shortcuts).map(([p, r]) => `${p}: ${r.withShortcut} of ${r.commands} commands, ${r.worked.length} worked`).join('; ') : 'not run'}`);
 console.log(`overlay    ${g.overlay ? Object.entries(g.overlay).map(([p, r]) => `${p}: typed into the palette "${r.query}"`).join('; ') : 'not run'}`);
-console.log(`job        ${g.job ? `cancel acknowledged as "${g.job.cancelAcknowledged}", ${Object.keys(g.job).length - 2} failure fixtures, repeated failure "${g.job.secondFailure?.text ?? ''}"` : 'not run'}`);
+console.log(`job        ${g.job ? `cancel acknowledged as "${g.job.cancelAcknowledged}", ${Object.keys(g.job).filter((k) => k.startsWith('row:')).length} rows of the error table, repeated failure "${g.job.secondFailure?.text ?? ''}"` : 'not run'}`);
+console.log(`crop       ${g.crop ? 'slider, keys, drag, reset and edges checked' : 'not run'}`);
+console.log(`files      ${g.files ? 'drop, Replace question, refused drops, highlight and a second launch checked' : 'not run'}`);
+console.log(`tool       ${g.tool ? 'the missing-tool state, at launch and after it' : 'not run'}`);
+console.log(`notices    ${g.notices ? 'the exemption covers the notices and nothing else' : 'not run'}`);
 if (failures.length) {
   console.error(`\naudit FAILED: ${failures.length} failure(s)`);
   console.error(failures.join('\n'));
