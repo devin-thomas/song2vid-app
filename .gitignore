@@ -30,3 +30,6 @@ TestMedia/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Windows tools staged for packaging
+/windows/app/staging/
