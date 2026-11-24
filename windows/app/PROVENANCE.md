@@ -1,3 +1,19 @@
+# Song2Vid for Windows: where this folder came from
+
+This folder is a copy of the desktop-app skill's `web-three-systems` starter, used as an outside developer would use it (ADR-022, SPEC 27.1).
+
+| | |
+| --- | --- |
+| Repository | `devin-thomas/skills` |
+| Branch | `beta` |
+| Folder | `beta/desktop-app/starters/web-three-systems` |
+| Commit | `48b054d16de2fbcdcb30487471967dda176b469b` (2026-11-22, "Add browser verification beta skill") |
+| Copied | 2026-11-23, by S2V-028 |
+
+Every change to a starter file outside its marked replace-me blocks is listed with its reason in `windows/SKILL-NOTES.md`. `git log -- windows/app` shows the copy as published first, then each change. The rest of this file is the starter's own provenance, unchanged.
+
+---
+
 # Provenance of the three-system content-app branch
 
 What this starter and the skill's round 2 changes were extracted from, how each item was sorted, and what a later run should merge. It covers this folder and the skill's `content-app.md` (renamed from `windows-content.md`), `tool-contract.md`, `packaging.md`, `premium-bar.md` and `measurement.md`. Round 1's record is `../windows-web/PROVENANCE.md`, unchanged.

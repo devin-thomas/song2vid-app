@@ -1,57 +1,22 @@
-# Tool contract: example 1.0
+# Tool contract: song2vid 1.2
 
-The interface between the bundled command-line tool and the app's adapter (`electron/tool/`). It is one of the two seam files written before any builder starts (the other is `src/bridge.ts` with `docs/BRIDGE.md`). Both sides are built against it and neither changes it alone: a change is a lead decision recorded in `docs/DECISIONS.md`.
+The interface between the bundled command, `song2vid.exe`, and the app's adapter (`electron/tool/`). It is a seam file written before any builder starts, with `src/bridge.ts` and `docs/BRIDGE.md`. Neither side changes it alone: a change is a lead decision recorded in `docs/DECISIONS.md`.
 
-This is a tiny example so the untouched starter builds, tests and audits. Replace it with the app's real contract, following the desktop-app skill's `references/tool-contract.md`. Build 2's full contract (the media converter, `resample-gui 1.0`) is the worked example.
+**The contract is the repository's `SPEC.md`, not a copy of it here** (ADR-024): section 14 (`check`, `make`, the options, `--json` lines, exit statuses and error codes), section 24 (`--codec`, `encoders`, `preview`, `--cancel-on-eof`, the added keys and codes) and section 26 (how the Windows command behaves). The starter's example contract (`--capabilities`, `--events 1`, `--stdin-control`) is not used: the starter's adapter, its stand-in tool and its scenarios are rewritten against SPEC 14 and 24 by S2V-029.
 
-## Calls
+## What the adapter relies on
 
-| Call | Arguments | Answer |
-| --- | --- | --- |
-| Capabilities | `--capabilities` | One JSON object on stdout, exit 0. Never fails because a helper is missing; it reports that |
-| Job | `--events 1 --stdin-control -o OUT [-- INPUT ...]`, every path absolute | Newline-delimited JSON events on stdout; exit 0 with `result`, 1 with `error`, 130 with `cancelled` |
-
-## Capabilities
-
-```json
-{"schema":"example-capabilities","schema_version":"1.0","tool":"example-tool","tool_version":"0.1.0","events":[1],"features":["events","stdin-control"]}
-```
-
-The adapter accepts schema `example-capabilities` with major 1 and `events` including 1. Anything else (no answer within 10 s, not JSON, another schema such as the placeholder's `example-placeholder`) is a damaged installation. Unknown fields are ignored. The answer is cached by the binaries' size and modified time.
-
-## Events
-
-UTF-8, one object per line, `\n` only, no line over 1 MiB. Every event has `type`, `seq` (from 0, by one) and `t_ms`. `hello` is first; exactly one terminal event (`result`, `error` or `cancelled`) is last. Consumers ignore unknown event types and fields. Paths the caller gave are never echoed; inputs are named by their position.
-
-| `type` | Fields |
+| Need | Where it is decided |
 | --- | --- |
-| `hello` | `schema: "example-events"`, `schema_version: "1.0"`, `tool`, `tool_version`, `pid` |
-| `start` | `inputs` (count) |
-| `stage` | `stage`: `working` then `publishing`; with `working`, `staging` (the staging folder's leaf name) |
-| `progress` | `done` and `total` (numbers or null), `fraction` (0 to 1 or null). Never decreasing |
-| `result` | `output: { bytes }` |
-| `error` | `code`, `message` (English, for a developer), `details` (object) |
-| `cancelled` | `reason`: `stdin_closed` or `command` |
-
-## Cancelling and the tool's own children
-
-The adapter keeps the tool's stdin open. End-of-file, or a line that is exactly `cancel`, asks the tool to stop: it stops its own children, removes its staging folder, emits `cancelled` and exits within 2 s. If it has not exited 3 s after the request, the adapter kills it (on Windows `child.kill()`; elsewhere a SIGKILL to its process group).
-
-A tool that starts programs of its own must own them: a kill-on-close job object on Windows, and on macOS and Linux a guardian that kills the child when the tool's pipe to it closes. A closed pipe does not end a child that ignores SIGPIPE (build 2: FFmpeg on all three systems). Kill the tool in a test; do not reason about it.
-
-## Publication
-
-The finished file appears under its name in one step, from a private staging folder beside it named `.example-<32 hex>.tmp`. Without an explicit flag the tool never replaces an existing file, including one that appears while it works.
-
-## Error codes
-
-| Code | Meaning | The page's filled button |
-| --- | --- | --- |
-| `OUTPUT_IN_USE` | The file to replace is open in another program | Try again |
-| `INTERNAL` | Anything else | Copy details |
-
-Codes the adapter makes itself: `TOOL_NOT_FOUND`, `TOOL_INCOMPATIBLE`, `TOOL_CRASHED` (exit without a terminal event), `TOOL_PROTOCOL` (not JSON, a line over 1 MiB, events out of order), `TOOL_STALLED` (no `hello` in 5 s, no capabilities in 10 s). An unknown code from a newer tool gets the page's generic sentence. The tool's text reaches a person only through Copy details.
+| Run `song2vid.exe --json --cancel-on-eof` with every path absolute, by absolute path, never PATH | SPEC 26.1, 27.6 |
+| Read the JSON lines: every line has `"api_version":"1"` and a `type`; ignore unknown keys and types; exactly one final `result` or `error` line | SPEC 14.5, 24.5 |
+| A non-JSON line, a line over 1 MiB, or an exit without exactly one final line ends the job as `export_failed`, after the rest of the output is drained | SPEC 27.6 |
+| Launch checks: `--version --json` must say `song2vid 1.2.0` (any other answer is the wrong version); `encoders --json` is cached by the binaries' size and modified time and refreshed in the background every launch | SPEC 24.7, 27.6 |
+| Cancel by closing stdin, kill the process 3 s later; never kill a job for being silent; "Still working…" after 30 s with no line | SPEC 24.4, 27.6 |
+| Record the job before it starts; the next launch removes a leftover `.song2vid-<32 hex>.tmp` directly in the recorded output folder and nothing else | SPEC 26.3, 27.6 |
+| Exit statuses and error codes | SPEC 14.6, 24.6 |
+| Which Encoder and fallback | SPEC 23, 24.5 |
 
 ## The stand-in
 
-`test/standin-tool.ts` takes these flags and replays a scenario from `test/scenarios/`. Every code in the table above has a scenario, and the adapter's tests run against them on every system (`pnpm test`).
+`test/standin-tool.ts` replays recorded SPEC 14 and 24 lines from `test/scenarios/` so the adapter is tested on every system without FFmpeg (SPEC 27.6, 31): success, slow success, each error code, an unknown code, a crash with no final line, garbage, a 2 MiB line, 10 MB of noise, silence mid-job, a cancel ignored, and the wrong version. S2V-029 writes them.

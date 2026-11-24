@@ -91,6 +91,14 @@ Owner, 2026-11-21. A generated app starts dark on first run and with any fresh d
 - **Baselines.** Per system, because each system draws fonts its own way, in `qa/baselines/<system>/`. The starter keeps none (`.gitignore`); an app removes that line and commits its own after reviewing the pictures. The threshold is 0.02 with anti-aliasing excluded, and a picture fails above 0.05% changed pixels: 0.1, the library's default, cannot see the design's smallest step.
 - **Crash loop.** More than 3 renderer crashes in 60 s stop the reloads. The notice that tells the person is never shown under `--no-activate`, because a dialog would take focus.
 
+## D-022 Song2Vid's seam files replace the starter's examples (S2V-028)
+
+Song2Vid for Windows is built from this starter (ADR-022). Before any page work, the seam files were written for it: `src/bridge.ts` with `docs/BRIDGE.md`, `docs/JOURNEYS.md` with `qa/journeys.json`, `shortcuts.json`, `qa/banned-terms.json`, and `docs/TOOL-CONTRACT.md`, which now points at SPEC sections 14, 24 and 26 instead of describing the starter's example contract (ADR-024). The starter's example screen, its job, its stand-in bridge and its scenarios still speak the old seams until S2V-029 and S2V-030 replace them, so `pnpm typecheck`, `pnpm test` (the preload name check) and `pnpm qa:audit` (journeys and shortcuts) are expected to fail on the example until then. `windows/SKILL-NOTES.md` lists each file.
+
+## D-023 Window size is Song2Vid's own
+
+Default 560 x 760 and minimum 480 x 640 (SPEC 27.1), in `app.config.json`. The starter's example screen does not fit this width (its title bar overflows at 200% zoom and its two-pane journey fails), which is the reason the window size was changed in a commit of its own after the starter's gates had passed at its own size.
+
 ## Preferences ledger
 
 Every preference the app offers is listed here with the reason a default could not serve. The starter has one: the theme, which starts dark and keeps a person's saved choice (D-020).

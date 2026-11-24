@@ -46,15 +46,15 @@ function appTemplate({ productName, item }: TemplateContext): TemplateEntry[] {
     },
     {
       label: 'File',
-      submenu: [item('run-example', 'Run Example'), item('cancel-example', 'Cancel Example'), SEPARATOR, { role: 'close' }],
+      submenu: [item('choose-audio', 'Choose Audio…'), item('choose-image', 'Choose Image…'), SEPARATOR, item('make-video', 'Make Video'), item('cancel', 'Cancel'), item('show-in-folder', 'Show in File Explorer'), SEPARATOR, { role: 'close' }],
     },
     {
       label: 'Edit',
-      submenu: [{ role: 'undo' }, { role: 'redo' }, SEPARATOR, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'delete' }, { role: 'selectAll' }, SEPARATOR, item('clear-note', 'Clear Note')],
+      submenu: [{ role: 'undo' }, { role: 'redo' }, SEPARATOR, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'delete' }, { role: 'selectAll' }],
     },
     {
       label: 'View',
-      submenu: [item('focus-title', 'Go to Title'), item('focus-body', 'Go to Note'), item('show-items', 'Show Items'), SEPARATOR, item('toggle-theme', 'Switch Between Light and Dark'), SEPARATOR, { role: 'togglefullscreen' }],
+      submenu: [item('reset-crop', 'Reset Crop to Center'), SEPARATOR, item('toggle-theme', 'Light or Dark Theme'), SEPARATOR, { role: 'togglefullscreen' }],
     },
     { role: 'windowMenu' },
     { role: 'help', submenu: [item('command-palette', 'All Actions…')] },
@@ -63,7 +63,7 @@ function appTemplate({ productName, item }: TemplateContext): TemplateEntry[] {
 
 /** The Dock menu on macOS: what a person starts from the Dock. The Dock adds windows, Hide and Quit itself. */
 function dockAppTemplate({ item }: Pick<TemplateContext, 'item'>): TemplateEntry[] {
-  return [item('run-example', 'Run Example')];
+  return [item('choose-audio', 'Choose Audio…'), item('choose-image', 'Choose Image…')];
 }
 
 const menu = createCommandMenu({

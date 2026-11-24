@@ -1,18 +1,32 @@
 {
-  "note": "The essential journeys, each with the most steps it may take. One step is one run of typing or one key combination. The audit runs each journey by keyboard alone, once with each key family (Ctrl, and Command), and fails when a script is missing, fails, or passes its budget. Raising a budget is a recorded decision in docs/DECISIONS.md.",
+  "note": "The essential journeys, each with the most steps it may take. One step is one run of typing or one key combination; a system file dialog (open or save) is one step with the key that opens it, because the person's pick and confirmation inside it is not the page's, and the audit's stand-in bridge answers it at once. The one pointer step, a drop, is named in docs/JOURNEYS.md. The audit runs each journey by keyboard alone, once with each key family (Ctrl, and Command), and fails when a script is missing, fails, or passes its budget. Raising a budget is a recorded decision in docs/DECISIONS.md.",
   "journeys": [
     {
-      "id": "note-with-item",
-      "name": "Write a titled note and add one item from the list",
-      "stepBudget": 7
+      "id": "choose-and-make",
+      "name": "Choose a song and an image, make the video and see that it was saved",
+      "stepBudget": 3
     },
     {
-      "id": "run-example",
-      "name": "Run the example job and see that it finished",
-      "stepBudget": 1
+      "id": "drop-and-make",
+      "name": "Drop a song and an image on the window, make the video and see that it was saved",
+      "stepBudget": 2
+    },
+    {
+      "id": "crop-square",
+      "name": "Choose a song and an image, switch to 1:1, move the crop, make the video",
+      "stepBudget": 10
+    },
+    {
+      "id": "hevc-remembered",
+      "name": "Switch to HEVC, restart the app and find HEVC still chosen",
+      "stepBudget": 6
     }
   ],
   "commandsWithoutShortcut": [
+    {
+      "label": "Show in File Explorer",
+      "reason": "Offered only after a save, once; reached through the palette (Ctrl+K) or Tab to its button, which takes focus when the save finishes."
+    },
     {
       "label": "About {productName}",
       "reason": "Opened rarely; not a repeated action."
