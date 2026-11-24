@@ -1,0 +1,30 @@
+{
+  "vars": {
+    "code": "export_failed",
+    "message": "The video couldn't be made.",
+    "exit": 5
+  },
+  "steps": [
+    {
+      "line": {
+        "type": "progress",
+        "stage": "checking",
+        "percent": null,
+        "elapsed_seconds": 0.0,
+        "remaining_seconds": null
+      }
+    },
+    {
+      "line": {
+        "type": "error",
+        "error": {
+          "code": "${code}",
+          "message": "${message}"
+        }
+      }
+    },
+    {
+      "exit": "${exit}"
+    }
+  ]
+}

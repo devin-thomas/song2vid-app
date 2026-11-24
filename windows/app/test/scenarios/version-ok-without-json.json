@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "only": "json",
+      "line": {
+        "type": "error",
+        "error": {
+          "code": "usage",
+          "message": "That option does not apply here. Run 'song2vid --help'."
+        }
+      }
+    },
+    {
+      "only": "json",
+      "exit": 2
+    },
+    {
+      "only": "no-json",
+      "raw": "song2vid 1.2.0\n"
+    }
+  ]
+}

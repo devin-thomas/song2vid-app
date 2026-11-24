@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "result",
+        "command": "encoders",
+        "codecs": {
+          "h264": {
+            "available": true,
+            "encoder": "software"
+          },
+          "hevc": {
+            "available": false,
+            "encoder": null
+          }
+        }
+      }
+    }
+  ]
+}

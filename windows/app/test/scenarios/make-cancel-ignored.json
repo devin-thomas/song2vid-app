@@ -1,0 +1,21 @@
+{
+  "cancel": "ignore",
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "line": {
+        "type": "progress",
+        "stage": "encoding",
+        "percent": 5.0,
+        "elapsed_seconds": 0.1,
+        "remaining_seconds": 2.0,
+        "encoder": "nvenc"
+      }
+    },
+    {
+      "delay_ms": 60000
+    }
+  ]
+}

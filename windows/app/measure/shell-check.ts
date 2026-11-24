@@ -87,6 +87,8 @@ const FOCUS_ALLOWED = [
   { file: 'shell.ts', line: '&& !quiet()) win.restore()', why: 'macOS open-file: restores a window put in the Dock only when the last launch did not ask for no focus' },
   { file: 'shell.ts', line: 'platform.show(win, app, quiet())', why: "macOS activate: follows the last launch's request" },
   { file: 'tool/index.ts', line: 'dialog.showMessageBox(', why: 'the quit question while a job runs; confirmQuitDuringJob answers a quiet request without it' },
+  { file: 'tool/index.ts', line: 'dialog.showOpenDialog(', why: "Choose Audio and Choose Image, a person's click; ui.pickFile answers a quiet launch as dismissed without opening it" },
+  { file: 'tool/index.ts', line: 'dialog.showSaveDialog(', why: "Make Video's save dialog, a person's click; ui.pickSave answers a quiet launch as dismissed without opening it" },
   { file: 'window.ts', line: 'if (maximizeAfterReveal) win.maximize();', why: 'restores a window saved maximized; maximizeAfterReveal is false for a launch that asked for no focus on Windows, the one system where maximizing activates' },
   { file: 'window.ts', line: '.showMessageBox(win,', why: 'the crash-loop notice, inside `if (!inactive)`: a launch that asked for no focus is never shown it' },
 ];

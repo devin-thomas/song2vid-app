@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "result",
+        "command": "check",
+        "audio": {
+          "name": "${name0}",
+          "duration_seconds": 144.0,
+          "sample_rate": 44100,
+          "channels": 2
+        }
+      }
+    }
+  ]
+}

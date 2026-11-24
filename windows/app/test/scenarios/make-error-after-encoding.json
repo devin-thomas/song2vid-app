@@ -1,0 +1,34 @@
+{
+  "vars": {
+    "code": "export_failed",
+    "message": "The video couldn't be made.",
+    "exit": 5
+  },
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "progress": {
+        "stage": "encoding",
+        "from": 0,
+        "to": 40,
+        "count": 4,
+        "every_ms": 20,
+        "encoder": "nvenc"
+      }
+    },
+    {
+      "line": {
+        "type": "error",
+        "error": {
+          "code": "${code}",
+          "message": "${message}"
+        }
+      }
+    },
+    {
+      "exit": "${exit}"
+    }
+  ]
+}

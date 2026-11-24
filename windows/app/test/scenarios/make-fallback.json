@@ -1,0 +1,43 @@
+{
+  "vars": {
+    "encoder": "software",
+    "fallback": true
+  },
+  "steps": [
+    {
+      "temp": true
+    },
+    {
+      "progress": {
+        "stage": "encoding",
+        "from": 0,
+        "to": 100,
+        "count": 5,
+        "every_ms": 20,
+        "encoder": "${encoder}"
+      }
+    },
+    {
+      "publish": true
+    },
+    {
+      "line": {
+        "type": "result",
+        "command": "make",
+        "output": {
+          "name": "${out_name}",
+          "width": 1920,
+          "height": 1080,
+          "duration_seconds": 144.0,
+          "bytes": 6153216
+        },
+        "placement": "fit",
+        "enlarged": false,
+        "dry_run": false,
+        "codec": "${codec}",
+        "encoder": "${encoder}",
+        "encoder_fallback": "${fallback}"
+      }
+    }
+  ]
+}

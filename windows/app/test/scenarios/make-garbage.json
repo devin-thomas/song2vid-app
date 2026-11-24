@@ -1,0 +1,31 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "progress",
+        "stage": "preparing",
+        "percent": null,
+        "elapsed_seconds": 0.0,
+        "remaining_seconds": null
+      }
+    },
+    {
+      "temp": true
+    },
+    {
+      "raw": "Encoding  ████░░░░  52%\n"
+    },
+    {
+      "delay_ms": 200
+    },
+    {
+      "line": {
+        "type": "progress",
+        "stage": "encoding",
+        "percent": 60.0,
+        "elapsed_seconds": 1.0,
+        "remaining_seconds": 1.0
+      }
+    }
+  ]
+}

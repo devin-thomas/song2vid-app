@@ -1,0 +1,15 @@
+{
+  "steps": [
+    {
+      "line": {
+        "type": "progress",
+        "stage": "encoding",
+        "percent": 1.0
+      },
+      "verbatim": true
+    },
+    {
+      "delay_ms": 300
+    }
+  ]
+}
