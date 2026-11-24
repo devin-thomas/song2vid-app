@@ -20,6 +20,9 @@ The Song2Vid window works end to end on Windows: choose or drop files, pick opti
 - The four journeys run by keyboard alone within their step budgets, with both key families.
 - With the real tool on Titan (headless page against the real adapter), one video per Frame Shape matches the command's output for the same options.
 - No banned term, path or template token in any state.
+- `pnpm typecheck` and `pnpm qa:audit` are green again (they were left red by D-022 in S2V-028, when the seam files replaced the starter's example).
+- The layout holds at 560x760, at the minimum 480x640, at 125% scale and at 200% zoom, including the title bar (the starter's audit failed 122 times at these sizes when only the window size changed in S2V-028).
+- The banned-terms gate exempts only About's third-party notices text (SPEC §27.5).
 
 ## Dependencies
 

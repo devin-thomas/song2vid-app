@@ -425,6 +425,10 @@ Section 14.6 gains:
 
 Status 3's meaning becomes "An input can't be read or isn't usable, or the chosen Codec can't be made here."
 
+### 24.8 `check` with one file
+
+`song2vid check <file> [-j]` with a single file reports only that file. For an audio file: the audio facts of section 14.3. For an image: the image facts and the output-size table of section 14.3. The type is taken from the file's contents, as `make` reads it. A file that is neither gives `audio_unreadable` if its extension is a section 7 audio type, else `image_unreadable`. The JSON `result` has the same keys as two-file `check`, with the other file's keys left out. Two-file `check` is unchanged. The Windows app uses one-file `check` to show a song's length or an image's size as soon as it is chosen (section 27.2).
+
 ### 24.7 Version
 
 Both commands print `song2vid 1.2.0`. `--update` is unchanged and compares against the one 1.2.0 release (ADR-027).
@@ -479,8 +483,8 @@ Both commands print `song2vid 1.2.0`. `--update` is unchanged and compares again
 
 One window, matching section 4 in order and wording, adapted only where Windows words differ:
 
-1. **Audio:** "Choose Audio…" with the file name and length once chosen.
-2. **Image:** "Choose Image…" with the file name and pixel size once chosen.
+1. **Audio:** "Choose Audio…" with the file name and length once chosen (from one-file `check`, 24.8).
+2. **Image:** "Choose Image…" with the file name and pixel size once chosen (from one-file `check`, 24.8).
 3. **Frame Shape:** five choices, default 16:9.
 4. **Resolution:** three choices, default 1080p. For Original it is replaced by "Output: W×H".
 5. **Codec:** H.264 or HEVC, remembered (section 23).
@@ -503,7 +507,7 @@ Section 4a in full. The Replace dialog is the page's own dialog: Keep Current is
 
 ### 27.5 Errors
 
-Each tool error code has the page's own sentence and a filled button that can succeed. The tool's message reaches a person only through Copy Details.
+Each tool error code has the page's own sentence and a filled button that can succeed. The tool's message reaches a person only through Copy Details. (The banned-terms gate exempts only the third-party notices text in About, which must name FFmpeg; every other surface stays covered.)
 
 | Code | Sentence | Filled button |
 | --- | --- | --- |

@@ -22,6 +22,7 @@ A Rust `song2vid.exe` that parses the shared contract and answers everything tha
 - Orientation: a rotated JPEG, HEIC and TIFF preview upright; a transparent PNG previews with black.
 - Path matrix (SPEC §26.3) for `check` and `preview`; no folder path or planted secret in any output.
 - Exit statuses 1, 2 and 3 with their codes; `-S` prints the bundled skill; `-v` prints `song2vid 1.2.0`.
+- One-file `check` (SPEC §24.8): output matches the Mac command for an audio file alone and an image alone.
 
 ## Dependencies
 

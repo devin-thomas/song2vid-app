@@ -278,7 +278,7 @@
 
 **Rationale:** Agents and scripts written for 1.1 keep working. A new `api_version` would break them for additions they can ignore. `preview` lets the Windows app show HEIC and TIFF, which Chromium cannot, oriented exactly as encoded, and lets an agent see the picture. `--cancel-on-eof` gives the app a way to cancel a windowless child on Windows without making stdin matter to anyone who does not ask for it.
 
-**Consequences:** The docs page records the version each key arrived in. Rejected: `api_version` 2; Windows-only commands outside the shared contract; reading stdin by default, which would cancel a run whose stdin is closed.
+**Consequences:** The docs page records the version each key arrived in. Added during S2V-028: one-file `check` (section 24.8), because the window shows a song's length and an image's size as each is chosen. Rejected: `api_version` 2; Windows-only commands outside the shared contract; reading stdin by default, which would cancel a run whose stdin is closed.
 
 ## ADR-029 - The Windows command is Rust over a bundled FFmpeg, with shared frame fixtures
 
