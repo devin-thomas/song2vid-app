@@ -4,7 +4,7 @@
 // fixture of the stand-in bridge (src/bridge.fake.ts); the states are in qa/states.ts, the same list the
 // audit checks, so every designed state is photographed.
 // Usage: node qa/shots.ts [outDir] [--quick]
-//   --quick  the default size only, one scale (for critique rounds and qa/visual.ts)
+//   --quick  the default size, the minimum size and the default at 125% (for critique rounds and qa/visual.ts)
 //            Every state at the main size; the secondary sets (each system's labels, forced colours, 200%
 //            zoom, the light theme) take the CORE states of qa/states.ts, which keeps the baselines to a
 //            size that can be reviewed.
@@ -21,10 +21,13 @@ const args = process.argv.slice(2);
 const quick = args.includes('--quick');
 const outDir = join(root, args.find((a) => !a.startsWith('--')) ?? 'qa/shots');
 
-const SIZES: [number, number][] = quick ? [[W.width, W.height]] : [[W.width, W.height], [W.minWidth, W.minHeight]];
+// The sizes and scales the main groups are taken at. A full run takes both sizes at both scales; a quick run (the
+// one qa/visual.ts compares) takes the default size, the minimum size (480 x 640) and the default at 125%.
+const GROUPS: [width: number, height: number, scale: number][] = quick
+  ? [[W.width, W.height, 1], [W.minWidth, W.minHeight, 1], [W.width, W.height, 1.25]]
+  : [[W.width, W.height, 1], [W.width, W.height, 1.25], [W.minWidth, W.minHeight, 1], [W.minWidth, W.minHeight, 1.25]];
 // The page is the same on every system except the title bar inset and the key labels.
 const PLATFORMS = quick ? ['windows', 'macos'] : ['windows', 'macos', 'linux'];
-const SCALES = quick ? [1] : [1, 1.25];
 // Dark is the default theme (D-020) and takes every state; light, a choice the person made, takes the core states.
 const THEMES = ['dark', 'light'] as const;
 
@@ -60,15 +63,15 @@ async function capture(dir: string, name: string, state: State, options: PageOpt
 }
 
 try {
-  for (const [width, height] of SIZES) {
-    for (const scale of SCALES) {
-      for (const theme of THEMES) {
-        const dir = join(outDir, `${width}x${height}@${scale}x-${theme}`);
-        await mkdir(dir, { recursive: true });
-        // The default size takes every state in the dark theme; the other sizes, scales and the light theme take the core states.
-        const states = width === W.width && scale === 1 && theme === 'dark' ? ALL : CORE;
-        for (const [name, state] of states) await capture(dir, name, state, { width, height, scale, theme });
-      }
+  for (const [width, height, scale] of GROUPS) {
+    for (const theme of THEMES) {
+      // A quick run takes the default size at 125% in the dark theme only.
+      if (quick && scale !== 1 && theme === 'light') continue;
+      const dir = join(outDir, `${width}x${height}@${scale}x-${theme}`);
+      await mkdir(dir, { recursive: true });
+      // The default size takes every state in the dark theme; the other sizes, scales and the light theme take the core states.
+      const states = width === W.width && scale === 1 && theme === 'dark' ? ALL : CORE;
+      for (const [name, state] of states) await capture(dir, name, state, { width, height, scale, theme });
     }
   }
   // Every system's labels and title bar inset, at the default size in the dark theme.
