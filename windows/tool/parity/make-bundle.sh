@@ -231,19 +231,24 @@ mkdir -p "$bundle/videos"
 videos="$bundle/videos.tsv"
 : > "$videos"
 video() { printf '%s\t%s\t%s\t%s\t%s\n' "$@" >> "$videos"; }
-video v-16x9 tone-44k-stereo.wav fit-1000x800.png 16:9 480p
-video v-9x16 tone-44k-stereo.wav tall-1000x5000.png 9:16 480p
-video v-1x1-turned tone-44k-stereo.wav or6.jpg 1:1 480p
-video v-4x3-scene tone-44k-stereo.wav scene-1600x1200.png 4:3 1080p
-video v-original tone-44k-stereo.wav preview-3001x2000.jpg original -
-video v-original-trimmed tone-22k-mono.wav trim-3860x2160.png original -
+# The first five are the five inputs of SPEC section 31: one per Frame Shape, at 1080p, from a scene with
+# gradients, thin lines and curves. (Flat colour blocks are a poor comparison: an SSIM between two lossy
+# encodes of a red-green edge is low whichever encoder is closer to the picture.) The rest cover turns,
+# containers, transparency, 2160p, a song that needs the repeated group many times, and each audio rule.
+video v-16x9 tone-44k-stereo.wav scene-1600x1200.png 16:9 1080p
+video v-9x16 tone-44k-stereo.wav scene-tall-1200x2000.png 9:16 1080p
+video v-1x1 tone-44k-stereo.wav scene-1920x1080.jpg 1:1 1080p
+video v-4x3 tone-44k-stereo.wav scene-1600x1200.png 4:3 1080p
+video v-original tone-44k-stereo.wav scene-3000x2000.jpg original -
+video v-original-trimmed tone-22k-mono.wav scene-3860x2160.png original -
+video v-jpeg-turned tone-44k-stereo.wav scene-or6.jpg 1:1 480p
+video v-heic-turned tone-44k-stereo.wav scene-or8.heic 16:9 480p
+video v-heic-grid tone-44k-stereo.wav scene-grid-or6.heic 9:16 480p
 video v-transparent tone-44k-stereo.wav transparent.png 16:9 480p
-video v-heic-turned tone-44k-stereo.wav or8.heic 16:9 480p
-video v-heic-grid tone-44k-stereo.wav grid-or6.heic 9:16 480p
-video v-2160p-scene tone-44k-stereo.wav scene-1600x1200.png 16:9 2160p
-video v-long-song tone-8k-stereo.wav scene-1600x1200.png 1:1 480p
-video v-mono-22k tone-22k-mono.wav fit-1000x800.png 4:3 480p
-video v-aac-source tone-aac.m4a scene-1920x1080.jpg 16:9 480p
+video v-2160p tone-44k-stereo.wav scene-1600x1200.png 16:9 2160p
+video v-long-song tone-8k-stereo.wav scene-1920x1080.jpg 1:1 480p
+video v-mono-22k tone-22k-mono.wav scene-1600x1200.png 4:3 480p
+video v-aac-source tone-aac.m4a scene-1920x1080.jpg 16:9 1080p
 while IFS=$'\t' read -r id song image shape resolution; do
   args=(-s "$shape"); [[ "$resolution" == "-" ]] || args+=(-r "$resolution")
   (cd "$media" && "$command" make "$song" "$image" "${args[@]}" -o "$bundle/videos/$id.mp4" --json > "$bundle/videos/$id.json" < /dev/null) || echo "make-bundle: the Mac command failed for $id" >&2

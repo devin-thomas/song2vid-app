@@ -1,4 +1,4 @@
-// Generates the media for the Windows command's parity check (S2V-025). Host tools only: this runs on
+// Generates the media for the Windows command's parity check (S2V-025, S2V-026). Host tools only: this runs on
 // the Mac, and nothing it writes is committed or shipped. The pictures are four coloured quadrants
 // as stored (red top left, green top right, blue bottom left, yellow bottom right), so a wrong turn or
 // flip shows in the colours; the orientation tag is written by ImageIO, the same writer the Mac's own
@@ -72,12 +72,13 @@ func drawScene(width: Int, height: Int) -> CGImage {
     return context.makeImage()!
 }
 
-func writeScene(_ name: String, _ type: UTType, _ width: Int, _ height: Int) throws {
+func writeScene(_ name: String, _ type: UTType, _ width: Int, _ height: Int, orientation: Int = 1) throws {
     let url = folder.appendingPathComponent(name)
     guard let destination = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else {
         throw NSError(domain: "media", code: 1)
     }
-    CGImageDestinationAddImage(destination, drawScene(width: width, height: height), nil)
+    let properties: [CFString: Any] = orientation == 1 ? [:] : [kCGImagePropertyOrientation: orientation]
+    CGImageDestinationAddImage(destination, drawScene(width: width, height: height), properties as CFDictionary)
     guard CGImageDestinationFinalize(destination) else { throw NSError(domain: "media", code: 2) }
 }
 
@@ -139,6 +140,13 @@ try writeImage("preview-3001x2000.jpg", .jpeg, 3001, 2000)
 // A scene with gradients, thin lines and curves, for comparing the video's quality.
 try writeScene("scene-1600x1200.png", .png, 1600, 1200)
 try writeScene("scene-1920x1080.jpg", .jpeg, 1920, 1080)
+try writeScene("scene-tall-1200x2000.png", .png, 1200, 2000)
+try writeScene("scene-3000x2000.jpg", .jpeg, 3000, 2000)
+try writeScene("scene-3860x2160.png", .png, 3860, 2160)
+// The same scene with a turn tag, in each container that carries one; the grid is large enough for the HEIC writer to tile it.
+try writeScene("scene-or6.jpg", .jpeg, 1200, 800, orientation: 6)
+try writeScene("scene-or8.heic", .heic, 1600, 800, orientation: 8)
+try writeScene("scene-grid-or6.heic", .heic, 3000, 1500, orientation: 6)
 // A name that looks like the other kind of file (the type comes from the contents).
 try writeImage("picture-named-like-a-song.mp3", .png, 320, 200)
 

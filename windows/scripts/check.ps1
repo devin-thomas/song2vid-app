@@ -585,26 +585,18 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
     $folder = New-CleanFolder 'progress-json'
     $stdoutFile = Join-Path $folder 'stdout.txt'
     $process = Start-Process -FilePath $exe -ArgumentList @('make', "`"$song3`"", "`"$scene`"", '-r', '2160p', '-o', "`"$folder\video.mp4`"", '--json') -WorkingDirectory $media -RedirectStandardOutput $stdoutFile -PassThru -NoNewWindow -Environment $software
-    $stamps = New-Object System.Collections.Generic.List[double]
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    # The file is read while the program writes it, so each line is stamped when it first shows.
-    $reader = $null
-    while (-not $process.HasExited -or ($reader -and $reader.Position -lt $reader.Length)) {
-        if (-not $reader -and (Test-Path $stdoutFile)) { $reader = [System.IO.FileStream]::new($stdoutFile, 'Open', 'Read', 'ReadWrite') }
-        if ($reader) {
-            $buffer = New-Object byte[] 65536
-            while (($count = $reader.Read($buffer, 0, $buffer.Length)) -gt 0) {
-                for ($i = 0; $i -lt $count; $i++) { if ($buffer[$i] -eq 10) { $stamps.Add($watch.Elapsed.TotalSeconds) } }
-            }
-        }
-        Start-Sleep -Milliseconds 25
-    }
-    if ($reader) { $reader.Dispose() }
     $process.WaitForExit()
     $lines = @([System.IO.File]::ReadAllLines($stdoutFile))
     $parsed = @($lines | ForEach-Object { $_ | ConvertFrom-Json })
+    # The gaps are read from the lines' own elapsed_seconds: they are when the program wrote each line.
+    # (A PowerShell loop polling the file adds delays of its own when the machine is busy.)
     $widest = 0.0
-    for ($i = 1; $i -lt $stamps.Count - 1; $i++) { if ($stamps[$i] - $stamps[$i - 1] -gt $widest) { $widest = $stamps[$i] - $stamps[$i - 1] } }
+    $previous = $null
+    foreach ($entry in ($parsed | Where-Object { $_.type -eq 'progress' })) {
+        if ($null -ne $previous -and $entry.elapsed_seconds - $previous -gt $widest) { $widest = $entry.elapsed_seconds - $previous }
+        $previous = $entry.elapsed_seconds
+    }
     $order = 'checking', 'preparing', 'encoding', 'finishing'
     $position = 0; $wentBack = $false
     foreach ($entry in ($parsed | Where-Object { $_.type -eq 'progress' })) {
@@ -612,11 +604,11 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
         if ($stage -lt $position) { $wentBack = $true }
         $position = $stage
     }
-    Write-Output ('  JSON: {0} lines in {1:n1} s, widest gap {2:n2} s, exit {3}' -f $parsed.Count, $watch.Elapsed.TotalSeconds, $widest, $process.ExitCode)
+    Write-Output ('  JSON: {0} lines in {1:n1} s, widest gap between progress lines {2:n2} s, exit {3}' -f $parsed.Count, $watch.Elapsed.TotalSeconds, $widest, $process.ExitCode)
     if ($process.ExitCode -ne 0) { Fail "the JSON progress run exited $($process.ExitCode)" }
     if (@($parsed | Where-Object { $_.type -eq 'result' }).Count -ne 1 -or $parsed[-1].type -ne 'result') { Fail 'the JSON run did not end with exactly one result line' }
     if (@($parsed | Where-Object { $_.api_version -ne '1' }).Count -ne 0) { Fail 'a JSON line has no api_version 1' }
-    if ($widest -gt 0.6) { Fail "progress went quiet for $([math]::Round($widest, 2)) s (limit 0.5 s plus the polling)" }
+    if ($widest -gt 0.5) { Fail "progress went quiet for $([math]::Round($widest, 2)) s (limit 0.5 s)" }
     if ($wentBack) { Fail 'the stage went backwards' }
     if (@($parsed | Where-Object { $_.type -eq 'progress' -and $_.stage -eq 'encoding' -and $_.encoder -ne 'software' }).Count -ne 0) { Fail 'an encoding line does not name the Encoder' }
 
@@ -725,6 +717,7 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
     $commandLine = '"{0}" make "{1}" "{2}" -r 480p -o "{3}"' -f $exe, $song3, $scene, (Join-Path $folder 'live.mp4')
     $pty = [PtyRun]::Start($commandLine, $media)
     $null = $pty.WaitForExit(120000)
+    Start-Sleep -Milliseconds 800
     $screen = $pty.Output()
     $statusLive = $pty.ExitCode
     $pty.Dispose()
@@ -743,6 +736,7 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
     $pty.Write([string][char]3)
     $exited = $pty.WaitForExit(10000)
     $took = $asked.Elapsed.TotalSeconds
+    Start-Sleep -Milliseconds 800
     $screen = $pty.Output()
     $statusC = $pty.ExitCode
     $pty.Dispose()
