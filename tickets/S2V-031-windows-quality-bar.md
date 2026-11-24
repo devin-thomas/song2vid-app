@@ -21,6 +21,7 @@ The quality bar of SPEC §28 is run and recorded: real-shell checks on the DeskM
 - Memory: under 300 MB after 5 idle minutes, under 680 MB during the job, counting `song2vid.exe` and FFmpeg.
 - The focus experiment shows no Song2Vid window in front.
 - Every ledger row says applies (with verdict) or N/A (with reason); the unverified rows are listed for the release notes.
+- Rule 77 ledger row: `electron/tool/locate.ts` reads `process.platform` as a default (from the starter, overridable for tests); decide whether it passes and note it in SKILL-NOTES if not.
 
 ## Dependencies
 

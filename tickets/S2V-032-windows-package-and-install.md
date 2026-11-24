@@ -20,6 +20,7 @@ Song2Vid for Windows is packaged, installs per user, and is checked as installed
 - The installed check passes on the DeskMini with 0 second launches, helpers started with PATH empty, and the sampler recording no Song2Vid window in front.
 - After the PATH line of SPEC §29, a new terminal runs `song2vid --version`, `encoders` and one `make` from a folder with a space and non-Latin text in its name.
 - Uninstall removes the app and shortcut and leaves the data folder and videos.
+- `scripts/installed-helpers.ts` and `tool/placeholder/` still speak the starter's `--capabilities`; move them to `song2vid --version` and `encoders` (noted by S2V-029).
 
 ## Dependencies
 

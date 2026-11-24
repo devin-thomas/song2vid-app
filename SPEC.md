@@ -529,7 +529,7 @@ A failure that repeats with the same inputs says "It failed again." and its fill
 ### 27.6 Talking to the tool
 
 - The adapter in `electron/tool/` runs `song2vid.exe` with `--json --cancel-on-eof` and reads the section 14.5 and 24.5 lines. It ignores unknown keys and types. A non-JSON line, a line over 1 MiB, or an exit without exactly one final line ends the job as `export_failed`, after the adapter has drained the rest of the output.
-- At launch it runs `song2vid.exe --version --json` and `encoders --json`, caching the answer by the binaries' size and modification time, so the Codec picker is ready at once. It refreshes the answer in the background on every launch, because a driver can change.
+- At launch it runs `song2vid.exe --version` (plain text, `song2vid 1.2.0`; `--json` is not an option of `--version`, section 14.2) and `encoders --json`, caching the answer by the binaries' size and modification time, so the Codec picker is ready at once. It refreshes the answer in the background on every launch, because a driver can change.
 - It cancels by closing stdin, then kills the process after 3 seconds. No job is ever killed for being silent. After 30 seconds without a line, the status bar shows "Still working…" with Cancel.
 - Before a job starts it records the job, so the next launch removes a leftover `.song2vid-*.tmp` file. It removes only a file of that pattern, directly in the output folder that was recorded.
 
