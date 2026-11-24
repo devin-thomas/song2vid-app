@@ -18,6 +18,7 @@ use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::{FromRawHandle, RawHandle};
 use std::path::Path;
 use std::ptr;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Instant;
 
@@ -44,7 +45,7 @@ use windows_sys::Win32::System::Threading::{
     STARTF_USESTDHANDLES, STARTUPINFOEXW,
 };
 
-use super::{RunError, RunLimits, ToolRun};
+use super::{keep_tail, tail_of, OutputSink, RunError, RunLimits, ToolRun, STDERR_TAIL};
 use crate::cancel::CancelToken;
 
 /// How often a running child is checked for cancel and time.
@@ -95,11 +96,13 @@ struct Pipe {
 }
 
 /// Runs the program as a child in its own job and returns its exit code and standard output.
+/// With `on_output`, each chunk of standard output is also passed to it while the child runs.
 pub(super) fn run(
     program: &Path,
     arguments: &[OsString],
     limits: RunLimits,
     cancel: &CancelToken,
+    mut on_output: Option<OutputSink<'_>>,
 ) -> Result<ToolRun, RunError> {
     let job: Handle = create_job()?;
     let input: Handle = open_nul()?;
@@ -137,14 +140,21 @@ pub(super) fn run(
     drop(errors_write);
 
     let keep: usize = limits.max_stdout;
-    let out_reader = thread::spawn(move || -> (Vec<u8>, bool) { drain(output_read, keep) });
-    let err_reader = thread::spawn(move || -> (Vec<u8>, bool) { drain(errors_read, 0) });
+    let (chunks, arrivals): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+    let forward: Option<Sender<Vec<u8>>> = on_output
+        .as_ref()
+        .map(|_sink| -> Sender<Vec<u8>> { chunks.clone() });
+    drop(chunks);
+    let out_reader =
+        thread::spawn(move || -> (Vec<u8>, bool) { drain(output_read, keep, forward) });
+    let err_reader = thread::spawn(move || -> Vec<u8> { drain_tail(errors_read) });
 
     let started: Instant = Instant::now();
     let mut failure: Option<RunError> = None;
     loop {
         // SAFETY: the process handle is valid for the whole loop.
         let waited: u32 = unsafe { WaitForSingleObject(process.0, WAIT_SLICE_MILLISECONDS) };
+        deliver(&arrivals, &mut on_output);
         if waited == WAIT_OBJECT_0 {
             break;
         }
@@ -166,7 +176,8 @@ pub(super) fn run(
     // SAFETY: the process handle is valid and `code` is a writable u32.
     let _ = unsafe { GetExitCodeProcess(process.0, &mut code) };
     let (stdout, too_much): (Vec<u8>, bool) = out_reader.join().unwrap_or((Vec::new(), false));
-    let _ = err_reader.join();
+    let stderr_tail: Vec<u8> = err_reader.join().unwrap_or_default();
+    deliver(&arrivals, &mut on_output);
     // The job closes here, ending anything still in it.
     drop(job);
     if let Some(error) = failure {
@@ -178,7 +189,17 @@ pub(super) fn run(
     Ok(ToolRun {
         exit_code: i32::from_ne_bytes(code.to_ne_bytes()),
         stdout,
+        stderr_tail,
     })
+}
+
+/// Hands everything that has arrived from the child's standard output to the caller's sink.
+fn deliver(arrivals: &Receiver<Vec<u8>>, sink: &mut Option<OutputSink<'_>>) -> () {
+    while let Ok(chunk) = arrivals.try_recv() {
+        if let Some(sink) = sink.as_mut() {
+            sink(&chunk);
+        }
+    }
 }
 
 fn create_job() -> Result<Handle, RunError> {
@@ -353,8 +374,9 @@ fn handle_list_attribute(handles: &mut [HANDLE; 3]) -> Result<AttributeList, Run
     Ok(list)
 }
 
-/// Reads a pipe to its end, keeping at most `keep` bytes. The flag says the pipe held more.
-fn drain(mut pipe: File, keep: usize) -> (Vec<u8>, bool) {
+/// Reads a pipe to its end, keeping at most `keep` bytes. The flag says the pipe held more. Every
+/// chunk is also sent on `forward`, when there is one.
+fn drain(mut pipe: File, keep: usize, forward: Option<Sender<Vec<u8>>>) -> (Vec<u8>, bool) {
     let mut kept: Vec<u8> = Vec::new();
     let mut chunk: Vec<u8> = vec![0; 65536];
     let mut overflow: bool = false;
@@ -362,12 +384,27 @@ fn drain(mut pipe: File, keep: usize) -> (Vec<u8>, bool) {
         match pipe.read(&mut chunk) {
             Ok(0) | Err(_) => return (kept, overflow),
             Ok(count) => {
+                if let Some(sender) = &forward {
+                    let _ = sender.send(chunk[..count].to_vec());
+                }
                 let room: usize = keep.saturating_sub(kept.len());
                 kept.extend_from_slice(&chunk[..count.min(room)]);
                 if count > room {
                     overflow = true;
                 }
             }
+        }
+    }
+}
+
+/// Reads a pipe to its end, keeping only the last bytes.
+fn drain_tail(mut pipe: File) -> Vec<u8> {
+    let mut kept: Vec<u8> = Vec::new();
+    let mut chunk: Vec<u8> = vec![0; 16384];
+    loop {
+        match pipe.read(&mut chunk) {
+            Ok(0) | Err(_) => return tail_of(kept, STDERR_TAIL),
+            Ok(count) => keep_tail(&mut kept, &chunk[..count], STDERR_TAIL),
         }
     }
 }

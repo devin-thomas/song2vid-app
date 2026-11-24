@@ -40,6 +40,14 @@ pub enum JsonKey {
     Hevc,
     Available,
     Encoder,
+    Bytes,
+    DryRun,
+    Codec,
+    EncoderFallback,
+    Stage,
+    Percent,
+    ElapsedSeconds,
+    RemainingSeconds,
 }
 
 impl JsonKey {
@@ -77,6 +85,14 @@ impl JsonKey {
             JsonKey::Hevc => "hevc",
             JsonKey::Available => "available",
             JsonKey::Encoder => "encoder",
+            JsonKey::Bytes => "bytes",
+            JsonKey::DryRun => "dry_run",
+            JsonKey::Codec => "codec",
+            JsonKey::EncoderFallback => "encoder_fallback",
+            JsonKey::Stage => "stage",
+            JsonKey::Percent => "percent",
+            JsonKey::ElapsedSeconds => "elapsed_seconds",
+            JsonKey::RemainingSeconds => "remaining_seconds",
         }
     }
 }

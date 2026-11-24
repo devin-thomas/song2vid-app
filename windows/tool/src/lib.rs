@@ -3,10 +3,14 @@
 //! `main.rs` only passes the arguments to `run` and writes what comes back. Everything the command
 //! decides lives here.
 
+pub mod audio_target;
 pub mod cancel;
 pub mod check;
+pub mod console;
 pub mod context;
 pub mod destination;
+pub mod encode;
+pub mod encoder;
 pub mod error;
 pub mod frame;
 pub mod heif;
@@ -14,12 +18,15 @@ pub mod help;
 pub mod http;
 pub mod inputs;
 pub mod json;
+pub mod make;
 pub mod make_options;
+pub mod make_report;
 pub mod media;
 pub mod options;
 pub mod orientation;
 pub mod preview;
 pub mod process;
+pub mod progress;
 pub mod report;
 pub mod run;
 pub mod skill;

@@ -5,6 +5,7 @@ use crate::check;
 use crate::context::Context;
 use crate::error::{status, CommandError, CommandOutput, ErrorCode};
 use crate::help::help_text;
+use crate::make;
 use crate::make_options::MakeOptions;
 use crate::options::{
     parse, Argument, CommandName, CommandOption, CommandScope, ParsedCommandLine, UsageProblem,
@@ -31,7 +32,7 @@ pub fn run(arguments: &[Argument], context: &Context) -> CommandOutput {
         CommandName::Check => check::run(&line.operands, line.has(CommandOption::Json), context),
         CommandName::Make => match MakeOptions::resolve(&line) {
             Err(problem) => usage_failure(&problem),
-            Ok(options) => not_built_yet(options.json),
+            Ok(options) => make::run(&options, context),
         },
         CommandName::Encoders => {
             if line.operands.is_empty() {
@@ -53,8 +54,8 @@ fn usage_failure(problem: &UsageProblem) -> CommandOutput {
     CommandOutput::failure(&CommandError::from_usage(problem), problem.json_requested)
 }
 
-/// `make` and `encoders` are written in S2V-026 and S2V-027. Until then they say so, with the
-/// export failure status, so nothing mistakes them for a video that was made.
+/// `encoders` is written in S2V-027. Until then it says so, with the export failure status, so
+/// nothing mistakes it for an answer.
 fn not_built_yet(json: bool) -> CommandOutput {
     let error: CommandError = CommandError::new(
         ErrorCode::ExportFailed,

@@ -16,6 +16,22 @@ pub enum Codec {
 }
 
 impl Codec {
+    /// The name in output (SPEC section 24.5).
+    pub fn title(self) -> &'static str {
+        match self {
+            Codec::H264 => "H.264",
+            Codec::Hevc => "HEVC",
+        }
+    }
+
+    /// The value in JSON.
+    pub fn json_name(self) -> &'static str {
+        match self {
+            Codec::H264 => "h264",
+            Codec::Hevc => "hevc",
+        }
+    }
+
     fn from_command_name(name: &str) -> Option<Codec> {
         match name {
             "h264" => Some(Codec::H264),

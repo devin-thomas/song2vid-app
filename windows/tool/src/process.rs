@@ -49,11 +49,20 @@ pub struct RunLimits {
     pub max_stdout: usize,
 }
 
+/// Where a child's standard output is passed while it runs.
+pub type OutputSink<'a> = &'a mut dyn FnMut(&[u8]);
+
+/// How much of the end of a child's standard error is kept, to tell why it failed. It is never
+/// printed: it can name files.
+pub const STDERR_TAIL: usize = 4096;
+
 /// What a child that ran to the end left behind.
 #[derive(Debug)]
 pub struct ToolRun {
     pub exit_code: i32,
     pub stdout: Vec<u8>,
+    /// The last bytes of standard error, for the command's own use (never shown).
+    pub stderr_tail: Vec<u8>,
 }
 
 /// Why a child did not run to the end.
@@ -70,19 +79,51 @@ pub enum RunError {
 }
 
 /// Runs a program with the given arguments and no standard input, waits for it and returns its
-/// exit code and standard output. Its standard error is read and thrown away: it can name files.
+/// exit code and standard output. Its standard error is read and only its tail is kept: it can
+/// name files.
 pub fn run_tool(
     program: &Path,
     arguments: &[OsString],
     limits: RunLimits,
     cancel: &CancelToken,
 ) -> Result<ToolRun, RunError> {
+    run_tool_streaming(program, arguments, limits, cancel, None)
+}
+
+/// Like `run_tool`, and every chunk the child writes to standard output is also handed to
+/// `on_output` while it runs, on the calling thread, at least every 20 milliseconds. FFmpeg's
+/// `-progress` output reaches the command this way.
+pub fn run_tool_streaming(
+    program: &Path,
+    arguments: &[OsString],
+    limits: RunLimits,
+    cancel: &CancelToken,
+    on_output: Option<OutputSink<'_>>,
+) -> Result<ToolRun, RunError> {
     #[cfg(windows)]
     {
-        job::run(program, arguments, limits, cancel)
+        job::run(program, arguments, limits, cancel, on_output)
     }
     #[cfg(not(windows))]
     {
-        portable::run(program, arguments, limits, cancel)
+        portable::run(program, arguments, limits, cancel, on_output)
     }
+}
+
+/// Appends `chunk` to a buffer that keeps only its last `keep` bytes.
+fn keep_tail(kept: &mut Vec<u8>, chunk: &[u8], keep: usize) -> () {
+    kept.extend_from_slice(chunk);
+    if kept.len() > keep * 2 {
+        let drop: usize = kept.len() - keep;
+        kept.drain(..drop);
+    }
+}
+
+/// The last `keep` bytes of a buffer filled by `keep_tail`.
+fn tail_of(mut kept: Vec<u8>, keep: usize) -> Vec<u8> {
+    if kept.len() > keep {
+        let drop: usize = kept.len() - keep;
+        kept.drain(..drop);
+    }
+    kept
 }

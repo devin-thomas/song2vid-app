@@ -5,10 +5,11 @@ use std::ffi::OsString;
 use std::io::Read;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Instant;
 
-use super::{RunError, RunLimits, ToolRun};
+use super::{keep_tail, tail_of, OutputSink, RunError, RunLimits, ToolRun, STDERR_TAIL};
 use crate::cancel::CancelToken;
 
 pub(super) fn run(
@@ -16,6 +17,7 @@ pub(super) fn run(
     arguments: &[OsString],
     limits: RunLimits,
     cancel: &CancelToken,
+    mut on_output: Option<OutputSink<'_>>,
 ) -> Result<ToolRun, RunError> {
     let mut child = Command::new(program)
         .args(arguments)
@@ -27,12 +29,18 @@ pub(super) fn run(
     let stdout = child.stdout.take().ok_or(RunError::CouldNotStart)?;
     let stderr = child.stderr.take().ok_or(RunError::CouldNotStart)?;
     let max: usize = limits.max_stdout;
-    let out_reader = thread::spawn(move || -> (Vec<u8>, bool) { drain(stdout, max) });
-    let err_reader = thread::spawn(move || -> (Vec<u8>, bool) { drain(stderr, 0) });
+    let (chunks, arrivals): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+    let forward: Option<Sender<Vec<u8>>> = on_output
+        .as_ref()
+        .map(|_sink| -> Sender<Vec<u8>> { chunks.clone() });
+    drop(chunks);
+    let out_reader = thread::spawn(move || -> (Vec<u8>, bool) { drain(stdout, max, forward) });
+    let err_reader = thread::spawn(move || -> Vec<u8> { drain_tail(stderr) });
 
     let started: Instant = Instant::now();
     let mut failure: Option<RunError> = None;
     loop {
+        deliver(&arrivals, &mut on_output);
         match child.try_wait() {
             Ok(Some(_)) => break,
             Ok(None) => {}
@@ -56,7 +64,8 @@ pub(super) fn run(
         .wait()
         .map_err(|_error: std::io::Error| -> RunError { RunError::CouldNotStart })?;
     let (stdout, too_much): (Vec<u8>, bool) = out_reader.join().unwrap_or((Vec::new(), false));
-    let _ = err_reader.join();
+    let stderr_tail: Vec<u8> = err_reader.join().unwrap_or_default();
+    deliver(&arrivals, &mut on_output);
     if let Some(error) = failure {
         return Err(error);
     }
@@ -66,11 +75,22 @@ pub(super) fn run(
     Ok(ToolRun {
         exit_code: status.code().unwrap_or(-1),
         stdout,
+        stderr_tail,
     })
 }
 
-/// Reads a pipe to its end, keeping at most `keep` bytes. The flag says the pipe held more.
-fn drain<R: Read>(mut pipe: R, keep: usize) -> (Vec<u8>, bool) {
+/// Hands everything that has arrived from the child's standard output to the caller's sink.
+fn deliver(arrivals: &Receiver<Vec<u8>>, sink: &mut Option<OutputSink<'_>>) -> () {
+    while let Ok(chunk) = arrivals.try_recv() {
+        if let Some(sink) = sink.as_mut() {
+            sink(&chunk);
+        }
+    }
+}
+
+/// Reads a pipe to its end, keeping at most `keep` bytes. The flag says the pipe held more. Every
+/// chunk is also sent on `forward`, when there is one.
+fn drain<R: Read>(mut pipe: R, keep: usize, forward: Option<Sender<Vec<u8>>>) -> (Vec<u8>, bool) {
     let mut kept: Vec<u8> = Vec::new();
     let mut chunk: [u8; 65536] = [0; 65536];
     let mut overflow: bool = false;
@@ -78,12 +98,27 @@ fn drain<R: Read>(mut pipe: R, keep: usize) -> (Vec<u8>, bool) {
         match pipe.read(&mut chunk) {
             Ok(0) | Err(_) => return (kept, overflow),
             Ok(count) => {
+                if let Some(sender) = &forward {
+                    let _ = sender.send(chunk[..count].to_vec());
+                }
                 let room: usize = keep.saturating_sub(kept.len());
                 kept.extend_from_slice(&chunk[..count.min(room)]);
                 if count > room {
                     overflow = true;
                 }
             }
+        }
+    }
+}
+
+/// Reads a pipe to its end, keeping only the last bytes.
+fn drain_tail<R: Read>(mut pipe: R) -> Vec<u8> {
+    let mut kept: Vec<u8> = Vec::new();
+    let mut chunk: [u8; 16384] = [0; 16384];
+    loop {
+        match pipe.read(&mut chunk) {
+            Ok(0) | Err(_) => return tail_of(kept, STDERR_TAIL),
+            Ok(count) => keep_tail(&mut kept, &chunk[..count], STDERR_TAIL),
         }
     }
 }

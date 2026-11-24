@@ -175,6 +175,7 @@ mod tests {
         }
         let environment: Environment = Environment {
             update_url: Some(String::from("http://example.com/")),
+            ..Environment::default()
         };
         assert_eq!(lookup_url(&environment), RELEASE_URL);
     }
