@@ -427,7 +427,7 @@ Status 3's meaning becomes "An input can't be read or isn't usable, or the chose
 
 ### 24.8 `check` with one file
 
-`song2vid check <file> [-j]` with a single file reports only that file. For an audio file: the audio facts of section 14.3. For an image: the image facts and the output-size table of section 14.3. The type is taken from the file's contents, as `make` reads it. A file that is neither gives `audio_unreadable` if its extension is a section 7 audio type, else `image_unreadable`. The JSON `result` has the same keys as two-file `check`, with the other file's keys left out. Two-file `check` is unchanged. The Windows app uses one-file `check` to show a song's length or an image's size as soon as it is chosen (section 27.2).
+`song2vid check <file> [-j]` with a single file reports only that file. For an audio file: the audio facts of section 14.3. For an image: the image facts and the output-size table of section 14.3. The type is taken from the file's contents, as `make` reads it. A file that is neither gives `audio_unreadable` if its extension is a section 7 audio type, else `image_unreadable`. A file that does not exist gives `audio_not_found` or `image_not_found` by the same extension rule (exit 1). A single file is no longer a usage error. The JSON `result` has the same keys as two-file `check`, with the other file's keys left out. Two-file `check` is unchanged. The Windows app uses one-file `check` to show a song's length or an image's size as soon as it is chosen (section 27.2).
 
 ### 24.7 Version
 
