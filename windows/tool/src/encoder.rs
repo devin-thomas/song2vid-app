@@ -92,8 +92,8 @@ impl Encoder {
 }
 
 /// The software Encoder's quality, 0 to 100. The picture is still, so the setting is spent on
-/// making that one picture sharp (the Mac asks VideoToolbox for 0.75).
-const SOFTWARE_QUALITY: &str = "75";
+/// making that one picture sharp (the Mac asks VideoToolbox for 0.75; 90 here gave the same SSIM against the Mac's frame as 100 at a quarter of the size).
+const SOFTWARE_QUALITY: &str = "90";
 
 /// The Encoder for a Codec: the one the test seam forces, or the first in the order that can make
 /// it. A forced Encoder that can't make the Codec, and a Codec no Encoder can make, are

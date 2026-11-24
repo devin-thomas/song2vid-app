@@ -127,3 +127,87 @@ fn tail_of(mut kept: Vec<u8>, keep: usize) -> Vec<u8> {
     }
     kept
 }
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    fn limits() -> RunLimits {
+        RunLimits {
+            timeout: Duration::from_secs(10),
+            max_stdout: 1024,
+        }
+    }
+
+    #[test]
+    fn standard_output_is_handed_on_while_the_child_runs() -> () {
+        let arguments: Vec<OsString> = ["-c", "echo first; sleep 0.4; echo second"]
+            .iter()
+            .map(|word: &&str| -> OsString { OsString::from(*word) })
+            .collect();
+        let started: Instant = Instant::now();
+        let mut arrivals: Vec<(String, f64)> = Vec::new();
+        let mut sink = |bytes: &[u8]| -> () {
+            arrivals.push((
+                String::from_utf8_lossy(bytes).into_owned(),
+                started.elapsed().as_secs_f64(),
+            ));
+        };
+        let run: ToolRun = run_tool_streaming(
+            Path::new("/bin/sh"),
+            &arguments,
+            limits(),
+            &CancelToken::new(),
+            Some(&mut sink),
+        )
+        .expect("the shell runs");
+        assert_eq!(run.exit_code, 0);
+        assert_eq!(String::from_utf8_lossy(&run.stdout), "first\nsecond\n");
+        let joined: String = arrivals
+            .iter()
+            .map(|(text, _when): &(String, f64)| -> String { text.clone() })
+            .collect();
+        assert_eq!(joined, "first\nsecond\n");
+        // The first line arrived well before the child ended.
+        assert!(arrivals[0].1 < 0.3, "{arrivals:?}");
+    }
+
+    #[test]
+    fn the_tail_of_standard_error_is_kept_and_never_the_whole() -> () {
+        let arguments: Vec<OsString> = [
+            "-c",
+            "head -c 20000 /dev/zero | tr '\\0' x >&2; echo end >&2",
+        ]
+        .iter()
+        .map(|word: &&str| -> OsString { OsString::from(*word) })
+        .collect();
+        let run: ToolRun = run_tool(
+            Path::new("/bin/sh"),
+            &arguments,
+            limits(),
+            &CancelToken::new(),
+        )
+        .expect("the shell runs");
+        assert!(run.stderr_tail.len() <= STDERR_TAIL);
+        assert!(String::from_utf8_lossy(&run.stderr_tail).ends_with("xend\n"));
+    }
+
+    #[test]
+    fn a_cancel_stops_the_child() -> () {
+        let arguments: Vec<OsString> = ["-c", "sleep 30"]
+            .iter()
+            .map(|word: &&str| -> OsString { OsString::from(*word) })
+            .collect();
+        let token: CancelToken = CancelToken::new();
+        let asker: CancelToken = token.clone();
+        std::thread::spawn(move || -> () {
+            std::thread::sleep(Duration::from_millis(100));
+            asker.request();
+        });
+        let started: Instant = Instant::now();
+        let outcome = run_tool(Path::new("/bin/sh"), &arguments, limits(), &token);
+        assert_eq!(outcome.unwrap_err(), RunError::Cancelled);
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
+}

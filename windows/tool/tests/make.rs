@@ -334,7 +334,7 @@ fn make_does_not_read_standard_input_without_cancel_on_eof() -> () {
 #[cfg(windows)]
 mod encoding {
     use super::*;
-    use common::helper_folder;
+    use common::{helper_folder, write_to_stdin};
     use serde_json::Value;
     use std::path::Path;
     use std::process::Command;
