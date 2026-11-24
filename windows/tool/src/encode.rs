@@ -137,6 +137,10 @@ out_primaries=bt709:out_transfer=bt709:flags=accurate_rnd+full_chroma_int,format
 
 /// Run 2: the still, repeated for one group of frames and encoded by the chosen Encoder. None
 /// when that Encoder can't make the Codec.
+///
+/// The picture is read once, as one frame that lasts the whole group, and FFmpeg's constant frame
+/// rate step repeats it to 30 frames a second. (Looping the file instead decodes it again for every
+/// frame, and the decoded frames pile up in front of a slow encoder: gigabytes at 2160p.)
 pub fn group_arguments(job: &Job, still: &Path, group: &Path) -> Option<Vec<OsString>> {
     let video: Vec<OsString> = job.encoder.video_arguments(job.codec)?;
     let frames: i64 = frame_count(job.audio).min(GROUP_LENGTH);
@@ -147,14 +151,14 @@ pub fn group_arguments(job: &Job, still: &Path, group: &Path) -> Option<Vec<OsSt
         "image2",
         "-pattern_type",
         "none",
-        "-loop",
-        "1",
         "-framerate",
     ]));
-    arguments.push(OsString::from(FRAMES_PER_SECOND.to_string()));
+    arguments.push(OsString::from(format!("{FRAMES_PER_SECOND}/{frames}")));
     arguments.push(OsString::from("-i"));
     arguments.push(still.as_os_str().to_os_string());
-    arguments.extend(words(&["-vf", COLOUR_FILTER, "-frames:v"]));
+    arguments.extend(words(&["-vf", COLOUR_FILTER, "-r"]));
+    arguments.push(OsString::from(FRAMES_PER_SECOND.to_string()));
+    arguments.extend(words(&["-fps_mode", "cfr", "-frames:v"]));
     arguments.push(OsString::from(frames.to_string()));
     arguments.extend(video);
     arguments.extend(words(&["-f", "mp4"]));
@@ -473,10 +477,13 @@ mod tests {
             texts(&group_arguments(&job, Path::new("still.png"), Path::new("group.mp4")).unwrap());
         let joined: String = words.join(" ");
         assert!(
-            joined.contains("-loop 1 -framerate 30 -i still.png"),
+            joined.contains("-framerate 30/300 -i still.png"),
             "{joined}"
         );
-        assert!(joined.contains("-frames:v 300 "));
+        assert!(
+            joined.contains("-r 30 -fps_mode cfr -frames:v 300 "),
+            "{joined}"
+        );
         assert!(joined.contains("out_color_matrix=bt709"));
         assert!(joined.contains("out_primaries=bt709"));
         assert!(joined.contains("out_transfer=bt709"));
@@ -493,6 +500,8 @@ mod tests {
         let words: Vec<String> = texts(
             &group_arguments(&short_job, Path::new("still.png"), Path::new("group.mp4")).unwrap(),
         );
+        assert!(words.join(" ").contains("-framerate 30/60 "));
+        assert!(words.join(" ").contains("-framerate 30/60 "));
         assert!(words.join(" ").contains("-frames:v 60 "));
     }
 

@@ -305,7 +305,7 @@ if (Test-Path $videosFile) {
             try {
                 $lines = @($text -split "`n" | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
                 if ($lines[-1].type -ne 'result' -or @($lines | Where-Object { $_.type -eq 'result' }).Count -ne 1) { $problem = 'not exactly one result, last' }
-                $macResult = Get-Content (Join-Path $Bundle "videos\$id.json") -Raw | ConvertFrom-Json
+                $macResult = @(Get-Content (Join-Path $Bundle "videos\$id.json") | Where-Object { $_ })[-1] | ConvertFrom-Json
                 if (-not $problem) {
                     $problem = Get-VideoProblem (Get-Probe (Join-Path $videoOut "$id.mp4")) (Get-Content (Join-Path $Bundle "videos\$id.probe.json") -Raw | ConvertFrom-Json) $lines[-1] $macResult
                 }
@@ -455,6 +455,9 @@ public sealed class PtyRun : IDisposable
 
         var startup = new STARTUPINFOEX();
         startup.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
+        // With every standard handle left empty, the program gets the pseudo console's, even when this
+        // process's own are redirected to a file or a pipe.
+        startup.StartupInfo.dwFlags = 0x100;
         IntPtr size = IntPtr.Zero;
         InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
         startup.lpAttributeList = Marshal.AllocHGlobal(size);
@@ -566,7 +569,7 @@ function Measure-Peak($Run) {
 }
 
 if ((Test-Path $song3) -and (Test-Path $scene)) {
-    Write-Output '== make: a three-minute song, speed and memory (software Encoder, limit 680 MB)'
+    Write-Output '== make: a three-minute song, speed and memory (software Encoder; the 680 MB of SPEC 26.4 is for a 2160p HEVC run, so memory is reported here, not limited)'
     foreach ($resolution in '480p', '1080p', '2160p') {
         $folder = New-CleanFolder "speed-$resolution"
         $run = Start-Song2Vid @('make', $song3, $scene, '-r', $resolution, '-o', (Join-Path $folder 'speed.mp4'), '-j') $media -Environment $software
@@ -574,7 +577,6 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
         $result = Wait-Song2Vid $run
         Write-Output ('  {0}: {1:n1} s, peak {2:n0} MB, exit {3}' -f $resolution, $result.Seconds, ($peak / 1MB), $result.Status)
         if ($result.Status -ne 0) { Fail "speed run at $resolution exited $($result.Status): $(ConvertTo-Text $result.Stdout)" }
-        if ($peak -gt 680MB) { Fail "peak private memory at $resolution was $([math]::Round($peak / 1MB)) MB, over 680" }
         if ($resolution -eq '2160p' -and $result.Seconds -gt 30) { Fail "a three-minute 2160p video took $([math]::Round($result.Seconds, 1)) s, over 30" }
     }
 
@@ -582,20 +584,24 @@ if ((Test-Path $song3) -and (Test-Path $scene)) {
     # JSON: every line parses, a line at least every 0.5 s, stages in order, exactly one result at the end.
     $folder = New-CleanFolder 'progress-json'
     $stdoutFile = Join-Path $folder 'stdout.txt'
-    $process = Start-Process -FilePath $exe -ArgumentList @('make', "`"$song3`"", "`"$scene`"", '-r', '2160p', '-o', "`"$folder\video.mp4`"", '--json') -WorkingDirectory $media -RedirectStandardOutput $stdoutFile -PassThru -NoNewWindow -Environment $software 2>$null
-    if (-not $process) { $process = $null }
+    $process = Start-Process -FilePath $exe -ArgumentList @('make', "`"$song3`"", "`"$scene`"", '-r', '2160p', '-o', "`"$folder\video.mp4`"", '--json') -WorkingDirectory $media -RedirectStandardOutput $stdoutFile -PassThru -NoNewWindow -Environment $software
     $stamps = New-Object System.Collections.Generic.List[double]
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    $seen = 0
-    while (-not $process.HasExited) {
-        $count = 0
-        try { $count = @([System.IO.File]::ReadAllLines($stdoutFile)).Count } catch { }
-        while ($seen -lt $count) { $stamps.Add($watch.Elapsed.TotalSeconds); $seen++ }
-        Start-Sleep -Milliseconds 40
+    # The file is read while the program writes it, so each line is stamped when it first shows.
+    $reader = $null
+    while (-not $process.HasExited -or ($reader -and $reader.Position -lt $reader.Length)) {
+        if (-not $reader -and (Test-Path $stdoutFile)) { $reader = [System.IO.FileStream]::new($stdoutFile, 'Open', 'Read', 'ReadWrite') }
+        if ($reader) {
+            $buffer = New-Object byte[] 65536
+            while (($count = $reader.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                for ($i = 0; $i -lt $count; $i++) { if ($buffer[$i] -eq 10) { $stamps.Add($watch.Elapsed.TotalSeconds) } }
+            }
+        }
+        Start-Sleep -Milliseconds 25
     }
+    if ($reader) { $reader.Dispose() }
     $process.WaitForExit()
     $lines = @([System.IO.File]::ReadAllLines($stdoutFile))
-    while ($seen -lt $lines.Count) { $stamps.Add($watch.Elapsed.TotalSeconds); $seen++ }
     $parsed = @($lines | ForEach-Object { $_ | ConvertFrom-Json })
     $widest = 0.0
     for ($i = 1; $i -lt $stamps.Count - 1; $i++) { if ($stamps[$i] - $stamps[$i - 1] -gt $widest) { $widest = $stamps[$i] - $stamps[$i - 1] } }
