@@ -14,6 +14,7 @@
 // lost time to a second spelling).
 import fs from 'node:fs';
 import path from 'node:path';
+import { NODE_ARCH, NODE_PLATFORM } from '../platform.ts';
 
 function isRunnable(file: string, platform: NodeJS.Platform): boolean {
   try {
@@ -61,8 +62,9 @@ export interface LocateOptions {
 }
 
 export function locateTool(options: LocateOptions): Located {
-  const platform = options.platform ?? process.platform;
-  const arch = options.arch ?? process.arch;
+  // The defaults come from electron/platform.ts, the one module that asks which system this is (premium bar rule 77); tests pass their own.
+  const platform = options.platform ?? NODE_PLATFORM;
+  const arch = options.arch ?? NODE_ARCH;
   const env = options.env ?? process.env;
   const exe = platform === 'win32' ? '.exe' : '';
   const toolFile = `${options.toolName}${exe}`;

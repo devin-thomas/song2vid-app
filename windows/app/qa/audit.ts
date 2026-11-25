@@ -141,13 +141,17 @@ interface Gates {
   journeys?: Record<string, { name: string; steps: number; stepBudget: number; passed: boolean }>;
   shortcuts?: Record<string, ShortcutResult>;
   forced?: { stateAndThemeRuns: number; focusableElementsChecked: number };
-  tokens?: { filesRead: number; linesRead: number; themes: string[] };
+  tokens?: { filesRead: number; linesRead: number; themes: string[]; contrasts: Record<string, number> };
   overlay?: Record<string, { query: string | null; body: string }>;
   job?: JobGate;
   crop?: Record<string, unknown>;
   files?: Record<string, unknown>;
   tool?: Record<string, unknown>;
   notices?: Record<string, unknown>;
+  theme?: Record<string, unknown>;
+  distinct?: Record<string, unknown>;
+  messages?: Record<string, unknown>;
+  ring?: Record<string, unknown>;
 }
 interface Report {
   generatedFor: string;
@@ -623,8 +627,24 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
     if (/^h[1-6]$/i.test(el.tagName) && /[.!?]\s+\S|, not /.test((el.textContent ?? '').trim())) webForm.push(`heading "${(el.textContent ?? '').trim().slice(0, 50)}" reads as a slogan`);
   }
 
-  // -- a scroll area that hides content must show it: a fading edge or a scrollbar
+  // What a person can see of an element is what its clipping ancestors leave of it: a picture placed past the edge of
+  // the frame that holds it (the crop) is cut by the frame, not outside the window.
+  const shown = (el: Element): DOMRect => {
+    let box = el.getBoundingClientRect();
+    for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+      const style = getComputedStyle(up);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const clip = up.getBoundingClientRect();
+      box = new DOMRect(Math.max(box.left, clip.left), Math.max(box.top, clip.top), Math.max(0, Math.min(box.right, clip.right) - Math.max(box.left, clip.left)), Math.max(0, Math.min(box.bottom, clip.bottom) - Math.max(box.top, clip.top)));
+    }
+    return box;
+  };
+  // -- a scroll area that hides content must show it: a visible scrollbar, or the cue the page draws ("More below", a real element).
+  //    A fade made with a mask is not a cue: it was always "present" in the style, vanished in a picture, and let whole rows of the
+  //    card sit out of sight at 200% zoom with nothing to say so (S2V-031, the critic's must-fix 2). Headless browsers hide scrollbars,
+  //    so in these runs the cue is what is checked; a scrollbar counts where the browser draws one.
   const clipped: string[] = [];
+  const unreachable: string[] = [];
   for (const el of document.querySelectorAll<HTMLElement>('*')) {
     if (!visible(el)) continue;
     const style = getComputedStyle(el);
@@ -632,8 +652,48 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
     if (el.matches('textarea')) continue; // native text scrolling
     const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
     const hasBar = el.offsetWidth - el.clientWidth > 0;
-    const hasFade = style.maskImage !== 'none' && style.maskImage !== '';
-    if (!atEnd && !hasBar && !hasFade) clipped.push(`${describe(el)} hides ${el.scrollHeight - el.clientHeight}px with no cue`);
+    const next = el.nextElementSibling;
+    const cue = next instanceof HTMLElement && next.hasAttribute('data-scroll-cue') && visible(next);
+    if (!atEnd && !hasBar && !cue) clipped.push(`${describe(el)} hides ${el.scrollHeight - el.clientHeight}px with no cue`);
+    // Every control inside it can be brought into view by scrolling (the keyboard does the same by focusing it).
+    const port = el.getBoundingClientRect();
+    const before = el.scrollTop;
+    for (const control of el.querySelectorAll<HTMLElement>('button, a[href], [tabindex], input, select, textarea, [role="option"]')) {
+      if (!visible(control) || (control as HTMLButtonElement).disabled) continue;
+      control.scrollIntoView({ block: 'nearest' });
+      const box = control.getBoundingClientRect();
+      if (box.top < port.top - 1 || box.bottom > port.bottom + 1) unreachable.push(`${describe(control)} cannot be scrolled into view of ${describe(el)}`);
+    }
+    el.scrollTop = before;
+  }
+
+  // -- a label or a sentence cut off by its own box: the text of a button, a message, a note must be whole. Where a box has
+  //    to cut (a file name in a row, which has its tooltip and keeps its ending) the cut is by the page's own two-part name.
+  const truncated: string[] = [];
+  const mayCut = (el: Element): boolean => el.classList.contains('file-head') || el.classList.contains('statusbar-layer') || el.closest('.statusbar-layer:not([data-live])') !== null;
+  for (const el of document.body.querySelectorAll<HTMLElement>('*')) {
+    if (!visible(el) || mayCut(el) || el.closest('svg') || el.closest('[data-notices]') || el.classList.contains('sr-only')) continue;
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? '').trim().length > 0);
+    if (!own) continue;
+    const style = getComputedStyle(el);
+    const cuts = style.overflowX !== 'visible' || style.overflowY !== 'visible' || style.textOverflow === 'ellipsis' || /-webkit-box/.test(style.display);
+    if (!cuts) continue;
+    if (/auto|scroll/.test(style.overflowY) && el.scrollHeight > el.clientHeight) continue; // a scroll area, checked above
+    if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) truncated.push(`${describe(el)} is cut off (${el.scrollWidth}x${el.scrollHeight} of ${el.clientWidth}x${el.clientHeight})`);
+  }
+  // A button's label whole inside the button, and the button whole inside what holds it.
+  for (const button of document.querySelectorAll<HTMLElement>('button, .btn')) {
+    if (!visible(button) || button.closest('.statusbar-layer:not([data-live])')) continue;
+    if (button.scrollWidth > button.clientWidth + 1) truncated.push(`${describe(button)}: the label is wider than the button (${button.scrollWidth} > ${button.clientWidth})`);
+    const box = button.getBoundingClientRect();
+    const seen = shown(button);
+    if (seen.width < box.width - 1 || seen.height < box.height - 1) {
+      const inScroll = (() => {
+        for (let up = button.parentElement; up && up !== document.body; up = up.parentElement) if (/auto|scroll/.test(getComputedStyle(up).overflowY)) return true;
+        return false;
+      })();
+      if (!inScroll) truncated.push(`${describe(button)} is cut by what holds it (${Math.round(seen.width)}x${Math.round(seen.height)} of ${Math.round(box.width)}x${Math.round(box.height)})`);
+    }
   }
 
   // -- accessible names and focus styles
@@ -735,18 +795,6 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
   // -- horizontal overflow
   const vw = document.documentElement.clientWidth;
   const outside: string[] = [];
-  // What a person can see of an element is what its clipping ancestors leave of it: a picture placed past the edge of
-  // the frame that holds it (the crop) is cut by the frame, not outside the window.
-  const shown = (el: Element): DOMRect => {
-    let box = el.getBoundingClientRect();
-    for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
-      const style = getComputedStyle(up);
-      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
-      const clip = up.getBoundingClientRect();
-      box = new DOMRect(Math.max(box.left, clip.left), Math.max(box.top, clip.top), Math.max(0, Math.min(box.right, clip.right) - Math.max(box.left, clip.left)), Math.max(0, Math.min(box.bottom, clip.bottom) - Math.max(box.top, clip.top)));
-    }
-    return box;
-  };
   for (const el of document.body.querySelectorAll('*')) {
     if (!visible(el)) continue;
     const box = shown(el);
@@ -798,6 +846,8 @@ const PAGE_CHECKS = async (terms: BannedTerms) => {
     filledWrong,
     webForm: [...new Set(webForm)].slice(0, 12),
     clipped,
+    unreachable,
+    truncated,
     interactiveCount: interactive.length,
     focusableCount: focusable.length,
     unnamed,
@@ -845,6 +895,8 @@ async function stateGates() {
         c.smallText.forEach((t) => fail('text', `${name}/${theme}: ${t}`));
         c.banned.forEach((t) => fail('language', `${name}/${theme}: banned term in primary text: ${t}`));
         c.clipped.forEach((t) => fail('clipped', `${name}/${theme}: ${t}`));
+        c.unreachable.forEach((t) => fail('reach', `${name}/${theme}: ${t}`));
+        c.truncated.forEach((t) => fail('truncated', `${name}/${theme}: ${t}`));
         c.unnamed.forEach((t) => fail('names', `${name}/${theme}: no accessible name: ${t}`));
         c.labelNotInName.forEach((t) => fail('names', `${name}/${theme}: the accessible name does not contain the visible label: ${t}`));
         c.filledWrong.forEach((t) => fail('buttons', `${name}/${theme}: ${t}`));
@@ -934,7 +986,59 @@ function tokensGate(): void {
   const themes: string[] = (['light', 'dark'] as const).filter((t) => tokens.color?.[t]);
   const keys = themes.map((t) => Object.keys(tokens.color?.[t] ?? {}).sort().join());
   if (themes.length < 2 || new Set(keys).size !== 1) fail('tokens', `tokens/design-tokens.json: the themes (${themes.join(', ')}) do not define the same colour names`);
-  report.gates.tokens = { filesRead: files.length, linesRead: lines, themes };
+  // The accent and the tones, checked as numbers in both themes (S2V-031): the filled button's text on its fill, the fill on the
+  // card, the tones on the tinted status bar, and the bar's two text colours on that tint. These are the pairs the stylesheet makes;
+  // axe checks the rendered ones too, in every state.
+  const contrasts: Record<string, number> = {};
+  for (const theme of ['light', 'dark'] as const) {
+    const c = (name: string): [number, number, number] => parseOklch(String(tokens.color?.[theme]?.[name] ?? ''));
+    const fg = c('fg');
+    const mixIn = (top: [number, number, number], over: [number, number, number], share: number): [number, number, number] => [0, 1, 2].map((i) => (top[i] ?? 0) * share + (over[i] ?? 0) * (1 - share)) as [number, number, number];
+    const need = (label: string, a: [number, number, number], b: [number, number, number], least: number): void => {
+      const ratio = contrastOf(a, b);
+      contrasts[`${theme}: ${label}`] = Number(ratio.toFixed(2));
+      if (ratio < least) fail('tokens', `${theme} theme: ${label} has contrast ${ratio.toFixed(2)}, under ${least}:1`);
+    };
+    need('on-accent text on the accent fill', c('on-accent'), c('accent'), 4.5);
+    need('the accent fill on the card', c('accent'), c('surface'), 3);
+    need('the accent fill on the status bar', c('accent'), c('chrome'), 3);
+    for (const tone of ['danger', 'warning', 'success'] as const) {
+      const bar = mixIn(c(tone), c('chrome'), 0.1);
+      need(`the ${tone} mark on its tinted status bar`, c(tone), bar, 3);
+      need(`the status bar's first line on the ${tone} tint`, fg, bar, 4.5);
+      need(`the status bar's second line on the ${tone} tint`, mixIn(fg, bar, 0.66), bar, 4.5);
+      need(`the accent fill on the ${tone} tint`, c('accent'), bar, 3);
+    }
+    need("the status bar's second line on the bar", mixIn(fg, c('chrome'), 0.66), c('chrome'), 4.5);
+  }
+  report.gates.tokens = { filesRead: files.length, linesRead: lines, themes, contrasts };
+}
+
+/** "oklch(0.55 0.19 258)" as sRGB 0 to 1, gamma-encoded. */
+function parseOklch(text: string): [number, number, number] {
+  const m = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)/.exec(text);
+  if (!m) throw new Error(`not an oklch colour: ${text}`);
+  const [L, C, H] = [Number(m[1]), Number(m[2]), (Number(m[3]) * Math.PI) / 180];
+  const a = C * Math.cos(H);
+  const b = C * Math.sin(H);
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const mm = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const ss = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const lin = [4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * ss, -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * ss, -0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * ss];
+  return lin.map((v) => {
+    const x = Math.min(1, Math.max(0, v));
+    return x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+  }) as [number, number, number];
+}
+
+/** WCAG contrast of two gamma-encoded sRGB colours. */
+function contrastOf(a: [number, number, number], b: [number, number, number]): number {
+  const luminance = (rgb: [number, number, number]): number => {
+    const [r, g, bl] = rgb.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
 }
 
 // ------------------------------------------------------------- overflow ---
@@ -967,6 +1071,10 @@ async function overflowGate() {
         c.outside.forEach((o) => fail('overflow', `${label}/${name}: ${o}`));
         if (c.primaryActionReachable === false) fail('overflow', `${label}/${name}: the primary action is outside the window`);
         c.spill.forEach((o) => fail('spill', `${label}/${name}: ${o}`));
+        // At every size, 200% zoom included: a control out of sight has a cue and can be scrolled to, and no label or sentence is cut.
+        c.clipped.forEach((o) => fail('clipped', `${label}/${name}: ${o}`));
+        c.unreachable.forEach((o) => fail('reach', `${label}/${name}: ${o}`));
+        c.truncated.forEach((o) => fail('truncated', `${label}/${name}: ${o}`));
         if (c.scrollRange.x > 0 || c.scrollRange.y > 0) fail('spill', `${label}/${name}: the window itself scrolls (${JSON.stringify(c.scrollRange)})`);
         const g = await geometry(page);
         stable[`${label}/${name}`] = g;
@@ -1430,7 +1538,7 @@ async function jobGate() {
     const refused = await statusText(page);
     const dropCalls = (await callsOf(page, 'dropFiles')).length;
     if (!/^Wait for the current video to finish\./.test(refused) || dropCalls !== 0) fail('job', `a drop during a job said "${refused}" and asked the shell ${dropCalls} times`);
-    const cancelStill = await page.locator('[data-status-bar] button', { hasText: 'Cancel' }).count();
+    const cancelStill = await page.locator('[data-status-bar] [data-live] button', { hasText: 'Cancel' }).count();
     if (cancelStill !== 1) fail('job', 'Cancel disappeared while the drop was refused');
     await page.waitForTimeout(3300);
     const after = await page.locator('[data-status-bar]').getAttribute('data-job');
@@ -1570,9 +1678,9 @@ async function filesGate() {
   // Rejected drops change nothing and say why.
   const before = await names(page);
   for (const [label, files, words] of [
-    ['two songs', [SONG, { name: 'B.mp3', type: 'audio/mpeg' }], /Drop one song, one image, or one of each\./],
-    ['three files', [SONG, PICTURE, { name: 'C.png', type: 'image/png' }], /Drop no more than two files/],
-    ['an unreadable type', [{ name: 'notes.txt', type: 'text/plain' }], /can't read this kind of file/],
+    ['two songs', [SONG, { name: 'B.mp3', type: 'audio/mpeg' }], /Song2Vid uses one song at a time\. Drop one song, one image, or one of each\./],
+    ['three files', [SONG, PICTURE, { name: 'C.png', type: 'image/png' }], /takes two at most\. Drop one song, one image, or one of each\./],
+    ['an unreadable type', [{ name: 'notes.txt', type: 'text/plain' }], /\u201cnotes\.txt\u201d is not a song or an image Song2Vid can use\. Drop a song or an image\./],
   ] as const) {
     await drop(page, [...files]);
     await waitStatus(page, 'notice');
@@ -1675,6 +1783,213 @@ async function noticesGate() {
   report.gates.notices = out;
 }
 
+// ------------------------------------------------------------- distinct ---
+// A failure, a refusal and a saved video are not a status line (the critic's must-fix 4 and 7, 11): the bar carries a mark, a tint
+// and a heavier first line, and the idle bar carries none of them. And every state that says a file is the problem says one thing
+// in every place (must-fix 5): the row, the preview, the bar, Make Video and the enlarge note.
+
+interface BarLook {
+  tone: string | null;
+  mark: boolean;
+  background: string;
+  weight: number;
+  edge: string;
+  text: string;
+  button: { label: string; filled: boolean } | null;
+  progressWide: number | null;
+  height: number;
+}
+
+const barLook = (page: Page): Promise<BarLook> =>
+  page.evaluate(() => {
+    const bar = document.querySelector('[data-status-bar]') as HTMLElement;
+    // A bar without the live layer is an old layout: it is looked at as a whole, and fails the checks below instead of crashing.
+    const live = (bar.querySelector('[data-live]') ?? bar) as HTMLElement;
+    const first = (live.querySelector('.statusbar-first') ?? live.querySelector('p') ?? live) as HTMLElement;
+    const filled = live.querySelector('[data-filled]');
+    const button = live.querySelector('button');
+    const progress = bar.querySelector('[role="progressbar"]') as HTMLElement | null;
+    return {
+      tone: bar.getAttribute('data-tone'),
+      mark: Boolean(live.querySelector('svg.statusbar-mark, svg')),
+      background: getComputedStyle(bar).backgroundColor,
+      weight: Number(getComputedStyle(first).fontWeight),
+      edge: getComputedStyle(bar).boxShadow,
+      text: [...live.querySelectorAll('[data-status-text] p')].map((p) => p.textContent ?? '').join(' ').trim(),
+      button: button ? { label: (button.textContent ?? '').trim(), filled: Boolean(filled) } : null,
+      progressWide: progress ? progress.getBoundingClientRect().width / bar.getBoundingClientRect().width : null,
+      height: bar.getBoundingClientRect().height,
+    };
+  });
+
+async function distinctGate(): Promise<void> {
+  const out: Record<string, unknown> = {};
+  for (const theme of ['dark', 'light'] as const) {
+    const looks: Record<string, BarLook> = {};
+    for (const name of ['04-both', '17-making', '21-cancelled', '22-done', '23-error-audio-not-found', '28-error-codec-unavailable', '32-error-output-exists', '33-error-export-failed', '35-error-repeated', '36-choose-audio-unreadable', '45-drop-refused']) {
+      await inState(name, { ...VIEW, theme }, async (page) => {
+        looks[name] = await barLook(page);
+      });
+    }
+    const idle = looks['04-both'] as BarLook;
+    if (idle.tone !== 'neutral' || idle.mark || idle.weight >= 600) fail('distinct', `${theme}: the idle bar already looks like an error or a result (${JSON.stringify({ tone: idle.tone, mark: idle.mark, weight: idle.weight })})`);
+    for (const [name, look] of Object.entries(looks)) {
+      const isFailure = /error|choose-audio-unreadable|drop-refused/.test(name);
+      const isDone = /done/.test(name);
+      if (!isFailure && !isDone) continue;
+      const what = isDone ? 'a saved video' : 'a failure or a refusal';
+      if (look.tone === 'neutral' || look.tone === null) fail('distinct', `${theme}/${name}: ${what} has the neutral tone of a status line`);
+      if (!look.mark) fail('distinct', `${theme}/${name}: ${what} has no mark (icon) in the bar`);
+      if (look.background === idle.background) fail('distinct', `${theme}/${name}: ${what} has the same bar colour as "Ready"`);
+      if (look.weight < 600) fail('distinct', `${theme}/${name}: the first line of ${what} is not heavier than a status (${look.weight})`);
+      if (look.edge === 'none') fail('distinct', `${theme}/${name}: ${what} has no coloured edge`);
+      if (isFailure && !look.button && !/drop-refused/.test(name)) fail('distinct', `${theme}/${name}: ${what} offers no button that can succeed`);
+      if (isFailure && look.button && !look.button.filled && !/drop-refused/.test(name)) fail('distinct', `${theme}/${name}: the button of a failure is not the filled one`);
+    }
+    const making = looks['17-making'] as BarLook;
+    if (making.progressWide === null || making.progressWide < 0.95) fail('distinct', `${theme}: the progress bar spans ${making.progressWide === null ? 'nothing' : `${Math.round(making.progressWide * 100)}%`} of the status bar, not its full width`);
+    if (making.text.match(/(\d+)%.*\1%/)) fail('distinct', `${theme}: the percent is said twice in "${making.text}"`);
+    const hold = new Set(Object.values(looks).map((l) => Math.round(l.height)));
+    if (hold.size !== 1) fail('distinct', `${theme}: the status bar has more than one height across these states (${[...hold].join(', ')})`);
+    out[theme] = { states: Object.keys(looks).length, barHeight: [...hold][0] };
+  }
+  report.gates.distinct = out;
+}
+
+// ------------------------------------------------------------- messages ---
+// When a file is the problem the controls say so too: the row names the problem, the preview says it, Make Video waits, the
+// enlarge note goes; a tool that is missing never says "Ready".
+
+async function messagesGate(): Promise<void> {
+  const out: Record<string, unknown> = {};
+  const seen = (page: Page) =>
+    page.evaluate(() => ({
+      make: (document.getElementById('make-video') as HTMLButtonElement | null)?.disabled ?? null,
+      note: (document.querySelector('[data-enlarge-note]')?.textContent ?? '').trim(),
+      problemRows: [...document.querySelectorAll('[data-problem]')].map((el) => (el.getAttribute('data-file') ?? 'words') + ':' + (el.textContent ?? '').trim()),
+      frame: (document.querySelector('[data-preview-words]')?.textContent ?? '').trim(),
+      bar: (document.querySelector('[data-status-text]')?.textContent ?? '').trim(),
+      output: (document.querySelector('[data-output]')?.textContent ?? '').trim(),
+    }));
+  const cases: [string, 'audio' | 'image' | null][] = [
+    ['23-error-audio-not-found', 'audio'],
+    ['24-error-image-not-found', 'image'],
+    ['25-error-audio-unreadable', 'audio'],
+    ['26-error-image-unreadable', 'image'],
+    ['27-error-image-too-small', 'image'],
+    ['16-preview-failed', 'image'],
+  ];
+  for (const [name, slot] of cases) {
+    await inState(name, VIEW, async (page) => {
+      const v = await seen(page);
+      out[name] = v;
+      if (v.make !== true) fail('messages', `${name}: Make Video is enabled while the bar says the ${slot} is the problem ("${v.bar}")`);
+      if (slot === 'image' && v.note) fail('messages', `${name}: the enlarge note ("${v.note}") is shown beside "${v.bar}"`);
+      if (!v.problemRows.some((r) => r.startsWith(`${slot}:`))) fail('messages', `${name}: the ${slot} row does not say that file is the problem (${v.problemRows.join(' | ') || 'nothing marked'})`);
+      if (slot === 'image' && !v.frame) fail('messages', `${name}: the preview shows no words for an image that cannot be drawn`);
+      if (/^Ready|^Choose a song/.test(v.bar)) fail('messages', `${name}: the bar says "${v.bar}"`);
+    });
+  }
+  await inState('13-original-too-small', VIEW, async (page) => {
+    const v = await seen(page);
+    out['13-original-too-small'] = v;
+    if (v.make !== true) fail('messages', '13-original-too-small: Make Video is enabled for an image that is too small');
+    if (/^Ready/.test(v.bar) || !/too small/.test(v.bar)) fail('messages', `13-original-too-small: the bar says "${v.bar}", not what blocks Make Video`);
+    if (/not available/.test(v.output)) fail('messages', `13-original-too-small: the row says "${v.output}", which tells nothing`);
+  });
+  for (const name of ['38-tool-missing', '39-tool-turns-missing']) {
+    await inState(name, VIEW, async (page) => {
+      const v = await seen(page);
+      out[name] = v;
+      if (/Ready|Choose a song|Choose an image/.test(v.bar)) fail('messages', `${name}: the bar says "${v.bar}" on a screen that can make nothing`);
+      if ((await page.locator('#make-video').count()) !== 0) fail('messages', `${name}: a Make Video button is still there`);
+    });
+  }
+  // After the problem file is replaced, the controls come back by themselves.
+  await inState('23-error-audio-not-found', VIEW, async (page) => {
+    await page.keyboard.press('Control+o');
+    await page.waitForFunction(() => !document.querySelector('[data-problem]'));
+    const v = await seen(page);
+    if (v.make !== false) fail('messages', 'after a new song replaced the one that was not found, Make Video is still disabled');
+  });
+  report.gates.messages = out;
+}
+
+// ----------------------------------------------------------------- ring ---
+// The focus ring is for the keyboard (must-fix 10): none on the first paint, none after a mouse action, none in a window that is not
+// active; it appears at once with the first key. And a row's label does not change when its control is focused.
+
+async function ringGate(): Promise<void> {
+  const out: Record<string, unknown> = {};
+  const ring = (page: Page) =>
+    page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el || el === document.body) return { element: null, shown: false };
+      const s = getComputedStyle(el);
+      return { element: el.id || el.getAttribute('aria-label') || el.tagName, shown: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 };
+    });
+  const labels = (page: Page) => page.evaluate(() => [...document.querySelectorAll('.row-label')].map((l) => getComputedStyle(l).color).join('|'));
+  for (const theme of ['dark', 'light'] as const) {
+    const { context, page } = await openPage(browser, { ...VIEW, theme });
+    await load(page, url);
+    await page.waitForFunction(() => document.activeElement?.id === 'choose-audio');
+    const first = await ring(page);
+    if (first.element !== 'choose-audio') fail('ring', `${theme}: the window did not start on Choose Audio (${first.element})`);
+    if (first.shown) fail('ring', `${theme}: a focus ring shows on the first paint`);
+    const baseline = await labels(page);
+    await page.locator('[data-group="shape"] [data-value="1:1"]').click();
+    const afterClick = await ring(page);
+    if (afterClick.shown) fail('ring', `${theme}: a focus ring shows after a mouse click on ${afterClick.element}`);
+    if ((await labels(page)) !== baseline) fail('ring', `${theme}: a row label changed colour when its control took focus`);
+    await page.keyboard.press('Tab');
+    const afterTab = await ring(page);
+    if (!afterTab.shown) fail('ring', `${theme}: no focus ring shows on ${afterTab.element} after Tab`);
+    if ((await labels(page)) !== baseline) fail('ring', `${theme}: a row label changed colour when a key moved focus into its row`);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    const inactive = await ring(page);
+    if (inactive.shown) fail('ring', `${theme}: a focus ring shows in a window that is not active`);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.mouse.move(10, 10);
+    await page.mouse.move(40, 12);
+    if ((await ring(page)).shown) fail('ring', `${theme}: the ring stays after the pointer moves`);
+    out[theme] = { first, afterClick, afterTab: afterTab.shown, inactive: inactive.shown };
+    await context.close();
+  }
+  report.gates.ring = out;
+}
+
+// ---------------------------------------------------------------- theme ---
+// A run that says "light" shows the light theme (S2V-031: light pictures and light audits were the dark ones for a whole ticket).
+
+async function themeGate(): Promise<void> {
+  const out: Record<string, unknown> = {};
+  const read = async (theme: 'light' | 'dark') => {
+    const { context, page } = await openPage(browser, { ...VIEW, theme });
+    await load(page, url);
+    const look = await page.evaluate(() => ({ theme: document.documentElement.dataset.theme, background: getComputedStyle(document.body).backgroundColor, card: getComputedStyle(document.querySelector('.card') as Element).backgroundColor, scheme: getComputedStyle(document.documentElement).colorScheme }));
+    await context.close();
+    return look;
+  };
+  const light = await read('light');
+  const dark = await read('dark');
+  out.light = light;
+  out.dark = dark;
+  if (light.theme !== 'light') fail('theme', `a page opened for the light theme shows "${light.theme}"`);
+  if (dark.theme !== 'dark') fail('theme', `a page opened for the dark theme shows "${dark.theme}"`);
+  if (light.background === dark.background || light.card === dark.card) fail('theme', 'the light and the dark themes paint the same colours');
+  // The toggle switches both ways and the choice survives a reload.
+  const { context, page } = await openPage(browser, VIEW);
+  await load(page, url);
+
+  await page.locator('[aria-label="Use the light theme"]').click();
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+  await page.reload();
+  await page.waitForSelector('.app');
+  if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'light') fail('theme', 'the light theme did not survive a reload');
+  await context.close();
+  report.gates.theme = out;
+}
+
 // ------------------------------------------------------------------ run ---
 
 // AUDIT_ONLY=job,files runs just those gates while one is being worked on; a full run, with it unset, is the gate.
@@ -1700,6 +2015,10 @@ try {
   await gate('files', filesGate);
   await gate('tool', toolGate);
   await gate('notices', noticesGate);
+  await gate('theme', themeGate);
+  await gate('distinct', distinctGate);
+  await gate('messages', messagesGate);
+  await gate('ring', ringGate);
 } catch (error) {
   fail('audit', `the audit itself failed: ${(error instanceof Error ? (error.stack ?? error.message) : String(error)).split('\n').slice(0, 3).join(' ')}`);
 } finally {
@@ -1727,6 +2046,10 @@ console.log(`job        ${g.job ? `cancel acknowledged as "${g.job.cancelAcknowl
 console.log(`crop       ${g.crop ? 'slider, keys, drag, reset and edges checked' : 'not run'}`);
 console.log(`files      ${g.files ? 'drop, Replace question, refused drops, highlight and a second launch checked' : 'not run'}`);
 console.log(`tool       ${g.tool ? 'the missing-tool state, at launch and after it' : 'not run'}`);
+console.log(`theme      ${g.theme ? 'light and dark are painted differently, the choice survives a reload' : 'not run'}`);
+console.log(`distinct   ${g.distinct ? 'a failure, a refusal and a saved video are not a status line; progress spans the bar; one bar height' : 'not run'}`);
+console.log(`messages   ${g.messages ? 'when a file is the problem the row, the preview, the bar, Make Video and the note agree' : 'not run'}`);
+console.log(`ring       ${g.ring ? 'no focus ring on first paint, after a click or in an inactive window; one with the keyboard' : 'not run'}`);
 console.log(`notices    ${g.notices ? 'the exemption covers the notices and nothing else' : 'not run'}`);
 if (failures.length) {
   console.error(`\naudit FAILED: ${failures.length} failure(s)`);

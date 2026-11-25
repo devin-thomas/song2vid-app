@@ -33,6 +33,18 @@ export function clock(seconds: number): string {
 /** "1920×1080". */
 export const dimensions = (width: number, height: number): string => `${width}×${height}`;
 
+/**
+ * A file name cut in the middle so its start and its end both stay ("A very long photo…ame.jpg"): the part a person
+ * recognises and the extension. Used where a name is part of a sentence; the rows cut theirs the same way in CSS
+ * (src/components/FileName.tsx).
+ */
+export function shortName(name: string, max = 40): string {
+  const chars = Array.from(name);
+  if (chars.length <= max) return name;
+  const tail = Math.min(10, Math.floor((max - 1) / 2));
+  return `${chars.slice(0, max - tail - 1).join('')}…${chars.slice(chars.length - tail).join('')}`;
+}
+
 // ---- errors (SPEC 27.5) ----------------------------------------------------------
 
 /** What the filled button of a failure does. */
@@ -74,6 +86,15 @@ export const FAILURES: Record<string, Failure> = {
   export_failed: GENERIC,
 };
 
+/**
+ * What a file row says when its file is the problem (the tool could not find it or read it, or it cannot be drawn),
+ * instead of the file's facts: the row, the preview, the status bar and Make Video then say one thing (S2V-031).
+ */
+export const slotProblemWords = (code: string): string => (code.endsWith('_not_found') ? "Can't find it" : code === 'image_too_small' ? 'Too small' : "Can't read it");
+
+/** Failure codes that are about a file already in a slot: that slot is the problem until another file replaces it. */
+export const slotOfFailure = (code: string): 'audio' | 'image' | null => (code.startsWith('audio_') ? 'audio' : code.startsWith('image_') ? 'image' : null);
+
 /** A code the page does not know (a newer tool's) gets the generic sentence. */
 export const failureFor = (code: string): Failure => (Object.hasOwn(FAILURES, code) ? (FAILURES[code] ?? GENERIC) : GENERIC);
 
@@ -99,25 +120,50 @@ export const BLOCKED = { first: 'Song2Vid is missing part of itself.', second: '
 // ---- drops (SPEC 4a) -----------------------------------------------------------------
 
 export const WAIT_MESSAGE = 'Wait for the current video to finish.';
+export const WAIT_LINES: Refusal = { first: WAIT_MESSAGE, second: '' };
+export const NOTHING_DROPPED: Refusal = { first: 'Drop a song or an image.', second: '' };
 
 type Rejection = Extract<DropResult, { status: 'rejected' }>['reason'];
 
-/** The message for a drop that changes nothing, in the Mac app's words. */
-export function rejectionMessage(reason: Rejection): string {
+/** A refused drop in two lines: what was refused, and what to do instead (SPEC 4a; the first line is shown with the error treatment). */
+export interface Refusal {
+  first: string;
+  second: string;
+}
+
+/** The names the page can see of a drop, for the sentence; at most one is named, the rest are counted. */
+const quoted = (name: string): string => `\u201c${shortName(name, 32)}\u201d`;
+
+/**
+ * The message for a drop that changes nothing, in the Mac app's words, now saying what was refused and why (S2V-031).
+ * `names` are the dropped files' names when the page has them (a drop does; a file opened with the app does not).
+ */
+export function rejectionLines(reason: Rejection, names: readonly string[] = []): Refusal {
+  const one = names.length === 1 ? quoted(names[0] ?? '') : null;
   switch (reason) {
     case 'folder':
-      return "Song2Vid can't use folders. Drop a song or an image.";
+      return { first: "Song2Vid can't use folders.", second: 'Drop a song or an image.' };
     case 'too-many':
-      return 'Drop no more than two files: one song, one image, or one of each.';
+      return { first: names.length > 2 ? `That is ${names.length} files, and Song2Vid takes two at most.` : 'That is more than two files.', second: 'Drop one song, one image, or one of each.' };
     case 'unsupported':
-      return "Song2Vid can't read this kind of file. Drop a song or an image.";
+      return { first: one ? `${one} is not a song or an image Song2Vid can use.` : "Song2Vid can't read this kind of file.", second: 'Drop a song or an image.' };
     case 'more-audio':
+      return { first: 'Song2Vid uses one song at a time.', second: 'Drop one song, one image, or one of each.' };
     case 'more-images':
-      return 'Drop one song, one image, or one of each.';
+      return { first: 'Song2Vid uses one image at a time.', second: 'Drop one song, one image, or one of each.' };
     case 'unreadable':
-      return "Song2Vid can't read that file. Drop a song or an image.";
+      return { first: one ? `Song2Vid can't read ${one}.` : "Song2Vid can't read that file.", second: 'Drop a song or an image.' };
   }
 }
+
+/** The whole refusal as one sentence. */
+export const rejectionMessage = (reason: Rejection, names: readonly string[] = []): string => {
+  const lines = rejectionLines(reason, names);
+  return `${lines.first} ${lines.second}`;
+};
+
+/** Every refusal the page can say, for sizing the status bar to its longest. */
+export const REJECTION_REASONS: readonly Rejection[] = ['folder', 'too-many', 'unsupported', 'more-audio', 'more-images', 'unreadable'];
 
 /** One item of a drag in flight: the page sees a kind and a type, never a name or a path. */
 export interface DragItem {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import config from '../../app.config.json';
 import type { DesktopBridge } from '../bridge';
 import { answerReplace, openRepository, useApp } from '../state/app';
+import { ScrollArea } from './ScrollArea';
 
 /** Where focus was when a dialog opened, so closing it returns there (SPEC 27.3). Dialogs opened by a drop have no trigger. */
 function useFocusBefore(open: boolean) {
@@ -78,12 +79,10 @@ export function AboutDialog({ open, onOpenChange, desktop, version }: { open: bo
           <dl className="facts mt-4">
             <div className="px-3 py-2">
               <dt className="text-small text-fg-3">Version</dt>
-              <dd className="selectable mt-0.5">
-                {config.productName} {version}
-              </dd>
+              <dd className="selectable mt-0.5">{version}</dd>
             </div>
             <div className="px-3 py-2">
-              <dt className="text-small text-fg-3">Licence</dt>
+              <dt className="text-small text-fg-3">License</dt>
               <dd className="mt-0.5">MIT License</dd>
             </div>
             <div className="px-3 py-2">
@@ -98,9 +97,9 @@ export function AboutDialog({ open, onOpenChange, desktop, version }: { open: bo
           <p className="mt-4 text-small text-fg-3" id="notices-title">
             Third-party notices
           </p>
-          <div className="notices scroll-cue mt-1" tabIndex={0} role="region" aria-labelledby="notices-title" data-notices="">
+          <ScrollArea className="notices mt-1" tabIndex={0} role="region" aria-labelledby="notices-title" data-notices="">
             {notices ?? 'Loading…'}
-          </div>
+          </ScrollArea>
           <div className="mt-5 flex justify-end">
             <Dialog.Close className="btn btn-secondary">Close</Dialog.Close>
           </div>

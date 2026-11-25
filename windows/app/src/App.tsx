@@ -5,12 +5,14 @@ import config from '../app.config.json';
 import pkg from '../package.json';
 import type { Bootstrap, DesktopBridge, Platform } from './bridge';
 import { Choice } from './components/Choice';
+import { FileName } from './components/FileName';
+import { ScrollArea } from './components/ScrollArea';
 import { CommandPalette, type Command } from './components/CommandPalette';
 import { AboutDialog, ReplaceDialog } from './components/Dialogs';
 import { Preview } from './components/Preview';
 import { StatusBar } from './components/StatusBar';
 import { TitleBar } from './components/TitleBar';
-import { Kbd, Tip } from './components/ui';
+import { Kbd } from './components/ui';
 import {
   cancel,
   canMake,
@@ -36,7 +38,7 @@ import { SHAPES, TIERS, isCropShape } from './state/frame';
 import type { Shape, Tier } from './state/frame';
 import { jobBusy } from './state/model';
 import { SHORTCUTS, ariaKeys, keysOf, matches, type CommandId } from './state/shortcuts';
-import { ACTION_LABELS, BLOCKED, CODEC_NAMES, HEVC_UNAVAILABLE, clock, dimensions, dragLooksValid, enlargeNote, hevcAvailable } from './state/words';
+import { ACTION_LABELS, BLOCKED, CODEC_NAMES, HEVC_UNAVAILABLE, NOTHING_DROPPED, clock, dimensions, dragLooksValid, enlargeNote, hevcAvailable, slotProblemWords } from './state/words';
 
 // Song2Vid's one window (SPEC 27.2): Audio, Image, Frame Shape, Resolution, Codec, the preview with
 // its crop, the enlarge note, and Make Video, over a status bar that says what is happening and what
@@ -68,7 +70,7 @@ const SHAPE_LABELS: Record<Shape, string> = { '16:9': '16:9', '9:16': '9:16', '1
 
 export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: DesktopBridge; platform: Platform }) {
   const state = useApp((s) => s);
-  const { audio, image, shape, tier, codec, job, encoders } = state;
+  const { audio, image, shape, tier, codec, job, encoders, failure } = state;
   const [theme, toggleTheme] = useTheme(desktop);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -190,13 +192,14 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
     setDragging(false);
     const files = Array.from(event.dataTransfer.files);
     if (files.length) void dropFiles(files);
-    else say('Drop a song or an image.');
+    else say(NOTHING_DROPPED);
   }
 
   const version = boot.about?.appVersion ?? pkg.version;
   const original = shape === 'original';
   const output = original ? originalSize(state) : null;
-  const showEnlarge = Boolean(frame?.enlarged && image);
+  // The note is about an image that can be made; one that is missing, unreadable or too small has the bar's words instead.
+  const showEnlarge = Boolean(frame?.enlarged && image && failure?.of !== 'image');
   const makeKeys = keysOf(SHORTCUTS['make-video']);
   const enlargeWidth = frame?.size.width ?? 0;
   const enlargeHeight = frame?.size.height ?? 0;
@@ -208,21 +211,23 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
         <div className="workspace">
           <main className="card" data-card="">
             {blocked ? (
-              <div className="blocked" data-blocked="" role="alert">
-                <p className="text-subhead font-semibold">{BLOCKED.first}</p>
-                <p className="text-fg-2">{BLOCKED.second}</p>
-                <div className="blocked-actions">
-                  <button type="button" className="btn btn-primary btn-lg" data-filled="" onClick={openDownloadPage}>
-                    {ACTION_LABELS[BLOCKED.action]}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-lg" onClick={() => void copyDetails()}>
-                    {ACTION_LABELS['copy-details']}
-                  </button>
+              <ScrollArea className="blocked" data-blocked="" role="alert">
+                <div className="blocked-inner">
+                  <p className="text-subhead font-semibold">{BLOCKED.first}</p>
+                  <p className="text-fg-2">{BLOCKED.second}</p>
+                  <div className="blocked-actions">
+                    <button type="button" className="btn btn-primary btn-lg" data-filled="" onClick={openDownloadPage}>
+                      {ACTION_LABELS[BLOCKED.action]}
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-lg" onClick={() => void copyDetails()}>
+                      {ACTION_LABELS['copy-details']}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </ScrollArea>
             ) : (
               <>
-                <div className="card-body scroll-cue" data-card-body="">
+                <ScrollArea className="card-body" data-card-body="">
                   <div className="row">
                     <span className="row-label">Audio</span>
                     <div className="file-line">
@@ -230,14 +235,12 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
                         Choose Audio…
                       </button>
                       {audio && (
-                        <>
-                          <Tip label={audio.name}>
-                            <span className="file-name selectable" data-file="audio">
-                              {audio.name}
-                            </span>
-                          </Tip>
-                          <span className="file-fact">{clock(audio.durationSeconds)}</span>
-                        </>
+                        <div className="file-info">
+                          <FileName name={audio.name} kind="audio" problem={failure?.of === 'audio'} />
+                          <span className="file-fact" data-problem={failure?.of === 'audio' ? '' : undefined}>
+                            {failure?.of === 'audio' ? slotProblemWords(failure.code) : clock(audio.durationSeconds)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -248,14 +251,12 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
                         Choose Image…
                       </button>
                       {image && (
-                        <>
-                          <Tip label={image.name}>
-                            <span className="file-name selectable" data-file="image">
-                              {image.name}
-                            </span>
-                          </Tip>
-                          <span className="file-fact">{dimensions(image.width, image.height)}</span>
-                        </>
+                        <div className="file-info">
+                          <FileName name={image.name} kind="image" problem={failure?.of === 'image'} />
+                          <span className="file-fact" data-problem={failure?.of === 'image' ? '' : undefined}>
+                            {failure?.of === 'image' ? slotProblemWords(failure.code) : dimensions(image.width, image.height)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -267,7 +268,7 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
                     <span className="row-label">Resolution</span>
                     {original ? (
                       <p className="output-line" data-output="">
-                        Output: {output ? dimensions(output.width, output.height) : 'not available'}
+                        Output: {output ? dimensions(output.width, output.height) : 'image too small'}
                       </p>
                     ) : (
                       <Choice<Tier> label="Resolution" group="resolution" value={tier} onChange={setTier} disabled={busy} options={TIERS.map((value) => ({ value, label: value }))} />
@@ -297,15 +298,15 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
                   <div className="preview" data-preview="">
                     <Preview />
                     <div className="preview-foot">
-                      <button type="button" className="btn btn-secondary btn-sm" id="reset-crop" disabled={!canReset} aria-keyshortcuts={ariaKeys(SHORTCUTS['reset-crop'])} onClick={resetCrop}>
-                        Reset to Center
-                      </button>
                       <p className="preview-note" data-enlarge-note="" aria-live="polite">
                         {showEnlarge ? enlargeNote(enlargeWidth, enlargeHeight) : ''}
                       </p>
+                      <button type="button" className="btn btn-secondary btn-sm" id="reset-crop" disabled={!canReset} aria-keyshortcuts={ariaKeys(SHORTCUTS['reset-crop'])} onClick={resetCrop}>
+                        Reset to Center
+                      </button>
                     </div>
                   </div>
-                </div>
+                </ScrollArea>
                 <div className="card-foot">
                   <button id="make-video" type="button" className="btn btn-primary btn-lg w-full" data-primary-action="" disabled={!makeReady} aria-keyshortcuts={ariaKeys(SHORTCUTS['make-video'])} onClick={() => void makeVideo('ask')}>
                     <span>Make Video</span>

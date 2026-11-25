@@ -66,10 +66,11 @@ if (built.includes('main.mjs')) {
   ok(handler !== -1 && (firstCode === -1 || handler < firstCode), `dist/electron/main.mjs does not install the no-dialog handler before other code (handler at line ${handler + 1}, other code at line ${firstCode + 1}); electron/no-dialog.ts must be main.ts's first import`);
 }
 
-// 1. One place asks about the system. The adapter's plain-Node modules (electron/tool/*.ts
-// other than index.ts) take the system as an argument so the tests can play any system;
-// their default is the one exception. index.ts, which touches Electron, is held to the rule.
-for (const file of [...mainFiles.filter((f) => !f.startsWith('tool/')), 'tool/index.ts']) {
+// 1. One place asks about the system (premium bar rule 77). The adapter's plain-Node modules (electron/tool/*.ts) take the
+// system as an argument so the tests can play any system, and their defaults come from platform.ts (NODE_PLATFORM,
+// NODE_ARCH): no file but platform.ts asks, tool/ included (S2V-031: locate.ts read process.platform itself, which the
+// starter's check let through as "the one exception").
+for (const file of mainFiles) {
   if (file === 'platform.ts') continue;
   const hits = read(join('electron', file))
     .split('\n')

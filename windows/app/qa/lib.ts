@@ -79,6 +79,9 @@ export interface OpenedPage {
   errors: string[];
 }
 
+/** The theme each page was opened to show, so `load` can say when the page did not take it. */
+const themes = new WeakMap<Page, 'light' | 'dark'>();
+
 export async function openPage(browser: Browser, { width, height, scale = 1, theme = 'dark', reducedMotion = 'no-preference', forcedColors = 'none' }: PageOptions): Promise<OpenedPage> {
   const context = await browser.newContext({
     viewport: { width, height },
@@ -95,6 +98,17 @@ export async function openPage(browser: Browser, { width, height, scale = 1, the
   // clipboard, which belongs to the person using it (build 2 overwrote it once): the write
   // is caught here instead, and the checks read what would have been copied from
   // window.__copied.
+  // The page chooses its theme from the saved choice, never from the system's setting (D-020), so a picture or an audit run
+  // "in the light theme" has to save that choice first. Setting only the colour scheme of the browser (as qa/shots.ts and
+  // qa/audit.ts did until S2V-031) photographed and audited the dark theme twice: the light pictures were the dark ones.
+  await context.addInitScript((chosen: string) => {
+    try {
+      // Dark is what a page with no saved choice starts in; a choice made later in the run (the toggle) is kept across a reload.
+      if (chosen === 'light' && localStorage.getItem('app.theme') === null) localStorage.setItem('app.theme', chosen);
+    } catch {
+      // The page then starts dark, and the theme check in openPage's callers says so.
+    }
+  }, theme);
   await context.addInitScript(() => {
     window.__copied = [];
     const capture = async (text: unknown): Promise<void> => {
@@ -111,6 +125,7 @@ export async function openPage(browser: Browser, { width, height, scale = 1, the
     };
   });
   const page = await context.newPage();
+  themes.set(page, theme);
   await page.clock.setFixedTime(FIXED_TIME);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -125,6 +140,10 @@ export async function load(page: Page, base: string, fixture = 'default', option
   await page.goto(`${base}/#fixture=${fixture}${options ? `&${options}` : ''}`);
   await page.waitForSelector('.app');
   await page.evaluate(() => document.fonts.ready);
+  // A run that says "light" and shows dark proves nothing about the light theme (S2V-031: it happened for a whole ticket).
+  const wanted = themes.get(page);
+  const shown = await page.evaluate(() => document.documentElement.dataset.theme);
+  if (wanted && shown !== wanted && !options.includes('theme=')) throw new Error(`the page was opened for the ${wanted} theme and shows the ${shown} theme`);
 }
 
 /** Calls the page made to the stand-in bridge, by name. */
@@ -135,7 +154,8 @@ export const modFor = (platform: string): 'Meta' | 'Control' => (platform === 'm
 
 export async function park(page: Page): Promise<void> {
   // Park the pointer on the empty title bar so nothing shows a hover state.
-  await page.mouse.move(300, 4);
+  const viewport = page.viewportSize();
+  await page.mouse.move(Math.min(300, (viewport?.width ?? 300) - 8), 4);
 }
 
 /** Resolves when no CSS transition or animation is running (spinners excepted). */
@@ -145,5 +165,8 @@ export async function settle(page: Page): Promise<void> {
     null,
     { timeout: 5000 },
   );
+  // A dialog or the palette fades in from a starting style on the frame after it opens, which `getAnimations` does not list until
+  // then: a contrast check taken mid-fade saw a colour at 90% opacity and failed one run in two (S2V-031). Wait for it to be whole.
+  await page.waitForFunction(() => [...document.querySelectorAll('.dialog, .palette, .scrim')].every((el) => getComputedStyle(el).opacity === '1' && !el.hasAttribute('data-starting-style')), null, { timeout: 5000 });
   await page.waitForTimeout(60);
 }

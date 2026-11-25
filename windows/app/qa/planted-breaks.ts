@@ -1,4 +1,4 @@
-// Proves each check of premium-bar rules 104 to 111 fails when its rule is broken. For every
+// Proves each check of premium-bar rules 104 to 111 (and, from S2V-031, the gates added for rules 5, 38, 97 and 111) fails when its rule is broken. For every
 // planted break it copies the project to a throwaway folder (node_modules linked, not copied),
 // makes one edit, runs the check that is meant to catch it and requires a non-zero exit with
 // the expected message in the output. A planted break the check lets through fails this run.
@@ -166,6 +166,65 @@ const PLANTED: Planted[] = [
       { run: viteBuild, passes: true },
       { run: node('qa/visual.ts'), fails: /pixels changed/ },
       { run: node('qa/visual.ts'), env: { VISUAL_THRESHOLD: '0.1' }, passes: true },
+    ],
+  },
+  {
+    rule: 77,
+    name: 'the tool locator asks which system this is itself',
+    check: 'pnpm shell:check',
+    steps: [
+      { edit: { file: 'electron/tool/locate.ts', from: 'const platform = options.platform ?? NODE_PLATFORM;', to: 'const platform = options.platform ?? process.platform;' } },
+      { run: shellCheck, fails: /electron\/tool\/locate\.ts asks which system this is/ },
+    ],
+  },
+  {
+    rule: 5,
+    name: 'the focus ring shows on the first paint and after a mouse click',
+    check: 'pnpm qa:audit (ring gate)',
+    steps: [
+      { edit: { file: 'src/styles/app.css', from: '  :root[data-modality="pointer"] :focus-visible,\n  :root[data-window="inactive"] :focus-visible {', to: '  :root[data-window="inactive"] :focus-visible {' } },
+      { run: viteBuild, passes: true },
+      { run: node('qa/audit.ts'), env: { AUDIT_ONLY: 'ring' }, fails: /a focus ring shows on the first paint/ },
+    ],
+  },
+  {
+    rule: 38,
+    name: 'the card scrolls at 200% zoom and nothing says there is more below',
+    check: 'pnpm qa:audit (overflow gate)',
+    steps: [
+      { edit: { file: 'src/styles/app.css', from: '  .scroll-more {\n    display: flex;', to: '  .scroll-more {\n    display: none !important;' } },
+      { run: viteBuild, passes: true },
+      { run: node('qa/audit.ts'), env: { AUDIT_ONLY: 'overflow' }, fails: /hides \d+px with no cue/ },
+    ],
+  },
+  {
+    rule: 38,
+    name: 'a button label is cut by its own box',
+    check: 'pnpm qa:audit (overflow gate)',
+    steps: [
+      { edit: { file: 'src/styles/app.css', from: '    padding: 0 12px;\n    border: var(--hairline) solid transparent;', to: '    max-width: 70px;\n    overflow: hidden;\n    padding: 0 12px;\n    border: var(--hairline) solid transparent;' } },
+      { run: viteBuild, passes: true },
+      { run: node('qa/audit.ts'), env: { AUDIT_ONLY: 'overflow' }, fails: /the label is wider than the button/ },
+    ],
+  },
+  {
+    rule: 97,
+    name: 'the status bar takes the height of the message it shows, so the work area moves between states',
+    check: 'pnpm qa:audit (overflow gate, stable)',
+    steps: [
+      { edit: { file: 'src/styles/app.css', from: '  .statusbar-layer:not([data-live]) {\n    pointer-events: none;', to: '  .statusbar-layer:not([data-live]) {\n    display: none;\n    pointer-events: none;' } },
+      { run: viteBuild, passes: true },
+      { run: node('qa/audit.ts'), env: { AUDIT_ONLY: 'overflow' }, fails: /\[stable\]/ },
+    ],
+  },
+  {
+    rule: 111,
+    name: 'the light pictures and the light audit runs are the dark theme',
+    check: 'pnpm qa:visual (shots)',
+    steps: [
+      { edit: { file: 'qa/lib.ts', from: "if (chosen === 'light' && localStorage.getItem('app.theme') === null) localStorage.setItem('app.theme', chosen);", to: 'void chosen;' } },
+      { run: viteBuild, passes: true },
+      { run: node('qa/shots.ts', 'qa/shots-planted', '--quick'), fails: /opened for the light theme and shows the dark theme/ },
     ],
   },
 ];

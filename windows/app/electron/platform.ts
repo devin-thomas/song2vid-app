@@ -23,6 +23,9 @@ export interface Colours {
 
 /** The system's name as the page knows it (Platform in src/bridge.ts). */
 export type SystemName = 'windows' | 'macos' | 'linux';
+/** Node's own names for the system and processor, as the tool folder is spelled (`win32-x64`): the defaults of electron/tool/locate.ts, which tests override. */
+export const NODE_PLATFORM: NodeJS.Platform = process.platform;
+export const NODE_ARCH: string = process.arch;
 export const SYSTEM: SystemName = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux';
 
 type SwitchesApp = Pick<App, 'commandLine'>;

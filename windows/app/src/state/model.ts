@@ -38,6 +38,17 @@ export interface FailureView {
   details: string;
   /** The same failure with the same inputs twice in a row (premium bar rule 69). */
   again: boolean;
+  /**
+   * The slot whose file is the problem (it is gone, unreadable, too small, or cannot be drawn): that slot is marked, Make Video
+   * waits until another file replaces it, and the enlarge note goes (S2V-031). Null when the failure is not about a loaded file.
+   */
+  of: 'audio' | 'image' | null;
+}
+
+/** A message that stays for a few seconds, in two lines: what was refused, and what to do instead. */
+export interface Notice {
+  first: string;
+  second: string;
 }
 
 /** The question a drop asks when it would replace something (SPEC 4a). */
@@ -68,8 +79,8 @@ export interface AppState {
   preview: PreviewState | null;
   job: JobView;
   failure: FailureView | null;
-  /** A message that stays for a few seconds ("Wait for the current video to finish."). */
-  notice: string | null;
+  /** A message that stays for a few seconds ("Wait for the current video to finish.", a refused drop). */
+  notice: Notice | null;
   replace: ReplaceQuestion | null;
   /** A valid drop is held over the window (the highlight). */
   dragging: boolean;
