@@ -280,7 +280,7 @@ fn update_over_http_reaches_a_stub_on_this_computer() -> () {
 }
 
 #[test]
-fn make_and_encoders_check_their_usage_and_say_they_are_not_built_yet() -> () {
+fn make_and_encoders_check_their_usage_and_encoders_says_it_is_not_built_yet() -> () {
     let usage: Run = run(&["make", "a.wav", "b.png", "-s", "5:4", "-j"], &[], None);
     assert_eq!(usage.status, 2);
     assert_eq!(
@@ -290,13 +290,11 @@ fn make_and_encoders_check_their_usage_and_say_they_are_not_built_yet() -> () {
     assert_eq!(run(&["make", "a.wav", "b.png", "-wn"], &[], None).status, 2);
     assert_eq!(run(&["make", "a.wav"], &[], None).status, 2);
     assert_eq!(run(&["encoders", "unused", "-j"], &[], None).status, 2);
-    // Valid command lines reach the part that S2V-026 and S2V-027 write.
-    for args in [vec!["make", "a.wav", "b.png"], vec!["encoders"]] {
-        let result: Run = run(&args, &[], None);
-        assert_eq!(result.status, 5, "{args:?}");
-        assert_eq!(
-            result.stderr,
-            "This build of song2vid.exe can't make videos yet.\n"
-        );
-    }
+    // `make` is S2V-026's (tests/make.rs); `encoders` is S2V-027's.
+    let result: Run = run(&["encoders"], &[], None);
+    assert_eq!(result.status, 5);
+    assert_eq!(
+        result.stderr,
+        "This build of song2vid.exe can't make videos yet.\n"
+    );
 }

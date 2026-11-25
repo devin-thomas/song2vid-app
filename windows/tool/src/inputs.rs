@@ -64,7 +64,7 @@ impl InputFile {
 
 /// The path without the `\\?\` prefix when it fits in 259 characters, which every program accepts.
 #[cfg(windows)]
-fn shortest_form(path: PathBuf) -> PathBuf {
+pub(crate) fn shortest_form(path: PathBuf) -> PathBuf {
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
     const MAX_PLAIN_PATH: usize = 259;
@@ -85,7 +85,7 @@ fn shortest_form(path: PathBuf) -> PathBuf {
 }
 
 #[cfg(not(windows))]
-fn shortest_form(path: PathBuf) -> PathBuf {
+pub(crate) fn shortest_form(path: PathBuf) -> PathBuf {
     path
 }
 

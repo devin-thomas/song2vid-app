@@ -1,4 +1,4 @@
-// Generates the media for the Windows command's parity check (S2V-025). Host tools only: this runs on
+// Generates the media for the Windows command's parity check (S2V-025, S2V-026). Host tools only: this runs on
 // the Mac, and nothing it writes is committed or shipped. The pictures are four coloured quadrants
 // as stored (red top left, green top right, blue bottom left, yellow bottom right), so a wrong turn or
 // flip shows in the colours; the orientation tag is written by ImageIO, the same writer the Mac's own
@@ -37,6 +37,49 @@ func drawQuadrants(width: Int, height: Int, transparent: Bool = false, halfTrans
         context.clear(CGRect(x: halfW, y: 0, width: width - halfW, height: height))
     }
     return context.makeImage()!
+}
+
+/// A picture with smooth colour, fine lines and curved edges (not flat blocks), so a scaler or an
+/// encoder that smears or bands shows in the comparison.
+func drawScene(width: Int, height: Int) -> CGImage {
+    let space = CGColorSpace(name: CGColorSpace.sRGB)!
+    let context = CGContext(
+        data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
+        bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+    )!
+    let w = CGFloat(width), h = CGFloat(height)
+    let sky = CGGradient(colorsSpace: space, colors: [
+        CGColor(srgbRed: 0.05, green: 0.10, blue: 0.35, alpha: 1), CGColor(srgbRed: 0.95, green: 0.55, blue: 0.25, alpha: 1),
+    ] as CFArray, locations: [0, 1])!
+    context.drawLinearGradient(sky, start: CGPoint(x: 0, y: h), end: CGPoint(x: w, y: 0), options: [])
+    let glow = CGGradient(colorsSpace: space, colors: [
+        CGColor(srgbRed: 1, green: 1, blue: 0.8, alpha: 1), CGColor(srgbRed: 1, green: 1, blue: 0.8, alpha: 0),
+    ] as CFArray, locations: [0, 1])!
+    context.drawRadialGradient(glow, startCenter: CGPoint(x: w * 0.7, y: h * 0.65), startRadius: 0,
+                               endCenter: CGPoint(x: w * 0.7, y: h * 0.65), endRadius: h * 0.4, options: [])
+    context.setStrokeColor(CGColor(srgbRed: 0.1, green: 0.1, blue: 0.1, alpha: 0.8))
+    context.setLineWidth(max(1, w / 800))
+    for index in stride(from: 0, to: 60, by: 1) {
+        let x = w * CGFloat(index) / 60
+        context.move(to: CGPoint(x: x, y: 0))
+        context.addLine(to: CGPoint(x: x + h * 0.3, y: h))
+    }
+    context.strokePath()
+    context.setFillColor(CGColor(srgbRed: 0.1, green: 0.5, blue: 0.2, alpha: 1))
+    context.fillEllipse(in: CGRect(x: w * 0.1, y: h * 0.1, width: w * 0.3, height: h * 0.4))
+    context.setFillColor(CGColor(srgbRed: 0.8, green: 0.1, blue: 0.2, alpha: 1))
+    context.fill(CGRect(x: w * 0.45, y: h * 0.15, width: w * 0.2, height: h * 0.25))
+    return context.makeImage()!
+}
+
+func writeScene(_ name: String, _ type: UTType, _ width: Int, _ height: Int, orientation: Int = 1) throws {
+    let url = folder.appendingPathComponent(name)
+    guard let destination = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else {
+        throw NSError(domain: "media", code: 1)
+    }
+    let properties: [CFString: Any] = orientation == 1 ? [:] : [kCGImagePropertyOrientation: orientation]
+    CGImageDestinationAddImage(destination, drawScene(width: width, height: height), properties as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else { throw NSError(domain: "media", code: 2) }
 }
 
 func writeImage(_ name: String, _ type: UTType, _ width: Int, _ height: Int, orientation: Int = 1,
@@ -94,6 +137,16 @@ try writeImage("tiny-15x40.png", .png, 15, 40)
 try writeImage("square-640x640.png", .png, 640, 640)
 try writeImage("preview-3000x1500.png", .png, 3000, 1500)
 try writeImage("preview-3001x2000.jpg", .jpeg, 3001, 2000)
+// A scene with gradients, thin lines and curves, for comparing the video's quality.
+try writeScene("scene-1600x1200.png", .png, 1600, 1200)
+try writeScene("scene-1920x1080.jpg", .jpeg, 1920, 1080)
+try writeScene("scene-tall-1200x2000.png", .png, 1200, 2000)
+try writeScene("scene-3000x2000.jpg", .jpeg, 3000, 2000)
+try writeScene("scene-3860x2160.png", .png, 3860, 2160)
+// The same scene with a turn tag, in each container that carries one; the grid is large enough for the HEIC writer to tile it.
+try writeScene("scene-or6.jpg", .jpeg, 1200, 800, orientation: 6)
+try writeScene("scene-or8.heic", .heic, 1600, 800, orientation: 8)
+try writeScene("scene-grid-or6.heic", .heic, 3000, 1500, orientation: 6)
 // A name that looks like the other kind of file (the type comes from the contents).
 try writeImage("picture-named-like-a-song.mp3", .png, 320, 200)
 

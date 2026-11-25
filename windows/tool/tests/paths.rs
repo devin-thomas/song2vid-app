@@ -144,3 +144,97 @@ fn a_path_over_260_characters_works() -> () {
         .collect();
     assert!(leftovers.is_empty(), "{leftovers:?}");
 }
+
+/// `make` writes its own files through FFmpeg, so the names reach FFmpeg too: the song, the
+/// picture, the output and the folder it sits in. Only Windows has the encoder.
+#[cfg(windows)]
+#[test]
+fn make_works_for_every_name_and_for_folders_named_like_patterns() -> () {
+    if skip_without_helpers() {
+        return;
+    }
+    let work: Workspace = Workspace::new();
+    for name in NAMES {
+        let song_name: String = format!("{name}.wav");
+        let picture_name: String = format!("{name}.png");
+        work.wav(&song_name, 1.0, 8_000, 1);
+        work.png(&picture_name, 200, 100, 1);
+        // The folder holds the name too: FFmpeg's sequence patterns (%d) and options must not be read
+        // out of a folder or file name.
+        let folder_name: String = format!("{name} folder");
+        std::fs::create_dir_all(work.path(&folder_name)).expect("a folder");
+        let output_name: String = format!("{name}.mp4");
+        let relative_out: String = format!("./{folder_name}/{output_name}");
+        let result: Run = run(
+            &[
+                "make",
+                &format!("./{song_name}"),
+                &format!("./{picture_name}"),
+                "-o",
+                &relative_out,
+                "-s",
+                "1:1",
+                "-r",
+                "480p",
+                "-j",
+            ],
+            &[],
+            Some(&work.folder),
+        );
+        assert_eq!(result.status, 0, "{name}: {}", result.both());
+        let lines: Vec<&str> = result.stdout.lines().collect();
+        let last: serde_json::Value = serde_json::from_str(lines.last().expect("a line")).unwrap();
+        assert_eq!(last["output"]["name"], output_name.as_str(), "{name}");
+        assert!(
+            work.path(&folder_name).join(&output_name).is_file(),
+            "{name}: no video"
+        );
+        assert!(
+            !leaks(&result.both(), &work.folder),
+            "{name} leaked a folder"
+        );
+        let leftovers: Vec<String> = std::fs::read_dir(work.path(&folder_name))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|file: &String| file.starts_with(".song2vid-"))
+            .collect();
+        assert!(leftovers.is_empty(), "{name}: {leftovers:?}");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn make_works_in_a_path_over_260_characters() -> () {
+    if skip_without_helpers() {
+        return;
+    }
+    let work: Workspace = Workspace::new();
+    let mut deep: PathBuf = work.folder.clone();
+    for part in 0..6 {
+        deep.push(format!(
+            "a-folder-with-a-long-name-to-pass-the-limit-{part}-{}",
+            "x".repeat(30)
+        ));
+    }
+    std::fs::create_dir_all(&deep).expect("a deep folder");
+    common::write_wav(&deep.join("long song.wav"), 1.0, 8_000, 1);
+    common::write_png(&deep.join("long picture.png"), 200, 100, 1, false);
+    let song: String = deep.join("long song.wav").to_string_lossy().into_owned();
+    let picture: String = deep.join("long picture.png").to_string_lossy().into_owned();
+    let out: String = deep.join("long video.mp4").to_string_lossy().into_owned();
+    assert!(out.len() > 260);
+    let made: Run = run(
+        &["make", &song, &picture, "-o", &out, "-r", "480p", "-j"],
+        &[],
+        None,
+    );
+    assert_eq!(made.status, 0, "{}", made.both());
+    assert!(deep.join("long video.mp4").is_file());
+    assert!(!leaks(&made.both(), &work.folder));
+    let leftovers: Vec<String> = std::fs::read_dir(&deep)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name: &String| name.starts_with(".song2vid-"))
+        .collect();
+    assert!(leftovers.is_empty(), "{leftovers:?}");
+}

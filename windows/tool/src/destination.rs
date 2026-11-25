@@ -29,6 +29,11 @@ pub struct TemporaryFile {
 }
 
 impl TemporaryFile {
+    /// Where the file is, for a program that writes it (FFmpeg does, in `make`).
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn write_all(&mut self, bytes: &[u8]) -> Result<(), CommandError> {
         let Some(file) = self.file.as_mut() else {
             return Err(CommandError::output_folder_not_writable());
@@ -39,7 +44,7 @@ impl TemporaryFile {
             .map_err(|error: std::io::Error| -> CommandError { write_error(&error) })
     }
 
-    /// Closes the file, so it can be moved.
+    /// Closes the file, so it can be moved or written by another program.
     pub fn finish(&mut self) -> () {
         self.file = None;
     }
@@ -55,6 +60,11 @@ impl Drop for TemporaryFile {
 }
 
 impl Destination {
+    /// The final name, in its folder, as the system names it.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// Checks the output name and folder. Without `overwrite`, a file already there is an error.
     /// Nothing is created or changed.
     pub fn plan(
@@ -104,8 +114,22 @@ impl Destination {
 
     /// Creates the temporary file beside the final name.
     pub fn create_temporary(&self) -> Result<TemporaryFile, CommandError> {
+        self.create_named(None)
+    }
+
+    /// Creates a working file beside the final name (`make` keeps the still picture and the
+    /// encoded group there). It is removed like the temporary file, and is never published.
+    pub fn create_scratch(&self, tag: &str) -> Result<TemporaryFile, CommandError> {
+        self.create_named(Some(tag))
+    }
+
+    fn create_named(&self, tag: Option<&str>) -> Result<TemporaryFile, CommandError> {
         let random: String = platform::random_hex().ok_or_else(CommandError::preview_failed)?;
-        let path: PathBuf = self.folder.join(format!(".song2vid-{random}.tmp"));
+        let name: String = match tag {
+            Some(tag) => format!(".song2vid-{random}.{tag}.tmp"),
+            None => format!(".song2vid-{random}.tmp"),
+        };
+        let path: PathBuf = self.folder.join(name);
         let file: File = OpenOptions::new()
             .write(true)
             .create_new(true)

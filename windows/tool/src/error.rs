@@ -175,6 +175,19 @@ impl CommandError {
         Self::new(ErrorCode::DiskFull, "Not enough disk space.")
     }
 
+    /// The chosen Codec can't be made on this computer (SPEC sections 23 and 24.6).
+    pub fn codec_unavailable(title: &str) -> CommandError {
+        Self::new(
+            ErrorCode::CodecUnavailable,
+            &format!("This computer can't make {title} videos."),
+        )
+    }
+
+    /// The video could not be made after the files were accepted (SPEC section 14.6).
+    pub fn export_failed() -> CommandError {
+        Self::new(ErrorCode::ExportFailed, "Couldn't make the video.")
+    }
+
     pub fn preview_failed() -> CommandError {
         Self::new(ErrorCode::ExportFailed, "Couldn't make the preview.")
     }

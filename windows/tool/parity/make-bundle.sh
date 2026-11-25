@@ -6,7 +6,12 @@
 #
 #   windows/tool/parity/make-bundle.sh <mac song2vid command> <new folder> [--perf]
 #
-# --perf adds the large files for the timing and process checks (about 170 MB).
+# --perf adds the large files for the timing and process checks (about 200 MB).
+#
+# S2V-026 adds `make`: the dry-run lines and error answers go into cases.tsv like the rest (mode
+# make-dry compares them with the Encoder's names swapped), and videos.tsv lists inputs whose
+# videos the Mac command made (videos/<id>.mp4, its result and an ffprobe of it), for the
+# Windows command to make again and for compare-videos.sh to compare by SSIM.
 set -euo pipefail
 command="${1:?usage: make-bundle.sh <mac song2vid command> <new folder> [--perf]}"
 bundle="${2:?usage: make-bundle.sh <mac song2vid command> <new folder> [--perf]}"
@@ -40,6 +45,10 @@ if [[ "$perf" == "--perf" ]]; then
   ff -i "$bundle/perf/ten-minutes.wav" -c:a aac -b:a 256k "$bundle/perf/ten-minutes.m4a"
   # Small to store and slow to decode: a picture of 196 million pixels, for the process checks.
   ff -f lavfi -i "color=c=0x336699:s=14000x14000" -frames:v 1 "$bundle/perf/slow-14000.png"
+  # A three-minute song with some body to it (tones and noise), for the speed checks of make.
+  ff -f lavfi -i "sine=f=220:sample_rate=44100,volume=0.2" -f lavfi -i "anoisesrc=color=pink:amplitude=0.15:sample_rate=44100" \
+    -f lavfi -i "sine=f=1337:sample_rate=44100,volume=0.05,tremolo=f=4:d=0.9" \
+    -filter_complex "[0][1][2]amix=inputs=3:normalize=0,pan=stereo|c0=c0|c1=0.7*c0" -t 180 -c:a pcm_s16le "$bundle/perf/three-minutes.wav"
 fi
 
 cases="$bundle/cases.tsv"
@@ -161,10 +170,88 @@ add exact preview-folder-missing preview or6.jpg -o missing-folder/x.png -w -j
 add exact preview-output-is-input preview fit-1000x800.png -o fit-1000x800.png -w -j
 add exact preview-cancel-on-closed-stdin preview or6.jpg -o out/x.png -w -j -E
 
+# make: the usage rules, then everything that is checked before a file is written, then the dry
+# run for every Frame Shape. The Windows command names its Encoder differently, so these cases
+# are compared with "Apple encoder" read as "software encoder" (mode make-dry).
+printf 'existing output' > "$media/out/exists.mp4"
+add exact make-error-song-missing make gone.wav fit-1000x800.png -j
+add exact make-error-image-missing make tone-44k-stereo.wav gone.png -j
+add exact make-error-both-missing make gone.wav gone.png
+add exact make-error-song-unreadable make not-a-song.mp3 fit-1000x800.png -j
+add exact make-error-image-unreadable make tone-44k-stereo.wav not-a-picture.png -j
+add exact make-error-image-is-a-song make tone-44k-stereo.wav tone-22k-mono.wav -j
+add exact make-error-song-is-a-picture make fit-1000x800.png fit-1000x800.png -j
+add exact make-error-song-folder make a-folder.wav fit-1000x800.png -j
+add exact make-error-image-folder make tone-44k-stereo.wav a-folder -j
+add exact make-error-too-small make tone-44k-stereo.wav tiny-15x40.png -s original -j
+add exact make-error-too-small-text make tone-44k-stereo.wav tiny-15x40.png -s original
+add exact make-error-not-mp4 make tone-44k-stereo.wav fit-1000x800.png -o out/x.mov -j
+add exact make-error-not-mp4-short make tone-44k-stereo.wav fit-1000x800.png -o .mp4 -j
+add exact make-error-not-mp4-text make tone-44k-stereo.wav fit-1000x800.png -o out/x.txt
+add exact make-error-folder-missing make tone-44k-stereo.wav fit-1000x800.png -o missing-folder/x.mp4 -j
+add exact make-error-folder-missing-text make tone-44k-stereo.wav fit-1000x800.png -o missing-folder/x.mp4
+add exact make-error-exists make tone-44k-stereo.wav fit-1000x800.png -o out/exists.mp4 -j
+add exact make-error-exists-text make tone-44k-stereo.wav fit-1000x800.png -o out/exists.mp4
+add exact make-error-exists-dry-run make tone-44k-stereo.wav fit-1000x800.png -o out/exists.mp4 -n -j
+add exact make-error-output-is-input make tone-44k-stereo.wav fit-1000x800.png -o fit-1000x800.png -w -j
+add exact make-error-output-is-song make tone-44k-stereo.wav fit-1000x800.png -o tone-44k-stereo.wav -w -j
+add exact make-error-output-is-a-folder make tone-44k-stereo.wav fit-1000x800.png -o a-folder -w -j
+add exact make-error-order-song-before-output make not-a-song.mp3 fit-1000x800.png -o out/x.mov -j
+add exact make-error-order-too-small-before-output make tone-44k-stereo.wav tiny-15x40.png -s original -o out/x.mov -j
+add exact make-error-order-output-before-codec make tone-44k-stereo.wav fit-1000x800.png -o out/x.mov -C hevc -j
+add exact make-error-cancel-on-closed-stdin make tone-44k-stereo.wav fit-1000x800.png -o out/x.mp4 -w -E
+add exact make-error-cancel-on-closed-stdin-json make tone-44k-stereo.wav fit-1000x800.png -o out/x.mp4 -w -E -j
+dry_images=(fit-1000x800.png tall-1000x5000.png big-4000x3000.png small-16x16.png odd-1001x801.png trim-3860x2160.png
+  scale-4000x2000.png or6.jpg or8.heic grid-or6.heic transparent.png scene-1600x1200.png still.gif)
+for image in "${dry_images[@]}"; do
+  for shape_resolution in "16:9 480p" "9:16 1080p" "1:1 2160p" "4:3 480p" "original -"; do
+    read -r shape resolution <<< "$shape_resolution"
+    args=(-s "$shape"); [[ "$resolution" == "-" ]] || args+=(-r "$resolution")
+    label="${image}-${shape/:/x}-${resolution}"
+    add make-dry "make-dry-text-$label" make tone-44k-stereo.wav "$image" "${args[@]}" -n -o "out/dry.mp4"
+    add make-dry "make-dry-json-$label" make tone-44k-stereo.wav "$image" "${args[@]}" -n -o "out/dry.mp4" --json
+  done
+done
+add make-dry make-dry-crop make tone-44k-stereo.wav big-4000x3000.png -s 4:3 -c 0.2,0.8 -r 480p -n -o out/dry.mp4
+add make-dry make-dry-default-name make tone-22k-mono.wav fit-1000x800.png -n
+add make-dry make-dry-default-name-json make tone-48k-stereo.aiff fit-1000x800.png -n -j
+add make-dry make-dry-overwrite make tone-44k-stereo.wav fit-1000x800.png -o out/exists.mp4 -w -n -j
+add make-dry make-dry-long-song make tone-8k-stereo.wav scene-1600x1200.png -r 480p -n -j
+
 # Run every case with the Mac command in the media folder.
 while IFS=$'\t' read -r mode id args; do
   IFS=$'\t' read -r -a argv <<< "$args"
   (cd "$media" && "$command" ${argv[@]+"${argv[@]}"} > "$bundle/expected/$id.out" 2> "$bundle/expected/$id.err" < /dev/null; echo $? > "$bundle/expected/$id.status") || true
   if [[ "$mode" == preview && -f "$media/out/$id.png" ]]; then mv "$media/out/$id.png" "$bundle/expected/$id.png"; fi
 done < "$cases"
-echo "make-bundle: $(wc -l < "$cases" | tr -d ' ') cases in $bundle"
+
+# The videos the Mac command makes, for the Windows command to make again. One line each: id, song,
+# image, Frame Shape, Resolution ("-" for none). The Mac's result, its ffprobe and the file go in videos/.
+mkdir -p "$bundle/videos"
+videos="$bundle/videos.tsv"
+: > "$videos"
+video() { printf '%s\t%s\t%s\t%s\t%s\n' "$@" >> "$videos"; }
+# The first five are the five inputs of SPEC section 31: one per Frame Shape, at 1080p, from a scene with
+# gradients, thin lines and curves. (Flat colour blocks are a poor comparison: an SSIM between two lossy
+# encodes of a red-green edge is low whichever encoder is closer to the picture.) The rest cover turns,
+# containers, transparency, 2160p, a song that needs the repeated group many times, and each audio rule.
+video v-16x9 tone-44k-stereo.wav scene-1600x1200.png 16:9 1080p
+video v-9x16 tone-44k-stereo.wav scene-tall-1200x2000.png 9:16 1080p
+video v-1x1 tone-44k-stereo.wav scene-1920x1080.jpg 1:1 1080p
+video v-4x3 tone-44k-stereo.wav scene-1600x1200.png 4:3 1080p
+video v-original tone-44k-stereo.wav scene-3000x2000.jpg original -
+video v-original-trimmed tone-22k-mono.wav scene-3860x2160.png original -
+video v-jpeg-turned tone-44k-stereo.wav scene-or6.jpg 1:1 480p
+video v-heic-turned tone-44k-stereo.wav scene-or8.heic 16:9 480p
+video v-heic-grid tone-44k-stereo.wav scene-grid-or6.heic 9:16 480p
+video v-transparent tone-44k-stereo.wav transparent.png 16:9 480p
+video v-2160p tone-44k-stereo.wav scene-1600x1200.png 16:9 2160p
+video v-long-song tone-8k-stereo.wav scene-1920x1080.jpg 1:1 480p
+video v-mono-22k tone-22k-mono.wav scene-1600x1200.png 4:3 480p
+video v-aac-source tone-aac.m4a scene-1920x1080.jpg 16:9 1080p
+while IFS=$'\t' read -r id song image shape resolution; do
+  args=(-s "$shape"); [[ "$resolution" == "-" ]] || args+=(-r "$resolution")
+  (cd "$media" && "$command" make "$song" "$image" "${args[@]}" -o "$bundle/videos/$id.mp4" --json > "$bundle/videos/$id.json" < /dev/null) || echo "make-bundle: the Mac command failed for $id" >&2
+  ffprobe -v error -show_streams -show_format -print_format json "$bundle/videos/$id.mp4" > "$bundle/videos/$id.probe.json"
+done < "$videos"
+echo "make-bundle: $(wc -l < "$cases" | tr -d ' ') cases and $(wc -l < "$videos" | tr -d ' ') videos in $bundle"
