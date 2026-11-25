@@ -310,7 +310,7 @@ Goal: an agent that has only `https://song2vid.pages.dev` can find the public pa
 
 **Three facts a visitor may ask an agent, and where each lives in the HTML the server sends (no script needed):**
 1. What Song2Vid is, and that it is free: `/`.
-2. That it needs macOS 14 or later, and the current version (1.1.0): `/`. The version shown must equal `song2vid --version`.
+2. That it needs macOS 14 or later on a Mac and Windows 10 or 11 (64-bit) on a PC, and the current version (1.2.0): `/`. The version shown must equal `song2vid --version`. Changed in 1.2.0 (section 30); 1.1.0 had only the macOS requirement and version 1.1.0.
 3. How to make a video with the command, and the exit status and error code when it fails: `/docs/` and `/agent.md`.
 
 **What must stay out of every page and file:** plans for later versions, anything not yet released, the owner's sample files and their names, tokens, emails, IP addresses and local paths. The site has no drafts and no private records, and a check keeps it that way (see the allowlist below).
@@ -339,7 +339,7 @@ Goal: an agent that has only `https://song2vid.pages.dev` can find the public pa
 
 **Outside checks (after the deploy), with `curl` against `song2vid.pages.dev`:** `/` and `/docs/` return 200, `text/html`, with their own canonical link; `/docs` redirects permanently (308) to `/docs/`; `/llms.txt`, `/sitemap.xml`, `/robots.txt`, `/index.md`, `/docs.md`, `/agent.md` return 200 with the types above; the three facts are in the served HTML; a made-up address (for example `/roadmap`) returns 404; no response contains a local path, email or the sample files' names.
 
-**Proof with a separate agent.** A new Claude Code session that has not seen this repo gets only the site's address and two questions. (1) "Using only https://song2vid.pages.dev, what version of Song2Vid is current and what macOS does it need? Give the address of the page you used." It must answer 1.1.0 and macOS 14 or later, and cite `/`. (2) "What changes are planned for the next version of Song2Vid?" It must say the site does not publish that, without guessing. The coordinator opens the cited page and confirms the fact is there. On a pass, the `agent-ready-website` step gets its `verification` object in the private progress file.
+**Proof with a separate agent.** A new Claude Code session that has not seen this repo gets only the site's address and two questions. (1) "Using only https://song2vid.pages.dev, what version of Song2Vid is current and what does it need to run on a Mac and on Windows? Give the address of the page you used." It must answer 1.2.0, macOS 14 or later and Windows 10 or 11 (64-bit), and cite `/`. (2) "What changes are planned for the next version of Song2Vid?" It must say the site does not publish that, without guessing. The coordinator opens the cited page and confirms the fact is there. On a pass, the `agent-ready-website` step gets its `verification` object in the private progress file.
 
 ## 21. Definition of done (agent-ready site)
 
@@ -566,7 +566,8 @@ About shows Song2Vid 1.2.0, the licence (MIT), a link to the repository, and the
 
 ## 30. Site, Agent Guide and docs
 
-- **Download page:** two downloads, **Download for Mac** and **Download for Windows**, each with its requirement ("macOS 14 or later" and "Windows 10 or 11, 64-bit") and its first-open step (Open Anyway; More info, then Run anyway). It mentions HEVC once. The version line reads 1.2.0.
+- **Download page:** two downloads, **Download for Mac** (`Song2Vid-1.2.0.zip`) and **Download for Windows** (`Song2Vid-1.2.0-windows-x64.zip`), each linking the latest release's asset and each with its requirement ("macOS 14 or later" and "Windows 10 or 11, 64-bit") and its first-open step (Open Anyway; More info, then Run anyway). It mentions HEVC once. The version line reads 1.2.0. Checks: both requirements, both asset links, the version equal to `--version`, and exactly one mention of HEVC are tested by `scripts/check-site-ready.py`.
+- **Help coverage:** every option in the Mac command's `--help` and in the Windows help texts (`windows/tool/src/help/`) is on the docs page, and those texts equal the Mac command's help byte for byte.
 - **Section 20's facts** change: fact 2 becomes both requirements and the version 1.2.0. The site checks and the separate-agent proof use the new fact.
 - **Agent Guide** (`skills/song2vid/SKILL.md`): Windows install and the PATH line, the Windows window route by its control names in order, `--codec`, `encoders`, `preview`, and how to pick a Codec (H.264 unless the person asks for HEVC or smaller files, and only if `encoders` says it is available). The `--cancel-on-eof` option is documented for programs, not suggested for agents.
 - **Docs page:** every addition in section 24, the key table with the version each key arrived in, and the Windows install.
