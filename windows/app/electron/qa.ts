@@ -2,17 +2,19 @@
 // only when the app is not packaged and a --qa-* flag is present; the packaged app does not
 // include it (scripts/package.ts leaves it out, and the main bundle never imports it).
 //
-//   --qa-typing=<out.json>          key-event-to-frame latency while typing, short and long draft, and palette open time
-//   --qa-type-then-wait=<out.json>  type a known text into the body, report the PID and last key time, then stay open
-//                                   (the kill test terminates this process from outside)
-//   --qa-read-body=<out.json>       report the restored body text, then quit
-//   --qa-long=<n>                   with --qa-type-then-wait: start from a body of n characters
+//   --qa-typing=<out.json>          the palette shortcut to the frame that shows it (Song2Vid has no text
+//                                   field, so there is no typing run: rules 27, 29, 41, 41b and 44 are N/A)
+//   --qa-choose-codec=<out.json>    choose HEVC in the page by its own control, report the PID and the time of
+//                                   the choice, then stay open (the kill test terminates this process from outside)
+//   --qa-read-codec=<out.json>      report the Codec the page shows, then quit
 //   --qa-marks=<out.json>           launch and first-frame times, the display, and the result of --qa-bench
 //   --qa-bench=<script.js>          run a scripted workload inside the page (measure/workload.js) and record what it returns
 //   --qa-exit-after=<seconds>       quit after this long (the measurement harness uses it)
 //
-// The typing and kill tests need one text field with the id in FIELD and a saved
-// document shaped by draftJson(). Change both when the app's main field changes.
+// What these runs choose is the Codec, the one thing Song2Vid saves on a click (the theme and the
+// window's place are the shell's; the last save folder is saved when a video is). The choice is read
+// back after a relaunch by the page's own control, so the run proves the whole path: the click, the
+// bridge, the main process's write and the next launch's bootstrap.
 //
 // Measurement comes from @uppercut-labs/electron-qa-measurements, a development dependency
 // imported here at run time and never bundled. Every key goes into the page through the
@@ -33,14 +35,11 @@ type Kit = typeof import('@uppercut-labs/electron-qa-measurements');
 type WriteState = (key: string, json: string) => void;
 export interface QaOptions {
   launchedAt: number;
-  draftKey: string;
   system: 'windows' | 'macos' | 'linux';
 }
 
-/** The field these tests type into: the note's body. */
-const FIELD = '#field-body';
-/** The saved document the page restores from, holding `body` in its main text field. */
-const draftJson = (title: string, body: string) => JSON.stringify({ v: 1, title, body, savedAt: Date.now() });
+/** The Codec choices in the page: one radio group, each choice carrying its value. */
+const CODEC = (value: string) => `[data-group="codec"] [data-value="${value}"]`;
 
 function arg(name: string): string | null {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -79,33 +78,21 @@ async function protocolInjector(win: BrowserWindow, kit: Kit): Promise<KeyInject
   return kit.createProtocolInjector(send);
 }
 
-async function typingScenario(win: BrowserWindow, outFile: string, writeState: WriteState, options: QaOptions): Promise<void> {
+async function typingScenario(win: BrowserWindow, outFile: string, options: QaOptions): Promise<void> {
   const kit = await kitOf();
   const display = screen.getDisplayMatching(win.getBounds());
-  let injector = await protocolInjector(win, kit);
+  const injector = await protocolInjector(win, kit);
   await sleep(800);
-
-  // An empty draft: 220 keys into the body.
-  const emptyDraft = await kit.measureTyping(windowFor(win), { field: FIELD, text: kit.generateText(220), injector });
 
   // The palette: Ctrl+K (Command+K on macOS) to the frame that shows it.
   const palette = await kit.measureCommandPalette(windowFor(win), { openSelector: '.palette', injector, modifier: options.system === 'macos' ? 'meta' : 'control' });
 
-  // A long draft: restart the page with about 20,000 characters already in the body.
-  writeState(options.draftKey, draftJson('Long draft', kit.generateText(20000)));
-  await kit.reloadPage(windowFor(win));
-  injector = await protocolInjector(win, kit);
-  await sleep(800);
-  const longDraft = await kit.measureTyping(windowFor(win), { field: FIELD, text: kit.generateText(220), injector });
-
-  const gate = await judge({ typing: { emptyDraft, longDraft }, palette, windowFocusedAfterTyping: win.isFocused() });
+  const gate = await judge({ typing: {}, typingNotApplicable: 'Song2Vid has no text field (SPEC 28: rules 27, 29, 41, 41b and 44 are N/A)', palette, windowFocusedAfterTyping: win.isFocused() });
   const report = {
     at: new Date().toISOString(),
     display: { hz: display.displayFrequency, scale: display.scaleFactor },
     window: kit.describeWindow(windowFor(win)),
     note: 'Times run from the key event timestamp to the end of the frame that rendered the change, on the page clock. They do not include the compositor or the display.',
-    emptyDraft,
-    longDraft,
     palette,
     gate,
     passed: gate.passed,
@@ -113,25 +100,35 @@ async function typingScenario(win: BrowserWindow, outFile: string, writeState: W
   await kit.writeJsonReport(path.resolve(outFile), report);
 }
 
-async function typeThenWait(win: BrowserWindow, outFile: string, writeState: WriteState, options: QaOptions): Promise<void> {
-  const kit = await kitOf();
-  const longCount = Number(arg('qa-long') ?? 0);
-  if (longCount > 0) {
-    writeState(options.draftKey, draftJson('Kill test', kit.generateText(longCount)));
-    await kit.reloadPage(windowFor(win));
+/** Wait until the page has a Codec control that can take a choice (the first paint may still be coming). */
+async function waitForCodecControl(win: BrowserWindow): Promise<void> {
+  for (let i = 0; i < 100; i += 1) {
+    if (await win.webContents.executeJavaScript(`Boolean(document.querySelector('${CODEC('hevc')}'))`)) return;
+    await sleep(100);
   }
-  const injector = await protocolInjector(win, kit);
-  await sleep(800);
-  const text = `Kill test ${Date.now()}: this sentence must survive the process being terminated. `;
-  const record = await kit.typeAndRecord(windowFor(win), { field: FIELD, text, injector });
-  fs.writeFileSync(path.resolve(outFile), JSON.stringify(record));
+  throw new Error('the page has no Codec control');
 }
 
-async function readBody(win: BrowserWindow, outFile: string): Promise<void> {
-  const kit = await kitOf();
+/** Choose HEVC the way a person does (a click on its choice), so the whole path to the saved file is exercised. */
+async function chooseCodec(win: BrowserWindow, outFile: string): Promise<void> {
+  await waitForCodecControl(win);
+  // The HEVC choice is disabled until the Encoder report says this computer can make it.
+  for (let i = 0; i < 100; i += 1) {
+    if (await win.webContents.executeJavaScript(`!document.querySelector('${CODEC('hevc')}').disabled`)) break;
+    await sleep(100);
+  }
+  await win.webContents.executeJavaScript(`document.querySelector('${CODEC('hevc')}').click(); true`);
+  const at = Date.now();
+  fs.writeFileSync(path.resolve(outFile), JSON.stringify({ pid: process.pid, at, expected: 'hevc' }));
+}
+
+const readCodec = (win: BrowserWindow): Promise<string | null> =>
+  win.webContents.executeJavaScript(`document.querySelector('[data-group="codec"] [aria-checked="true"]')?.getAttribute('data-value') ?? null`) as Promise<string | null>;
+
+async function readCodecScenario(win: BrowserWindow, outFile: string): Promise<void> {
+  await waitForCodecControl(win);
   await sleep(600);
-  const body = await kit.readField(windowFor(win), FIELD);
-  fs.writeFileSync(path.resolve(outFile), JSON.stringify({ body }));
+  fs.writeFileSync(path.resolve(outFile), JSON.stringify({ codec: await readCodec(win) }));
   win.close();
 }
 
@@ -170,21 +167,21 @@ async function marksScenario(win: BrowserWindow, outFile: string, options: QaOpt
   }
 }
 
-export async function run(win: BrowserWindow, writeState: WriteState, options: QaOptions): Promise<void> {
+export async function run(win: BrowserWindow, _writeState: WriteState, options: QaOptions): Promise<void> {
   try {
     const marks = arg('qa-marks');
     if (marks) return await marksScenario(win, marks, options);
     const typing = arg('qa-typing');
-    const typeWait = arg('qa-type-then-wait');
-    const read = arg('qa-read-body');
+    const choose = arg('qa-choose-codec');
+    const read = arg('qa-read-codec');
     if (typing) {
-      await typingScenario(win, typing, writeState, options);
+      await typingScenario(win, typing, options);
       win.close();
-    } else if (typeWait) await typeThenWait(win, typeWait, writeState, options);
-    else if (read) await readBody(win, read);
+    } else if (choose) await chooseCodec(win, choose);
+    else if (read) await readCodecScenario(win, read);
   } catch (error) {
     process.stderr.write(`qa: ${stackOf(error)}\n`);
-    const out = arg('qa-typing') ?? arg('qa-type-then-wait') ?? arg('qa-read-body') ?? arg('qa-marks');
+    const out = arg('qa-typing') ?? arg('qa-choose-codec') ?? arg('qa-read-codec') ?? arg('qa-marks');
     if (out) fs.writeFileSync(path.resolve(out), JSON.stringify({ error: stackOf(error) }));
     if (!win.isDestroyed()) win.close();
   }

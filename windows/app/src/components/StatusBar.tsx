@@ -1,90 +1,53 @@
-import type { ToolStatus } from '../bridge';
-import { cancelExample, copyDetails, runExample, type JobView } from '../state/job';
+import { runAction, useApp } from '../state/app';
+import { statusOf } from '../state/status';
 import { SHORTCUTS, ariaKeys, keysOf } from '../state/shortcuts';
-import { Tip, formatTime } from './ui';
+import { Tip } from './ui';
 
-// The status bar: one line, one height in every state (premium-bar rule 74). A
-// long message is cut at its end with the whole sentence in the accessible
-// name, never wrapped, so no state moves what sits above it. It holds the
-// example job's progress and outcome; replace the job with the app's own.
+// The status bar: two lines of one line each, one height in every state (premium bar rule 97). It
+// says what is happening, what happened, and what to do about it (SPEC 27.4, 27.5). A long line is
+// cut at its end by the stylesheet; the whole sentence is in the page, so a screen reader reads it
+// all. One filled button at most, and it is the step that can succeed.
 
-function remaining(seconds: number | null): string {
-  if (seconds === null) return '';
-  if (seconds < 60) return ', less than a minute left';
-  const minutes = Math.round(seconds / 60);
-  return minutes === 1 ? ', about a minute left' : `, about ${minutes} minutes left`;
-}
-
-function sentence(job: JobView, tool: ToolStatus): string {
-  switch (job.phase) {
-    case 'running':
-      if (job.finishing) return 'Saving the result';
-      if (job.stalled) return 'Still running, with no progress for a while';
-      return job.fraction === null ? 'Running the example' : `Running the example: ${Math.round(job.fraction * 100)}%${remaining(job.remainingSeconds)}`;
-    case 'done':
-      return `Saved the example's result at ${formatTime(job.at)}`;
-    case 'stopped':
-      return 'Stopped. Nothing from that run was kept.';
-    case 'failed':
-      return job.message;
-    case 'idle':
-      return tool.state === 'damaged' ? 'Part of the app is missing, so the example cannot run. Your note is safe.' : 'The example has not run yet';
-  }
-}
-
-export function StatusBar({ job, tool }: { job: JobView; tool: ToolStatus }) {
-  const text = sentence(job, tool);
-  const run = SHORTCUTS['run-example'];
-  const cancel = SHORTCUTS['cancel-example'];
-  const damagedAtRest = job.phase === 'idle' && tool.state === 'damaged';
+export function StatusBar() {
+  const state = useApp((s) => s);
+  const view = statusOf(state);
+  const cancel = SHORTCUTS['cancel'];
+  const button = view.button;
+  const progress = view.progress;
   return (
-    <footer className="statusbar" data-status-bar="" data-job={job.phase}>
-      <p className="statusbar-text" data-status-text="" aria-live="polite">
-        {text}
-      </p>
-      {job.phase === 'running' && (
+    <footer className="statusbar" data-status-bar="" data-job={view.kind}>
+      <div className="statusbar-text" data-status-text="" aria-live="polite" aria-atomic="true">
+        <p className="statusbar-line">{view.first}</p>
+        <p className="statusbar-line">{view.second}</p>
+      </div>
+      {progress && (
         <div
           className="statusbar-progress"
           role="progressbar"
-          aria-label="Example progress"
+          aria-label="Progress"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={job.fraction === null ? undefined : Math.round(job.fraction * 100)}
-          data-indeterminate={job.fraction === null ? '' : undefined}
+          aria-valuenow={progress.percent === null ? undefined : progress.percent}
+          data-indeterminate={progress.percent === null ? '' : undefined}
         >
-          {job.fraction !== null && <span style={{ transform: `scaleX(${job.fraction})` }} />}
+          {progress.percent !== null && <span style={{ transform: `scaleX(${progress.percent / 100})` }} />}
         </div>
       )}
-      <div className="statusbar-actions">
-        {job.phase === 'running' ? (
-          <Tip label="Cancel the example" keys={keysOf(cancel)}>
-            <button type="button" className="btn btn-secondary" aria-keyshortcuts={ariaKeys(cancel)} onClick={cancelExample}>
-              Cancel
-            </button>
-          </Tip>
-        ) : job.phase === 'failed' ? (
-          <>
-            {job.action === 'retry' && (
-              <button type="button" className="btn btn-primary" onClick={() => void runExample()}>
-                Try again
+      {button && (
+        <div className="statusbar-actions">
+          {button.action === 'cancel' ? (
+            <Tip label="Cancel" keys={keysOf(cancel)}>
+              <button type="button" className="btn btn-secondary" aria-keyshortcuts={ariaKeys(cancel)} disabled={button.disabled} onClick={() => void runAction('cancel')}>
+                {button.label}
               </button>
-            )}
-            <button type="button" className={`btn ${job.action === 'copy' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => void copyDetails()}>
-              Copy details
+            </Tip>
+          ) : (
+            <button type="button" className="btn btn-primary" data-filled="" data-action={button.action} onClick={() => void runAction(button.action)}>
+              {button.label}
             </button>
-          </>
-        ) : damagedAtRest ? (
-          <button type="button" className="btn btn-primary" onClick={() => void copyDetails()}>
-            Copy details
-          </button>
-        ) : (
-          <Tip label="Run the example" keys={keysOf(run)}>
-            <button type="button" className="btn btn-secondary" aria-keyshortcuts={ariaKeys(run)} onClick={() => void runExample()}>
-              {job.phase === 'idle' ? 'Run example' : 'Run again'}
-            </button>
-          </Tip>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </footer>
   );
 }

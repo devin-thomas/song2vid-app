@@ -24,5 +24,4 @@ qa/data/
 measure/out/
 *.log
 qa/visual/
-# Screenshot baselines (qa/visual.ts). The starter keeps none; an app deletes this line and commits its own.
-qa/baselines/
+# Screenshot baselines (qa/visual.ts) are committed for each system the headless checks run on: qa/baselines/macos and qa/baselines/windows.

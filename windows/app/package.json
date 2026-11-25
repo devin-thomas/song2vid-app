@@ -22,6 +22,7 @@
     "qa:crash": "node qa/crash-test.ts",
     "qa:visual": "node qa/visual.ts",
     "qa:planted": "node qa/planted-breaks.ts",
+    "qa:real": "node qa/real-tool.ts",
     "fuses:check": "node scripts/fuses-check.ts",
     "measure:focus": "node measure/focus-experiment.ts",
     "measure:memory": "node measure/memory-experiment.ts",

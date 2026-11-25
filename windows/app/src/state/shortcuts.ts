@@ -22,8 +22,8 @@ export function setShortcutPlatform(next: Platform) {
   platform = next;
 }
 
-const MAC_KEYS: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backspace: '⌫', Delete: '⌦', ' ': 'Space', Enter: '↩' };
-const PC_KEYS: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', ' ': 'Space' };
+const MAC_KEYS: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backspace: '⌫', Delete: '⌦', ' ': 'Space', Enter: '↩', Escape: '⎋' };
+const PC_KEYS: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', ' ': 'Space', Escape: 'Esc' };
 
 /** The shortcut as this system writes it, as one string in a one-item list (one key cap). */
 export function keysOf(shortcut: Shortcut | null): string[] {

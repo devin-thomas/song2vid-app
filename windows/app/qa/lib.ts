@@ -1,4 +1,4 @@
-// Shared helpers for the screenshot and audit scripts. Everything runs headless;
+// Shared helpers for the screenshot and audit scripts (the states they open are in qa/states.ts). Everything runs headless;
 // no window is shown and nothing can take focus or make a sound. The production
 // build is served from this process on 127.0.0.1, so there is no separate server
 // to stop. The page runs against the stand-in bridge (src/bridge.fake.ts), whose
@@ -132,20 +132,6 @@ export const calls = (page: Page, name: string): Promise<DesktopCall[]> => page.
 
 /** The modifier for a platform's key family: Meta on macOS, Control elsewhere. */
 export const modFor = (platform: string): 'Meta' | 'Control' => (platform === 'macos' ? 'Meta' : 'Control');
-
-export const BODY = `The plan for the week, in the order it has to happen.
-
-1. Finish the list view and measure it with ten thousand rows.
-2. Write the three journeys down and count the steps in each.
-
-If Thursday at 3:00 PM still works, the review happens then.`;
-
-/** Writes a complete note the way a person would: by typing. Change this with the app's first screen. */
-export async function fill(page: Page): Promise<void> {
-  await page.fill('#field-title', 'Plan for the week');
-  await page.fill('#field-body', BODY);
-  await page.waitForTimeout(350); // let the draft save
-}
 
 export async function park(page: Page): Promise<void> {
   // Park the pointer on the empty title bar so nothing shows a hover state.

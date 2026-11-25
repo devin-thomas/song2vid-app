@@ -28,6 +28,10 @@
       "reason": "Offered only after a save, once; reached through the palette (Ctrl+K) or Tab to its button, which takes focus when the save finishes."
     },
     {
+      "label": "Copy Details",
+      "reason": "Offered only after a failure, for whoever repairs the app; reached through the palette (Ctrl+K) or its button in the status bar. Not a repeated action."
+    },
+    {
       "label": "About {productName}",
       "reason": "Opened rarely; not a repeated action."
     }

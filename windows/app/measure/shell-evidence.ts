@@ -302,11 +302,11 @@ try {
     const after = await diagnostics('diagnostics-menu', ['--menu-command=about']);
     check('a command reached the page through the menu path', (after?.shell.menu?.commandsSent ?? 0) > (shell.menu?.commandsSent ?? 0), { sent: after?.shell.menu?.commandsSent });
     // Dimming: say two commands cannot run, as the page would, and look for them in the menus.
-    const dimmed = await diagnostics('diagnostics-menu-dimmed', ['--qa-menu-state={"run-example":false,"clear-note":false}']);
+    const dimmed = await diagnostics('diagnostics-menu-dimmed', ['--qa-menu-state={"make-video":false,"cancel":false}']);
     type Entry = { command?: string; enabled?: boolean; submenu?: Entry[] };
     const flat = (items: Entry[] | null | undefined): Entry[] => (items ?? []).flatMap((entry) => [entry, ...flat(entry.submenu)]);
     const state = (d: Diagnostics | null, command: string) => flat(d?.shell.menu?.applicationMenu).filter((entry) => entry.command === command).map((entry) => entry.enabled);
-    check('the page can dim commands', dimmed?.shell.menu?.pageState['run-example'] === false && (shell.system !== 'macos' || (state(dimmed, 'run-example').every((on) => on === false) && state(dimmed, 'clear-note').every((on) => on === false) && state(dimmed, 'toggle-theme').every((on) => on === true))), { run: state(dimmed, 'run-example'), clear: state(dimmed, 'clear-note'), theme: state(dimmed, 'toggle-theme'), dock: dimmed?.shell.menu?.dockMenu });
+    check('the page can dim commands', dimmed?.shell.menu?.pageState['make-video'] === false && (shell.system !== 'macos' || (state(dimmed, 'make-video').every((on) => on === false) && state(dimmed, 'cancel').every((on) => on === false) && state(dimmed, 'toggle-theme').every((on) => on === true))), { make: state(dimmed, 'make-video'), cancel: state(dimmed, 'cancel'), theme: state(dimmed, 'toggle-theme'), dock: dimmed?.shell.menu?.dockMenu });
     await ask(['--qa-menu-state={}']);
   }
   if (steps.includes('open-file')) {
@@ -343,7 +343,7 @@ try {
     } else {
       const closed = await diagnostics('diagnostics-window-closed');
       check('closing the window left the app running', exited === null && closed?.shell.window.open === false, { open: closed?.shell.window.open });
-      check('commands that need the window are dimmed while it is closed', closed?.shell.menu?.dockMenu?.find((d) => d.command === 'run-example')?.enabled === false, closed?.shell.menu?.dockMenu);
+      check('commands that need the window are dimmed while it is closed', closed?.shell.menu?.dockMenu?.find((d) => d.command === 'choose-audio')?.enabled === false, closed?.shell.menu?.dockMenu);
       await ask(['--no-activate']);
       await sleep(2500);
       const again = await diagnostics('diagnostics-reopened');

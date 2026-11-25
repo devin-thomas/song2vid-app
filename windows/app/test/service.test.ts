@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import type { TestContext } from 'node:test';
-import type { AudioInfo, DropResult, EncoderReport, ImageInfo, JobUpdate, MakeRequest } from '../src/bridge.ts';
+import type { AudioInfo, DropResult, EncoderReport, ImageInfo, JobUpdate, MakeRequest, ToolStatus } from '../src/bridge.ts';
 import { EXIT_STATUS } from '../electron/tool/contract.ts';
 import type { Limits } from '../electron/tool/adapter.ts';
 import { createToolService } from '../electron/tool/service.ts';
@@ -28,6 +28,7 @@ function harness(t: TestContext, config: Record<string, unknown> = {}, options: 
   const updates: JobUpdate[] = [];
   const encoders: EncoderReport[] = [];
   const opened: DropResult[] = [];
+  const statuses: ToolStatus[] = [];
   const picks = { audio: [] as (string | null)[], image: [] as (string | null)[], save: [] as (string | null)[] };
   const saveDefaults: string[] = [];
   const shown: string[] = [];
@@ -46,7 +47,7 @@ function harness(t: TestContext, config: Record<string, unknown> = {}, options: 
       showInFolder: (file) => shown.push(file),
     },
     videosDir: () => outDir,
-    emit: { job: (u) => updates.push(u), encoders: (r) => encoders.push(r), filesOpened: (r) => opened.push(r) },
+    emit: { job: (u) => updates.push(u), encoders: (r) => encoders.push(r), filesOpened: (r) => opened.push(r), toolStatus: (status) => statuses.push(status) },
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     limits: { graceMs: 500, ...(options.limits ?? {}) },
   });
@@ -65,7 +66,7 @@ function harness(t: TestContext, config: Record<string, unknown> = {}, options: 
     assert.ok(a.status === 'chosen' && i.status === 'chosen');
     return { audio: a.file, image: i.file };
   }
-  return { box, service, updates, encoders, opened, picks, saveDefaults, shown, gate, outDir, song, cover, finished, last, request, load };
+  return { box, service, updates, encoders, opened, statuses, picks, saveDefaults, shown, gate, outDir, song, cover, finished, last, request, load };
 }
 
 type H = ReturnType<typeof harness>;
@@ -136,6 +137,8 @@ test('launch: a version check that stalls with a good cache turns the ready stat
   await second.service.settled();
   const status = await second.service.status();
   assert.deepEqual([status.state, status.code], ['damaged', 'TOOL_STALLED']);
+  assert.deepEqual(second.statuses.map((s) => [s.state, s.code]), [['damaged', 'TOOL_STALLED']], 'the page is told as soon as the cached answer is overturned');
+  assert.deepEqual(first.statuses, [], 'a launch whose check agrees with the cache says nothing more');
   await noProcessLeft(first.box);
 });
 

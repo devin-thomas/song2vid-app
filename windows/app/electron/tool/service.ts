@@ -41,6 +41,8 @@ export interface ServiceOptions {
     job: (update: JobUpdate) => void;
     encoders: (report: EncoderReport) => void;
     filesOpened: (result: DropResult) => void;
+    /** A status that changed after the page was told it was ready: a cached answer that this launch's check did not confirm. */
+    toolStatus?: (status: ToolStatus) => void;
   };
   platform?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
@@ -95,6 +97,7 @@ export function createToolService(options: ServiceOptions) {
   let lastDestination: Destination | null = null;
   let lastReconcile: { records: number; removed: number } | null = null;
   const previews = new Map<FileId, Set<AbortController>>();
+  let previewCount = 0;
 
   // ---- the launch -------------------------------------------------------------
 
@@ -122,9 +125,11 @@ export function createToolService(options: ServiceOptions) {
     }
     checked = (async () => {
       const answer = await ready.version();
+      const toldReady = current.state === 'ready'; // the cached answer, which the page may already have been given
       current = toolStatus(answer);
       if (!answer.ok) {
         cache.write(located, null);
+        if (toldReady) emit.toolStatus?.(current); // the page learns it now, not at its next Make Video
         return current;
       }
       refreshing = (async () => {
@@ -234,7 +239,7 @@ export function createToolService(options: ServiceOptions) {
     const mine = previews.get(imageId) ?? new Set<AbortController>();
     mine.add(abort);
     previews.set(imageId, mine);
-    const output = path.join(previewDir, `${path.basename(imageId)}-${Date.now().toString(36)}.png`);
+    const output = path.join(previewDir, `${path.basename(imageId)}-${Date.now().toString(36)}-${(previewCount += 1).toString(36)}.png`); // a counter too: two previews of one image can start in the same millisecond
     try {
       fs.mkdirSync(previewDir, { recursive: true });
       const before = new Set(records?.leftovers(previewDir) ?? []);

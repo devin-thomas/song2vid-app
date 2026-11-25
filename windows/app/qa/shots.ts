@@ -1,15 +1,19 @@
-// Captures every state at the app's default and minimum window, two device
-// scales, the dark theme (and light in a full run) and every system's key family, headless. These pictures are
-// what the independent critic gets: screenshots only, never the code, the audit or
-// the builder's notes. Each state opens on a fixture of the stand-in bridge
-// (src/bridge.fake.ts), so every designed state can be photographed directly.
+// Captures every state at the app's default and minimum window, two device scales, the dark theme (and
+// light in a full run) and every system's key family, headless. These pictures are what the independent
+// critic gets: screenshots only, never the code, the audit or the builder's notes. Each state opens on a
+// fixture of the stand-in bridge (src/bridge.fake.ts); the states are in qa/states.ts, the same list the
+// audit checks, so every designed state is photographed.
 // Usage: node qa/shots.ts [outDir] [--quick]
-//   --quick  the default size only, one scale, the dark theme (for critique rounds)
+//   --quick  the default size, the minimum size and the default at 125% (for critique rounds and qa/visual.ts)
+//            Every state at the main size; the secondary sets (each system's labels, forced colours, 200%
+//            zoom, the light theme) take the CORE states of qa/states.ts, which keeps the baselines to a
+//            size that can be reviewed.
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Page } from 'playwright-core';
-import { fill, launch, load, modFor, openPage, park, readConfig, root, serve, settle } from './lib.ts';
+import { launch, load, modFor, openPage, park, readConfig, root, serve, settle } from './lib.ts';
 import type { PageOptions } from './lib.ts';
+import { STATES } from './states.ts';
+import type { State } from './states.ts';
 
 const W = readConfig().window;
 
@@ -17,72 +21,18 @@ const args = process.argv.slice(2);
 const quick = args.includes('--quick');
 const outDir = join(root, args.find((a) => !a.startsWith('--')) ?? 'qa/shots');
 
-const SIZES: [number, number][] = quick ? [[W.width, W.height]] : [[W.width, W.height], [W.minWidth, W.minHeight]];
+// The sizes and scales the main groups are taken at. A full run takes both sizes at both scales; a quick run (the
+// one qa/visual.ts compares) takes the default size, the minimum size (480 x 640) and the default at 125%.
+const GROUPS: [width: number, height: number, scale: number][] = quick
+  ? [[W.width, W.height, 1], [W.minWidth, W.minHeight, 1], [W.width, W.height, 1.25]]
+  : [[W.width, W.height, 1], [W.width, W.height, 1.25], [W.minWidth, W.minHeight, 1], [W.minWidth, W.minHeight, 1.25]];
 // The page is the same on every system except the title bar inset and the key labels.
 const PLATFORMS = quick ? ['windows', 'macos'] : ['windows', 'macos', 'linux'];
-const SCALES = quick ? [1] : [1, 1.25];
-// Dark is the default theme (D-020): a critique round sees it alone, a full run adds light.
-const THEMES = quick ? (['dark'] as const) : (['dark', 'light'] as const);
+// Dark is the default theme (D-020) and takes every state; light, a choice the person made, takes the core states.
+const THEMES = ['dark', 'light'] as const;
 
-/** The steps that reach a state, given the page and the key family's modifier. */
-type Steps = (page: Page, mod: 'Meta' | 'Control') => Promise<unknown>;
-
-// Every step is given the key family's modifier ("Control" or "Meta"): a page told it runs on
-// macOS answers Command, not Control (pressing Control there timed out every keyboard state).
-const filterItems = async (page: Page, text: string, mod: 'Meta' | 'Control') => {
-  await page.keyboard.press(`${mod}+Shift+R`);
-  await page.waitForFunction(() => document.activeElement?.id === 'rail-filter');
-  await page.keyboard.type(text);
-};
-
-/** Name, the steps that reach the state, and the stand-in fixture. Rewrite for the app; include every designed empty, error and dense state. */
-const STATES: [string, Steps, string?][] = [
-  ['01-empty', async () => {}],
-  ['02-filled', async (page) => fill(page)],
-  ['03-list-scrolled', async (page, mod) => {
-    await fill(page);
-    const list = page.getByRole('listbox', { name: 'All items' });
-    // Too narrow to dock the list (the 200% zoom case): the shortcut shows it first.
-    if (!(await list.isVisible())) {
-      await page.keyboard.press(`${mod}+Shift+R`);
-      await list.waitFor({ state: 'visible' });
-    }
-    await list.evaluate((el: Element) => {
-      el.scrollTop = 4212 * 40;
-    });
-    await page.waitForTimeout(120);
-  }],
-  ['04-filtered', async (page, mod) => {
-    await fill(page);
-    await filterItems(page, 'cedar', mod);
-  }],
-  ['05-no-match', async (page, mod) => filterItems(page, 'zzq', mod)],
-  ['06-command-palette', async (page, mod) => {
-    await fill(page);
-    await page.keyboard.press(`${mod}+k`);
-    await page.waitForSelector('.palette');
-  }],
-  ['07-toast-undo', async (page) => {
-    await fill(page);
-    await page.click('#action-clear');
-    await page.waitForSelector('.toast');
-  }],
-  ['08-about', async (page, mod) => {
-    await page.keyboard.press(`${mod}+k`);
-    await page.keyboard.type('about');
-    await page.keyboard.press('Enter');
-    await page.waitForSelector('.dialog');
-  }],
-  ['09-window-inactive', async (page) => {
-    await fill(page);
-    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-  }],
-  // Worst-case content: a 300-character title and a long unbroken body line.
-  ['10-worst-case-text', async (page) => {
-    await page.fill('#field-title', 'A'.repeat(300));
-    await page.fill('#field-body', `${'W'.repeat(200)}\n${'word '.repeat(400)}`);
-  }],
-];
+const ALL = Object.entries(STATES);
+const CORE = ALL.filter(([, state]) => state.core);
 
 const { url, close } = await serve();
 const { browser, channel } = await launch();
@@ -90,13 +40,16 @@ console.log(`serving ${url}, browser channel ${channel}, writing ${outDir}`);
 let count = 0;
 const problems: string[] = [];
 
-async function capture(dir: string, name: string, steps: Steps, options: PageOptions, fixture = 'default', platform = 'windows'): Promise<void> {
+async function capture(dir: string, name: string, state: State, options: PageOptions, platform = 'windows'): Promise<void> {
   const { context, page, errors } = await openPage(browser, options);
   try {
-    await load(page, url, fixture, `platform=${platform}`);
-    await steps(page, modFor(platform));
+    await load(page, url, state.fixture, [`platform=${platform}`, state.extra].filter(Boolean).join('&'));
+    await state.run(page, modFor(platform));
     await park(page);
     await settle(page);
+    // Under forced colours a button that was disabled and enabled again redraws its border one beat after the
+    // animations have ended (it showed in 4 of 130 pictures, a different four each run): wait it out.
+    if (options.forcedColors === 'active') await page.waitForTimeout(400);
     // animations: 'disabled' finishes every CSS animation and transition before the capture, so
     // two runs of the same state give the same picture (an entrance caught mid-way differed by
     // up to 95% between identical runs; qa/visual.ts compares these pictures).
@@ -110,32 +63,34 @@ async function capture(dir: string, name: string, steps: Steps, options: PageOpt
 }
 
 try {
-  for (const [width, height] of SIZES) {
-    for (const scale of SCALES) {
-      for (const theme of THEMES) {
-        const dir = join(outDir, `${width}x${height}@${scale}x-${theme}`);
-        await mkdir(dir, { recursive: true });
-        for (const [name, steps, fixture] of STATES) await capture(dir, name, steps, { width, height, scale, theme }, fixture);
-      }
+  for (const [width, height, scale] of GROUPS) {
+    for (const theme of THEMES) {
+      // A quick run takes the default size at 125% in the dark theme only.
+      if (quick && scale !== 1 && theme === 'light') continue;
+      const dir = join(outDir, `${width}x${height}@${scale}x-${theme}`);
+      await mkdir(dir, { recursive: true });
+      // The default size takes every state in the dark theme; the other sizes, scales and the light theme take the core states.
+      const states = width === W.width && scale === 1 && theme === 'dark' ? ALL : CORE;
+      for (const [name, state] of states) await capture(dir, name, state, { width, height, scale, theme });
     }
   }
   // Every system's labels and title bar inset, at the default size in the dark theme.
   for (const platform of PLATFORMS) {
     const dir = join(outDir, `${platform}-${W.width}x${W.height}-dark`);
     await mkdir(dir, { recursive: true });
-    for (const [name, steps, fixture] of STATES) await capture(dir, name, steps, { width: W.width, height: W.height, scale: 1, theme: 'dark' }, fixture, platform);
+    for (const [name, state] of CORE) await capture(dir, name, state, { width: W.width, height: W.height, scale: 1, theme: 'dark' }, platform);
   }
   // A system contrast theme (forced colours), on a dark and a light system, at the default size.
   for (const theme of ['dark', 'light'] as const) {
     const dir = join(outDir, `forced-colors-${W.width}x${W.height}-${theme}`);
     await mkdir(dir, { recursive: true });
-    for (const [name, steps, fixture] of STATES) await capture(dir, name, steps, { width: W.width, height: W.height, scale: 1, theme, forcedColors: 'active' }, fixture);
+    for (const [name, state] of CORE) await capture(dir, name, state, { width: W.width, height: W.height, scale: 1, theme, forcedColors: 'active' });
   }
   // The 200% zoom case: the default window zoomed to 200% lays out at half its size in CSS px.
   const zoomDir = join(outDir, `zoom-200-of-${W.width}x${W.height}`);
   await mkdir(zoomDir, { recursive: true });
   for (const theme of THEMES) {
-    for (const [name, steps, fixture] of STATES) await capture(zoomDir, `${name}-${theme}`, steps, { width: Math.round(W.width / 2), height: Math.round(W.height / 2), scale: 2, theme }, fixture);
+    for (const [name, state] of CORE) await capture(zoomDir, `${name}-${theme}`, state, { width: Math.round(W.width / 2), height: Math.round(W.height / 2), scale: 2, theme });
   }
 } finally {
   await browser.close();

@@ -1,23 +1,31 @@
-// Data safety under a crash. For each trial: start the development shell, let it
-// type a known sentence into the main text field through real key events, terminate
-// that exact process a set time after the last key, start the app again and
-// compare the restored body with what was typed.
+// Data safety under a kill. Song2Vid has no document to lose; what it keeps across runs is the Codec
+// a person chose (SPEC 27.7), and a choice must survive the process being ended at any moment. For each
+// trial: start the development shell, choose HEVC in the page through its own control, terminate that
+// exact process a set time after the choice, start the app again with the same data folder and read the
+// Codec the page shows.
 //
-// Trials killed 300 ms or more after the last key must restore every character.
-// The 60 ms trial may lose only the tail typed in the last second.
+// Trials killed 300 ms or more after the choice must find HEVC chosen. The 60 ms trial may lose the
+// choice only inside the last second (SPEC 28: at most the last second of input is lost).
 //
 // Usage: node qa/kill-test.ts   (writes qa/evidence/kill-test.json)
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { KillRecord } from '@uppercut-labs/electron-qa-measurements';
 import { launchDev, root } from '../scripts/lib/launch.ts';
+import { standinEnv } from './standin.ts';
 
 const evidence = join(root, 'qa', 'evidence');
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** What --qa-read-body writes: the note's body as restored after a relaunch. */
-interface RestoredBody {
-  body: string;
+/** What --qa-choose-codec writes: the process, the moment of the choice and the Codec chosen. */
+interface Chosen {
+  pid: number;
+  at: number;
+  expected: string;
+}
+
+/** What --qa-read-codec writes: the Codec the page shows after a relaunch. */
+interface Restored {
+  codec: string | null;
 }
 
 /** The JSON file the app writes at `file`, as the shape `T` that the flag documents. */
@@ -39,60 +47,50 @@ async function waitFor<T>(file: string, timeoutMs: number): Promise<T> {
 interface TrialResult {
   name: string;
   killedAfterMs: number;
-  startedWithChars: number;
-  typedChars: number;
-  expectedChars: number;
-  restoredChars: number;
+  expected: string;
+  restored: string | null;
   intact: boolean;
-  restoredIsPrefix: boolean;
-  charsLost: number;
 }
 
-async function trial(name: string, killAfterMs: number, longChars?: number): Promise<TrialResult> {
+async function trial(name: string, killAfterMs: number): Promise<TrialResult> {
   const dataDir = join(root, 'qa', 'data', `kill-${name}`);
-  const typedFile = join(evidence, `kill-${name}-typed.json`);
+  const chosenFile = join(evidence, `kill-${name}-chosen.json`);
   const readFile = join(evidence, `kill-${name}-restored.json`);
-  for (const f of [typedFile, readFile]) rmSync(f, { force: true });
+  for (const f of [chosenFile, readFile]) rmSync(f, { force: true });
   rmSync(dataDir, { recursive: true, force: true });
 
-  const first = launchDev({ args: [`--qa-type-then-wait=${typedFile}`, ...(longChars ? [`--qa-long=${longChars}`] : [])], dataDir, timeoutMs: 90_000 });
-  const child = first.child;
-  const typed = await waitFor<KillRecord>(typedFile, 60_000);
-  if (typed.pid !== child.pid) throw new Error(`the app reported PID ${typed.pid}, but ${child.pid} was started`);
+  const first = launchDev({ args: [`--qa-choose-codec=${chosenFile}`], dataDir, timeoutMs: 90_000, env: standinEnv() });
+  const chosen = await waitFor<Chosen>(chosenFile, 60_000);
+  if (chosen.pid !== first.child.pid) throw new Error(`the app reported PID ${chosen.pid}, but ${first.child.pid} was started`);
 
-  // Terminate that exact process, by PID (the check above proved the app's PID is the one started), the set time after its last key.
-  await sleep(Math.max(0, typed.lastKeyAt + killAfterMs - Date.now()));
-  const killedAfterMs = Date.now() - typed.lastKeyAt;
-  process.kill(typed.pid);
+  // Terminate that exact process, by PID (the check above proved the app's PID is the one started), the set time after the choice.
+  await sleep(Math.max(0, chosen.at + killAfterMs - Date.now()));
+  const killedAfterMs = Date.now() - chosen.at;
+  process.kill(chosen.pid);
   await first.exited;
   await sleep(1500); // let the helper processes notice and exit
 
-  const again = launchDev({ args: [`--qa-read-body=${readFile}`], dataDir, timeoutMs: 90_000 });
-  const restored = await waitFor<RestoredBody>(readFile, 60_000);
+  const again = launchDev({ args: [`--qa-read-codec=${readFile}`], dataDir, timeoutMs: 90_000, env: standinEnv() });
+  const restored = await waitFor<Restored>(readFile, 60_000);
   await again.exited;
 
-  const intact = restored.body === typed.expected;
-  const isPrefix = typed.expected.startsWith(restored.body);
-  const lost = typed.expected.length - restored.body.length;
   rmSync(dataDir, { recursive: true, force: true });
-  for (const f of [typedFile, readFile]) rmSync(f, { force: true });
-  return { name, killedAfterMs, startedWithChars: longChars ?? 0, typedChars: typed.typed.length, expectedChars: typed.expected.length, restoredChars: restored.body.length, intact, restoredIsPrefix: isPrefix, charsLost: intact ? 0 : lost };
+  for (const f of [chosenFile, readFile]) rmSync(f, { force: true });
+  return { name, killedAfterMs, expected: chosen.expected, restored: restored.codec, intact: restored.codec === chosen.expected };
 }
 
 mkdirSync(evidence, { recursive: true });
 const results: TrialResult[] = [];
 results.push(await trial('600ms', 600));
 results.push(await trial('300ms', 300));
-results.push(await trial('300ms-long', 300, 20000));
 results.push(await trial('60ms', 60));
 
 const failures: string[] = [];
 for (const r of results) {
-  const mustBeIntact = r.name !== '60ms';
-  if (mustBeIntact && !r.intact) failures.push(`${r.name}: restored ${r.restoredChars} of ${r.expectedChars} characters`);
-  // 25 ms per key: one second of typing is 40 characters.
-  if (!mustBeIntact && (!r.restoredIsPrefix || r.charsLost > 40)) failures.push(`${r.name}: lost ${r.charsLost} characters, more than the last second`);
-  console.log(`${r.intact ? 'intact ' : 'partial'} kill at ${String(r.killedAfterMs).padStart(4)} ms after the last key (${r.name}): ${r.restoredChars}/${r.expectedChars} characters restored`);
+  // Everything but the 60 ms trial must be intact; the 60 ms trial is judged by the one-second rule too (a kill that early
+  // may still lose the choice only because it is inside the last second).
+  if (r.name !== '60ms' && !r.intact) failures.push(`${r.name}: the page showed ${r.restored} after the relaunch, not ${r.expected}`);
+  console.log(`${r.intact ? 'intact ' : 'partial'} kill at ${String(r.killedAfterMs).padStart(4)} ms after the choice (${r.name}): the page showed ${r.restored}`);
 }
 writeFileSync(join(evidence, 'kill-test.json'), JSON.stringify({ at: new Date().toISOString(), results, failures, passed: failures.length === 0 }, null, 2));
 if (failures.length) {

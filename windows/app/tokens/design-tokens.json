@@ -16,6 +16,7 @@
       "warning": "oklch(0.51 0.12 68)",
       "danger": "oklch(0.53 0.2 27)",
       "shadow": "oklch(0.22 0.004 95)",
+      "frame": "oklch(0 0 0)",
       "scrim": "oklch(0.22 0.004 95 / 0.28)"
     },
     "dark": {
@@ -29,6 +30,7 @@
       "warning": "oklch(0.83 0.13 82)",
       "danger": "oklch(0.75 0.15 25)",
       "shadow": "oklch(0 0 0)",
+      "frame": "oklch(0 0 0)",
       "scrim": "oklch(0 0 0 / 0.52)"
     },
     "tier": {
@@ -230,11 +232,11 @@
     "caption-reserve-note": "Fallbacks only. The bar lays itself out inside env(titlebar-area-*), which the shell reports on every system (build 2 measured 137 px on Windows, 82 px on macOS, 113 px on Linux in a container with Electron's default button layout). These apply only when the page runs outside the shell.",
     "caption-reserve": 138,
     "mac-inset": 78,
-    "statusbar-note": "The status bar's one height, in every state (premium-bar rule 74): a long message is cut at its end, never wrapped.",
-    "statusbar": 40,
+    "statusbar-note": "The status bar's one height, in every state (premium-bar rule 74): two lines of one line each (a sentence and what goes with it, SPEC 27.4), each cut at its end, never wrapped. 40 px in the starter, 56 px here (D-025).",
+    "statusbar": 56,
     "rail": 380,
     "rail-compact": 332,
     "gutter": 8,
-    "label-col": 64
+    "label-col": 96
   }
 }
