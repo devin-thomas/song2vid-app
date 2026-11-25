@@ -141,7 +141,7 @@
     opacity: 0.45;
   }
 
-  /* ---- status bar: one line, one height in every state -------------------- */
+  /* ---- status bar: two short lines, one height in every state --------------- */
 
   .statusbar {
     display: flex;
@@ -149,23 +149,36 @@
     gap: 12px;
     min-width: 0;
     height: var(--statusbar);
-    padding: 0 var(--gutter);
+    padding: 0 var(--gutter) 0 calc(var(--gutter) + 12px);
     border-top: var(--hairline) solid var(--stroke-1);
     background: var(--chrome);
   }
 
   .statusbar-text {
+    display: grid;
     flex: 1 1 auto;
+    gap: 2px;
     min-width: 0;
+  }
+
+  /* One line each, cut at the end; the whole sentence stays in the page for reading aloud. */
+  .statusbar-line {
+    min-width: 0;
+    height: var(--text-base--line-height);
     overflow: hidden;
-    color: var(--fg-2);
+    color: var(--fg);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  .statusbar-line + .statusbar-line {
+    color: var(--fg-3);
+  }
+
   .statusbar-progress {
     position: relative;
-    flex: 0 0 120px;
+    flex: 0 1 96px;
+    min-width: 40px;
     height: 6px;
     overflow: hidden;
     border-radius: 3px;
@@ -179,25 +192,39 @@
     transform-origin: left center;
   }
 
+  /* No known total: a bar that does not move or claim a number. */
+  .statusbar-progress[data-indeterminate] > span {
+    background: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+
   .statusbar-actions {
     display: flex;
     flex: none;
     gap: 8px;
   }
 
-  .workspace {
-    --rail-w: var(--rail-compact);
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--rail-w);
-    min-height: 0;
-    padding: 0 0 var(--gutter) var(--gutter);
+  /* The 200% zoom case, 280 px wide: the filled button gives way at its end before the sentence does. */
+  @container app (max-width: 420px) {
+    .statusbar-actions {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 48%;
+    }
+
+    .statusbar-actions .btn {
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
-  @container app (min-width: 1180px) {
-    .workspace {
-      --rail-w: var(--rail);
-    }
+  .workspace {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding: 0 var(--gutter) var(--gutter);
   }
 
   .card {
@@ -210,97 +237,27 @@
     border: var(--hairline) solid var(--stroke-2);
     border-radius: var(--radius-xl);
     box-shadow: var(--elev-card);
-  }
-
-  .rail {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-  }
-
-  .only-narrow {
-    display: none !important;
-  }
-
-  /* Panels that sit over the right edge: a sheet always, the rail when the
-     window is too narrow to dock it. */
-  .sheet {
-    position: absolute;
-    z-index: var(--z-sheet);
-    top: 0;
-    right: var(--gutter);
-    bottom: var(--gutter);
-    width: calc(var(--rail-w) - var(--gutter) * 2);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    background: var(--surface);
-    border: var(--hairline) solid var(--stroke-2);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--elev-sheet);
     overflow: clip;
-    transition:
-      transform var(--dur-sheet) var(--ease-snap),
-      opacity var(--dur-moderate) var(--ease-out),
-      visibility 0s;
   }
 
-  .sheet[data-open="false"] {
-    transform: translateX(calc(100% + 24px));
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      transform var(--dur-slow) var(--ease-snap),
-      opacity var(--dur-slow) var(--ease-out),
-      visibility 0s linear var(--dur-slow);
+  /* The part of the card that scrolls when the window is too small for everything: the choices
+     and the preview. Make Video, below it, never scrolls away. */
+  .card-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  @container app (max-width: 859.98px) {
-    .workspace {
-      grid-template-columns: minmax(0, 1fr);
-      padding-right: var(--gutter);
-    }
-
-    .sheet,
-    .rail {
-      width: min(var(--rail), calc(100% - var(--gutter) * 2));
-    }
-
-    .rail {
-      position: absolute;
-      z-index: var(--z-raised);
-      top: 0;
-      right: var(--gutter);
-      bottom: var(--gutter);
-      background: var(--chrome);
-      border: var(--hairline) solid var(--stroke-2);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--elev-sheet);
-      overflow: clip;
-      transition:
-        transform var(--dur-slow) var(--ease-snap),
-        opacity var(--dur-moderate) var(--ease-out),
-        visibility 0s;
-    }
-
-    .rail[data-open="false"] {
-      transform: translateX(calc(100% + 24px));
-      opacity: 0;
-      visibility: hidden;
-      transition:
-        transform var(--dur-moderate) var(--ease-snap),
-        opacity var(--dur-moderate) var(--ease-out),
-        visibility 0s linear var(--dur-moderate);
-    }
-
-    .only-narrow {
-      display: inline-flex !important;
-    }
-
-    .only-wide {
-      display: none !important;
-    }
+  .card-foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-top: var(--hairline) solid var(--stroke-1);
   }
 
   /* ---- form rows ------------------------------------------------------- */
@@ -308,14 +265,32 @@
   .row {
     position: relative;
     display: grid;
+    flex: none;
     grid-template-columns: var(--label-col) minmax(0, 1fr);
+    align-items: start;
     padding: 8px 20px;
     border-bottom: var(--hairline) solid var(--stroke-1);
   }
 
   .row-label {
     color: var(--fg-3);
-    line-height: var(--control-sm);
+    line-height: var(--control-md);
+  }
+
+  /* Too narrow for a label column (the 200% zoom case): the label sits above its control. */
+  @container app (max-width: 420px) {
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 6px 12px;
+    }
+
+    .row-label {
+      line-height: var(--text-base--line-height);
+    }
+
+    .card-foot {
+      padding: 8px 12px;
+    }
   }
 
   /* The focused row is marked on the card edge; borderless inputs rely on it. */
@@ -790,52 +765,8 @@
     transition-duration: 0s;
   }
 
-  .list-row {
-    position: absolute;
-    top: 0;
-    left: 8px;
-    right: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 40px;
-    padding: 0 8px;
-    border-radius: var(--radius-md);
-    color: var(--fg);
-  }
-
-  .list-row-add {
-    opacity: 0;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .list-row:hover {
-      background: var(--fill-2);
-    }
-
-    .list-row:hover .list-row-add {
-      opacity: 1;
-    }
-  }
-
-  .list-row:active,
   .option:active {
     background: var(--fill-3);
-  }
-
-  .listbox:focus-visible {
-    outline: none;
-  }
-
-  /* The keyboard position shows only while the list has keyboard focus. */
-  .listbox:focus-visible .list-row[data-active="true"] {
-    background: var(--fill-2);
-    outline: var(--focus-width) solid var(--accent);
-    outline-offset: -2px;
-  }
-
-  .listbox:focus-visible .list-row[data-active="true"] .list-row-add {
-    opacity: 1;
   }
 
   .tab {
@@ -1124,8 +1055,6 @@
     animation-iteration-count: 1 !important;
   }
 
-  .sheet[data-open="false"],
-  .rail[data-open="false"],
   .toast,
   .toast[data-leaving="true"],
   .select-popup,
@@ -1133,18 +1062,231 @@
   .tooltip {
     transform: none !important;
   }
-  /* Panels only fade, at the base duration, and hide once the fade has ended. */
-  .sheet,
-  .rail {
-    transition:
-      opacity var(--dur-base) var(--ease-out),
-      visibility 0s !important;
+}
+
+/* ---- Song2Vid's own parts (S2V-030) ----------------------------------------- */
+
+@layer components {
+  @container app (max-width: 520px) {
+    .only-wide {
+      display: none !important;
+    }
   }
 
-  .sheet[data-open="false"],
-  .rail[data-open="false"] {
+  /* A radio group drawn as one track of choices (Frame Shape, Resolution, Codec). */
+  .choice {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--radius-lg);
+    background: var(--fill-2);
+  }
+
+  .choice-item {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: calc(var(--control-md) - 4px);
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    color: var(--fg-2);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
     transition:
-      opacity var(--dur-base) var(--ease-out),
-      visibility 0s linear var(--dur-base) !important;
+      background-color var(--dur-base) var(--ease-out),
+      color var(--dur-base) var(--ease-out);
+  }
+
+  .choice-item[aria-checked="true"] {
+    background: var(--surface);
+    box-shadow: var(--elev-low);
+    color: var(--fg);
+  }
+
+  /* On a dark surface the chosen item is the lighter one, as the track is already lighter than the card. */
+  :root[data-theme="dark"] .choice-item[aria-checked="true"] {
+    background: var(--fill-4);
+  }
+
+  .choice-item:disabled {
+    color: var(--fg-4);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .choice-item:hover:not(:disabled):not([aria-checked="true"]) {
+      background: var(--fill-2);
+      color: var(--fg);
+      transition-duration: 0s;
+    }
+  }
+
+  .choice-item:active:not(:disabled) {
+    background: var(--fill-3);
+  }
+
+  .choice-note {
+    margin-top: 6px;
+    color: var(--fg-3);
+  }
+
+  /* A chosen file: its name, cut at the end, and its facts beside it. */
+  .file-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .file-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-fact {
+    flex: none;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .output-line {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-md);
+    color: var(--fg-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The preview: the frame drawn to scale in the room that is left, keeping its shape. */
+  .preview {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 168px;
+    padding: 12px 20px 8px;
+  }
+
+  .stage {
+    container-type: size;
+    display: grid;
+    flex: 1 1 0;
+    place-items: center;
+    min-height: 0;
+  }
+
+  .frame {
+    --ar: 1.7778;
+    position: relative;
+    width: min(100cqw, calc(100cqh * var(--ar)));
+    aspect-ratio: var(--ar);
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--frame);
+    box-shadow: 0 0 0 var(--hairline) var(--stroke-3);
+    touch-action: none;
+    user-select: none;
+  }
+
+  .frame[data-crop="true"] {
+    cursor: grab;
+  }
+
+  .frame[data-dragging="true"] {
+    cursor: grabbing;
+  }
+
+  .frame img {
+    position: absolute;
+    max-width: none;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+
+  .frame-words {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    color: var(--fg-3);
+    text-align: center;
+  }
+
+  /* Empty or failed: a plain surface, never the black of a video's bars. */
+  .frame[data-empty="true"] {
+    background: var(--fill-1);
+    box-shadow: 0 0 0 var(--hairline) var(--stroke-2);
+  }
+
+  .preview-foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    min-height: 32px;
+  }
+
+  .preview-note {
+    min-width: 0;
+    color: var(--fg-3);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .drop-veil-words {
+    padding: 8px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--elev-pop);
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* What stands in for the card when the tool is missing: one message, one button that can succeed. */
+  .blocked-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .blocked {
+    display: grid;
+    flex: 1 1 auto;
+    place-content: center;
+    justify-items: center;
+    gap: 4px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .link-button {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .notices {
+    max-height: 168px;
+    overflow: auto;
+    padding: 8px 10px;
+    border-radius: var(--radius-lg);
+    background: var(--fill-1);
+    color: var(--fg-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
   }
 }

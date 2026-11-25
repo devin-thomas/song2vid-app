@@ -1,6 +1,6 @@
 # S2V-024 - Windows: the bundled LGPL FFmpeg
 
-Status: open
+Status: resolved
 Blocked by: none
 
 ## Goal
@@ -32,3 +32,7 @@ None.
   - Supplementary on the Mac (not Titan): the same executables under Wine 10.0 in a linux/amd64 container produced the same encoder list, no GPL grep match, and decoded all images and audio inputs, GIF included, with exit 0; `-buildconf` was identical for the two builds there.
   - `scripts/check.sh` passed (0) on the final tree (no Mac code changed). One earlier run failed (65) when the Mac's disk filled during the Xcode tests (`No space left on device`); it passed after scratch files were removed.
   - Not checked: `h264_mf` and `hevc_mf` with hardware encoding on the DeskMini (SSH to the DeskMini is still off). `check.ps1 -Machine DeskMini` is written for it and requires `-hw_encoding 1` for both encoders. The Titan run exercised `h264_mf` in software only and never ran `hevc_mf`. The ticket stays `open` on that one criterion; every other criterion is met. Titan's ssh intermittently refused the key for several minutes during the run, then accepted it again, with no change made on this side.
+
+### 2026-11-24, coordinator
+
+Owner direction on 2026-11-24: Titan stands in for the DeskMini, and nothing waits for it. On Titan, the staged 8.1.3 build encoded a PNG plus WAV with `h264_mf -hw_encoding 1` and `hevc_mf -hw_encoding 1` (NVIDIA's Media Foundation encoder). Both exited 0, and the outputs probe as h264 and hevc at 1280x720. Together with the NVENC and software encodes recorded above, every encoder in the build is proven on real hardware. Still for the owner: one encode on the DeskMini (AMD 3400G, Windows 10) through AMD's Media Foundation encoder. Resolved.

@@ -1,9 +1,11 @@
 // The real shell when things go wrong, through its control channel only (never a second
 // instance, never focus). Four trials, each in its own throwaway data folder:
 //
-//   recover     type a known sentence, crash the page's renderer, and read the page again:
-//               the renderer is reloaded by the shell and the sentence is back, with no
-//               relaunch [crash recovery]. In the same session, the page's view of its
+//   recover     choose HEVC in the page, crash the page's renderer, and read the page again:
+//               the renderer is reloaded by the shell and HEVC is still chosen, with no
+//               relaunch [crash recovery]. (Song2Vid's saved state is the Codec: the files
+//               chosen are held by the page and by the shell's id table, and a crashed page
+//               asks for them again, D-025.) In the same session, the page's view of its
 //               permissions: camera, microphone, location, notifications and MIDI denied
 //               [secure desktop boundary].
 //   loop        crash the renderer four times inside a minute: three reloads, then the shell
@@ -18,11 +20,11 @@
 // Usage: node qa/crash-test.ts   (writes qa/evidence/crash-test.json)
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { KillRecord } from '@uppercut-labs/electron-qa-measurements';
 import type { Diagnostics } from '../electron/main.ts';
 import type { WindowDescription } from '../electron/window.ts';
 import { launchDev, root } from '../scripts/lib/launch.ts';
 import type { LaunchedApp } from '../scripts/lib/launch.ts';
+import { standinEnv } from './standin.ts';
 
 const evidence = join(root, 'qa', 'evidence');
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -32,11 +34,18 @@ const check = (trial: string, condition: unknown, message: string): void => {
   if (!condition) failures.push(`${trial}: ${message}`);
 };
 
-/** What --qa-page writes: the note's body as the page holds it, and the page's view of its permissions. */
+/** What --qa-page writes: the Codec the page shows, and the page's view of its permissions. */
 interface PageReport {
   url?: string;
-  body: string | null;
+  codec: string | null;
   permissions: Record<string, string>;
+}
+
+/** What --qa-choose-codec writes. */
+interface Chosen {
+  pid: number;
+  at: number;
+  expected: string;
 }
 
 /** A value the app was expected to report; a missing one fails the trial with a message instead of a TypeError. */
@@ -104,34 +113,34 @@ async function finish(trial: string, app: LaunchedApp, dataDir: string): Promise
 async function recover(): Promise<void> {
   const trial = 'recover';
   const dataDir = freshDir(trial);
-  const typedFile = join(evidence, 'crash-typed.json');
+  const typedFile = join(evidence, 'crash-chosen.json');
   const diag = join(evidence, 'crash-diagnostics.json');
   const pageFile = join(evidence, 'crash-page.json');
   rmSync(typedFile, { force: true });
-  const app = launchDev({ args: [`--qa-type-then-wait=${typedFile}`], dataDir, timeoutMs: 120_000 });
+  const app = launchDev({ args: [`--qa-choose-codec=${typedFile}`], dataDir, timeoutMs: 120_000, env: standinEnv() });
   try {
-    const typed = await waitForFile<KillRecord>(typedFile, 60_000);
-    await sleep(800); // past the save the page makes after the last key
+    const typed = await waitForFile<Chosen>(typedFile, 60_000);
+    await sleep(800); // past the write the main process makes on the choice
     const before = await askFile<PageReport>(app, 'qa-page', pageFile);
-    check(trial, before.body === typed.expected, 'the page did not hold the typed sentence before the crash');
+    check(trial, before.codec === typed.expected, `the page showed ${before.codec} before the crash, not ${typed.expected}`);
 
     const crashedAt = Date.now();
     const reply = await app.ask(['--qa-crash-renderer']);
     check(trial, reply.ok, `the crash request was not answered: ${JSON.stringify(reply)}`);
     const after = await until(() => askFile<Diagnostics>(app, 'diagnostics', diag), (d) => chosenOf(d).renderer.reloads >= 1 && pageLoaded(d), 30_000, 'the reloaded page');
-    const page = await until(() => askFile<PageReport>(app, 'qa-page', pageFile), (p) => typeof p.body === 'string' && p.body.length > 0, 15_000, 'the restored sentence');
+    const page = await until(() => askFile<PageReport>(app, 'qa-page', pageFile), (p) => typeof p.codec === 'string', 15_000, 'the restored Codec');
     const recoveredMs = Date.now() - crashedAt;
     const r = chosenOf(after).renderer;
     check(trial, r.crashes.length === 1 && r.crashes[0]?.reason !== 'clean-exit', `expected one crash, saw ${JSON.stringify(r.crashes)}`);
     check(trial, r.reloads === 1 && !r.gaveUp, `expected one reload and no crash loop, saw ${JSON.stringify(r)}`);
-    check(trial, page.body === typed.expected, `the sentence came back as ${page.body?.length} of ${typed.expected.length} characters`);
+    check(trial, page.codec === typed.expected, `the page came back showing ${page.codec}, not ${typed.expected}`);
     check(trial, after.pid === app.pid, `the app's process changed (${after.pid}, started ${app.pid}): it was relaunched, not recovered`);
     check(trial, windowOf(after).visible === true, 'the window was not visible after the reload');
 
     const denied = ['camera', 'microphone', 'geolocation', 'notifications', 'midi'];
     for (const name of denied) check(trial, page.permissions[name] === 'denied' || String(page.permissions[name]).startsWith('unsupported'), `the page sees ${name} as "${page.permissions[name]}", not denied`);
     check(trial, Array.isArray(after.boundary?.allowed) && after.boundary.allowed.join() === 'clipboard-sanitized-write', `the boundary allows ${JSON.stringify(after.boundary?.allowed)}`);
-    results[trial] = { recoveredMs, crash: r.crashes[0], reloads: r.reloads, restoredChars: page.body?.length, expectedChars: typed.expected.length, permissions: page.permissions, decisions: after.boundary?.decisions?.slice(-12) };
+    results[trial] = { recoveredMs, crash: r.crashes[0], reloads: r.reloads, restoredCodec: page.codec, expectedCodec: typed.expected, permissions: page.permissions, decisions: after.boundary?.decisions?.slice(-12) };
   } finally {
     await finish(trial, app, dataDir);
     rmSync(typedFile, { force: true });
@@ -143,7 +152,7 @@ async function loop(): Promise<void> {
   const trial = 'loop';
   const dataDir = freshDir(trial);
   const diag = join(evidence, 'crash-loop-diagnostics.json');
-  const app = launchDev({ dataDir, timeoutMs: 120_000 });
+  const app = launchDev({ dataDir, timeoutMs: 120_000, env: standinEnv() });
   try {
     await until(() => askFile<Diagnostics>(app, 'diagnostics', diag).catch(() => null), (d) => d !== null && pageLoaded(d), 30_000, 'the first page');
     for (let i = 1; i <= 4; i += 1) {
@@ -170,7 +179,7 @@ interface WindowState {
 async function restoreTrial(trial: string, windowState: WindowState, judge: (settled: Diagnostics, w: WindowDescription) => void): Promise<void> {
   const dataDir = freshDir(trial, windowState);
   const diag = join(evidence, `crash-${trial}-diagnostics.json`);
-  const app = launchDev({ dataDir, timeoutMs: 90_000 });
+  const app = launchDev({ dataDir, timeoutMs: 90_000, env: standinEnv() });
   try {
     const d = required(
       await until(() => askFile<Diagnostics>(app, 'diagnostics', diag).catch(() => null), (x) => x !== null && windowOf(x).visible === true && chosenOf(x).reveal !== null, 30_000, 'the revealed window'),

@@ -6,9 +6,9 @@
 //
 // Channels (electron/preload.ts is the other end): `file:choose-audio`, `file:choose-image`,
 // `file:drop`, `file:release`, `file:preview`, `job:make`, `job:cancel`, `job:show-in-folder`
-// (page to shell) and `job:update`, `tool:encoders`, `file:opened` (shell to page). The
+// (page to shell) and `job:update`, `tool:encoders`, `tool:status`, `file:opened` (shell to page). The
 // channels for preferences, links and notices (`app:preferences`, `app:open-link`, `app:notices`)
-// are not tool calls and belong to S2V-030.
+// are not tool calls and are in main.ts (electron/app-data.ts).
 import { app, dialog, shell } from 'electron';
 import type { BrowserWindow, IpcMain, IpcMainEvent } from 'electron';
 import type { JobUpdate, ToolStatus } from '../../src/bridge.ts';
@@ -16,6 +16,7 @@ import type { AppConfig, SystemName } from '../platform.ts';
 import { STAGING_NAME } from './contract.ts';
 import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS } from './files.ts';
 import { locateTool } from './locate.ts';
+import { answerOpen, answerSave, readQaPicks } from './qa-picks.ts';
 import { createToolService } from './service.ts';
 import type { ToolUi } from './service.ts';
 
@@ -51,8 +52,11 @@ export function createNative({ config, getWindow, system, projectDir, quiet }: N
   };
 
   /** The system's own dialogs. Under --no-activate none is opened (D-010): the answer is "the person closed it". */
+  // Development only: answers for the dialogs, from the launch's flags (qa-picks.ts). A packaged app never reads them.
+  const picks = readQaPicks(process.argv, app.isPackaged);
   const ui: ToolUi = {
     async pickFile(kind) {
+      if (picks) return answerOpen(picks, kind);
       if (quiet()) return null;
       const options = {
         title: kind === 'audio' ? 'Choose Audio' : 'Choose Image',
@@ -64,6 +68,7 @@ export function createNative({ config, getWindow, system, projectDir, quiet }: N
       return result.canceled ? null : (result.filePaths[0] ?? null);
     },
     async pickSave(defaultPath) {
+      if (picks) return answerSave(picks);
       if (quiet()) return null;
       const options = { title: 'Make Video', defaultPath, filters: [{ name: 'MP4 video', extensions: ['mp4'] }] };
       const win = parent();
@@ -82,6 +87,7 @@ export function createNative({ config, getWindow, system, projectDir, quiet }: N
       job: (update: JobUpdate) => sendToPage('job:update', update),
       encoders: (report) => sendToPage('tool:encoders', report),
       filesOpened: (result) => sendToPage('file:opened', result),
+      toolStatus: (status) => sendToPage('tool:status', status),
     },
   });
 

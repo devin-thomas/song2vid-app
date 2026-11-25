@@ -17,7 +17,7 @@ The page holds opaque ids and never a path. That is SPEC 27.2 and the starter's 
 | Last save folder, window size and position | The shell | Never sent to the page |
 | The system | The shell | `bootstrap().platform`; the page sets `data-platform` on the root and never reads the user agent |
 | Running the tool | The shell | `electron/tool/` runs `song2vid.exe` with `--json` and, for `make` and `preview`, `--cancel-on-eof` (SPEC 27.6). One job at a time. A second `makeVideo` while one runs, or while its save dialog is open, resolves `{ status: 'busy' }`. The tool's own files are the shell's: `service.ts` holds the logic and is tested with the stand-in tool, `index.ts` gives it the Windows dialogs and the channels |
-| Dialogs under `--no-activate` | The shell | A launch that asked for no focus opens no dialog (D-010): `chooseAudio`, `chooseImage` and `makeVideo` answer `dismissed`, as if the person had closed it |
+| Dialogs under `--no-activate` | The shell | A launch that asked for no focus opens no dialog (D-010): `chooseAudio`, `chooseImage` and `makeVideo` answer `dismissed`, as if the person had closed it. A development launch (never a packaged one) can answer them with `--qa-pick-audio=`, `--qa-pick-image=` and `--qa-pick-save=` (D-026) |
 | Which Encoder | The tool | The page reports the Encoder the tool names and never chooses one (ADR-025). It turns `nvenc`, `media_foundation`, `software` and `apple` into the human names "NVIDIA encoder", "graphics hardware encoder", "software encoder" and "Apple encoder" |
 | Words | The page | The shell sends codes and numbers. `Problem.details` and `ToolStatus.details` are developer text: the page only ever copies them (Copy Details) and never shows them. The sentence for each tool code is SPEC 27.5's table |
 | Closing during a job | The shell | The shell asks, with its own system dialog, "Stop making the video?" and the buttons Keep Making (default and Esc) and Stop and Close, before it closes the window or quits (the starter's `confirmQuitDuringJob`, reworded). The page is not asked and has no call for it |
@@ -36,6 +36,7 @@ The page holds opaque ids and never a path. That is SPEC 27.2 and the starter's 
 | `releaseFiles(ids)` | Free ids the page will not use | Nothing |
 | `previewImage(imageId)` | `song2vid preview` (SPEC 24.3): the image as the video will see it, any supported type | `ready` with an `src` and its pixel size, or `failed` with a problem. `src` is a `data:image/png;base64,` address (the page's policy allows `img-src data:`); the picture file is removed as soon as it is read. Releasing the image stops a preview still being made (`failed`, code `cancelled`) |
 | `onEncoders(listener)` | A fresh `encoders` answer after the launch refresh (SPEC 27.6) | One `EncoderReport` per refresh |
+| `onToolStatus(listener)` | The tool's status changed after `bootstrap()`: a tool the cached answer called ready failed this launch's version check (S2V-030, D-026) | One `ToolStatus` (`damaged`). The page then shows the one blocking state |
 | `makeVideo(request)` | Open the save dialog (`destination: 'ask'`), or reuse the last destination (`'same'`, for Try Again), then start the job | `started` with a job id as soon as it is recorded; `dismissed` when the person closed the save dialog; `busy` |
 | `cancelJob(jobId)` | Close the tool's stdin (SPEC 24.4), then kill it after 3 s; a tool that had to be killed may have left its `.song2vid-<32 hex>.tmp`, and the shell removes the one that is new in the output folder | Nothing. The job ends with a `cancelled` update. The page shows "Cancelling" on the next frame without waiting |
 | `onJob(listener)` | The job's updates, one at a time, in order | `running` (stage, percent or `null`, elapsed seconds, remaining seconds or `null`, the Encoder from the encoding stage, `stalled` after 30 s with no line), then exactly one of `done`, `cancelled`, `failed`. The first `running` update comes at once, at stage `checking` with no percent. The percent never goes back and stays under 100 until `done`. The shell withholds the remaining seconds (`null`) until encoding has run 1 second and passed 5%, and gives the tool's number, changing at most once a second and never up by more than a second at a time; the page applies the same rule again |
@@ -74,12 +75,11 @@ Codes the shell itself sends in a `Problem` or a `ToolStatus` (a tool error code
 ## Settled by S2V-029
 
 - `check` takes one file (SPEC 24.8), so `chooseAudio`, `chooseImage` and a drop each ask the tool about the files they have. D-024 records the rest of the adapter's decisions.
-- `electron/preload.ts` is unchanged: every channel it names has a handler in `electron/tool/index.ts` except the three below.
+- Every channel `electron/preload.ts` names has a handler in `electron/tool/index.ts` except the preferences, link and notices channels, which S2V-030 wrote (below).
 
-## Open points for S2V-030
+## Settled by S2V-030 (D-025, D-026)
 
-- The channels `app:preferences` (`setPreferences`), `app:open-link` (`openLink`) and `app:notices` (`notices`), and `Bootstrap.preferences`, have no handler yet: they are not tool calls. `app:bootstrap` in `electron/main.ts` gives `tool` and `encoders`.
-- A file opened with the app (the second-launch hand-off): `createNative(...).openFiles(paths)` judges it as a drop and sends `file:opened`; nothing calls it yet, because the second-launch and `open-file` plumbing lives in `electron/shell.ts`.
-- A refresh that ends after `bootstrap()` has returned reaches the page as `tool:encoders`. One that ends between the reply and the page's `onEncoders` subscribing is missed; the page should treat `bootstrap().encoders` as possibly stale and wait for the event.
-- `ToolStatus` is read once, at bootstrap. A launch that started from the cached answer and then found the tool damaged is not announced; the next `makeVideo` fails with the tool's code (`TOOL_INCOMPATIBLE`, `TOOL_STALLED`, `TOOL_NOT_FOUND`) and the page then shows the blocking state.
-- `src/bridge.fake.ts` and the example page still speak the old bridge, so `pnpm typecheck` fails (18 errors, all in them) until S2V-030 replaces them. Recorded in `windows/SKILL-NOTES.md`.
+- `app:preferences`, `app:open-link`, `app:notices` and `Bootstrap.preferences` have handlers (`electron/app-data.ts`, wired in `electron/main.ts`). The Codec is saved the moment it is chosen; the theme and the window's place are the shell's own as before.
+- A file opened with the app reaches `onFilesOpened` through `shell.ts` (`filesWaiting`) and `main.ts`, once the page has said it is listening (the preload sends `file:listening` when the page subscribes). Files that arrive while the page loads wait and are judged as a drop is.
+- A refresh that ends between `bootstrap()` and the page's subscriptions is not missed: the page asks `bootstrap()` once more after it has subscribed. A cached ready tool that fails this launch's version check is announced by `onToolStatus`.
+- `src/bridge.fake.ts` speaks the new bridge: every state of the window has a fixture (its header lists them, one `make-fail-<code>` for each row of SPEC 27.5) and `pnpm typecheck` is green.

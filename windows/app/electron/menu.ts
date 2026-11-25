@@ -46,7 +46,7 @@ function appTemplate({ productName, item }: TemplateContext): TemplateEntry[] {
     },
     {
       label: 'File',
-      submenu: [item('choose-audio', 'Choose Audio…'), item('choose-image', 'Choose Image…'), SEPARATOR, item('make-video', 'Make Video'), item('cancel', 'Cancel'), item('show-in-folder', 'Show in File Explorer'), SEPARATOR, { role: 'close' }],
+      submenu: [item('choose-audio', 'Choose Audio…'), item('choose-image', 'Choose Image…'), SEPARATOR, item('make-video', 'Make Video'), item('cancel', 'Cancel'), item('show-in-folder', 'Show in File Explorer'), item('copy-details', 'Copy Details'), SEPARATOR, { role: 'close' }],
     },
     {
       label: 'Edit',

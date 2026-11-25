@@ -49,6 +49,8 @@ export interface ShellContext {
   createWindow: (options?: { inactive?: boolean }) => BrowserWindow;
   handleCommands: (argv: string[]) => Promise<boolean>;
   diagnostics: () => Promise<unknown>;
+  /** Called when files are waiting in takeOpenedFiles(): the app takes them and hands them to its page (Song2Vid, S2V-030). */
+  filesWaiting?: () => void;
 }
 
 let ctx: ShellContext | null = null;
@@ -103,7 +105,10 @@ function openFiles(paths: string[]): void {
   if (!fresh.length) return;
   opened.push(...fresh);
   seen.filesOpened += fresh.length;
-  if (ctx?.app.isReady()) void shellMenu.send('open-files');
+  if (ctx?.app.isReady()) {
+    void shellMenu.send('open-files');
+    ctx.filesWaiting?.();
+  }
 }
 
 /** Files named on a command line: every argument that is not a flag and is an existing file. */
@@ -244,13 +249,13 @@ async function commands(argv: string[]): Promise<boolean> {
   const pageWindow = live();
   if (pageFile && !app.isPackaged && pageWindow) {
     const probe = `(async () => {
-      const field = document.getElementById('field-body');
+      const chosen = document.querySelector('[data-group="codec"] [aria-checked="true"]');
       const names = ['camera', 'microphone', 'geolocation', 'notifications', 'clipboard-write', 'clipboard-read', 'midi'];
       const permissions = {};
       for (const name of names) {
         try { permissions[name] = (await navigator.permissions.query({ name })).state; } catch (e) { permissions[name] = 'unsupported: ' + e.name; }
       }
-      return { url: location.href, body: field ? field.value : null, permissions };
+      return { url: location.href, codec: chosen ? chosen.getAttribute('data-value') : null, permissions };
     })()`;
     let page: unknown;
     try {
@@ -395,7 +400,10 @@ export function start(options: ShellContext): void {
     const files = filesIn(process.argv, process.cwd());
     setTimeout(() => {
       if (files.length) openFiles(files);
-      else if (opened.length) void shellMenu.send('open-files');
+      else if (opened.length) {
+        void shellMenu.send('open-files');
+        ctx?.filesWaiting?.();
+      }
     }, 0);
   });
 }

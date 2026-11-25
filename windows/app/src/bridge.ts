@@ -187,6 +187,8 @@ export interface DesktopBridge {
   releaseFiles(ids: FileId[]): void;
   previewImage(imageId: FileId): Promise<PreviewResult>;
   onEncoders(listener: (report: EncoderReport) => void): () => void;
+  /** The tool's status changed after bootstrap(): a tool the cached answer called ready failed this launch's version check (S2V-030, D-025). */
+  onToolStatus(listener: (status: ToolStatus) => void): () => void;
 
   makeVideo(request: MakeRequest): Promise<MakeStart>;
   cancelJob(jobId: string): void;

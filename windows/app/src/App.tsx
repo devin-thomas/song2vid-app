@@ -1,27 +1,47 @@
-import { Dialog } from '@base-ui/react/dialog';
 import { Tooltip } from '@base-ui/react/tooltip';
-import { Search } from 'lucide-react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import config from '../app.config.json';
+import pkg from '../package.json';
 import type { Bootstrap, DesktopBridge, Platform } from './bridge';
+import { Choice } from './components/Choice';
 import { CommandPalette, type Command } from './components/CommandPalette';
-import { ItemList, type Item } from './components/ItemList';
+import { AboutDialog, ReplaceDialog } from './components/Dialogs';
+import { Preview } from './components/Preview';
 import { StatusBar } from './components/StatusBar';
 import { TitleBar } from './components/TitleBar';
-import { Toaster } from './components/Toaster';
-import { Tip, formatTime } from './components/ui';
-import { useDraft } from './state/draft';
-import { cancelExample, jobRunning, runExample, useJob, useTool } from './state/job';
-import { SHORTCUTS, keysOf, matches, type CommandId } from './state/shortcuts';
-import { toast } from './state/toast';
+import { Kbd, Tip } from './components/ui';
+import {
+  cancel,
+  canMake,
+  chooseAudio,
+  chooseImage,
+  copyDetails,
+  dropFiles,
+  frameOf,
+  makeVideo,
+  openDownloadPage,
+  originalSize,
+  resetCrop,
+  roomOf,
+  say,
+  setCodec,
+  setDragging,
+  setShape,
+  setTier,
+  showInFolder,
+  useApp,
+} from './state/app';
+import { SHAPES, TIERS, isCropShape } from './state/frame';
+import type { Shape, Tier } from './state/frame';
+import { jobBusy } from './state/model';
+import { SHORTCUTS, ariaKeys, keysOf, matches, type CommandId } from './state/shortcuts';
+import { ACTION_LABELS, BLOCKED, CODEC_NAMES, HEVC_UNAVAILABLE, clock, dimensions, dragLooksValid, enlargeNote, hevcAvailable } from './state/words';
 
-// The starter screen: a note with a title and a body, beside a 10,000-row list
-// whose rows can be added to the note, and a status bar that runs an example
-// job through the bundled tool. It exists so the shell, the tokens, the audit
-// and the measurements have something real to run against on day one. Replace
-// it with the app's own screens and keep the parts around it: the command
-// registry with its ids from shortcuts.json, the saved draft, the title bar,
-// the status bar's one height, and the stand-in bridge.
+// Song2Vid's one window (SPEC 27.2): Audio, Image, Frame Shape, Resolution, Codec, the preview with
+// its crop, the enlarge note, and Make Video, over a status bar that says what is happening and what
+// happened. The command registry below is the single list of commands: the palette shows it, the key
+// handler and the shell's menu run it by id, each with its shortcut from shortcuts.json.
 
 type Theme = 'light' | 'dark';
 
@@ -44,100 +64,43 @@ function useTheme(desktop: DesktopBridge): [Theme, () => void] {
   return [theme, toggle];
 }
 
-const narrowQuery = window.matchMedia('(max-width: 859.98px)');
-
-function useNarrow() {
-  return useSyncExternalStore(
-    (listener) => {
-      narrowQuery.addEventListener('change', listener);
-      return () => narrowQuery.removeEventListener('change', listener);
-    },
-    () => narrowQuery.matches,
-    () => false,
-  );
-}
-
-export const FIELD = { title: 'field-title', body: 'field-body', filter: 'rail-filter' } as const;
-// Focus moves in the same turn as the key that asked for it, so keys typed
-// straight after a shortcut land in the new field. Only an element that is not
-// focusable yet (a panel still hidden in this render) waits one frame.
-function focusField(id: string) {
-  const el = document.getElementById(id);
-  el?.focus();
-  if (document.activeElement === el) return;
-  // The element may not be rendered yet: try once more next frame, but only if focus has not moved
-  // since. A dialog opened in between (a shortcut pressed straight after) keeps its focus.
-  const from = document.activeElement;
-  requestAnimationFrame(() => {
-    if (document.activeElement === from || document.activeElement === document.body) document.getElementById(id)?.focus();
-  });
-}
-
-const WORDS = ['Amber', 'Birch', 'Cedar', 'Delta', 'Ember', 'Flint', 'Grove', 'Harbor', 'Indigo', 'Juniper', 'Kestrel', 'Lumen', 'Meadow', 'Nimbus', 'Orchard', 'Pebble'];
-
-function makeItems(count: number): Item[] {
-  const out: Item[] = [];
-  for (let i = 0; i < count; i++) {
-    out.push({ id: `item-${i}`, label: `${WORDS[i % WORDS.length]} ${WORDS[(i * 7 + 3) % WORDS.length]} ${i + 1}`, detail: `${((i * 37) % 900) + 100} KB` });
-  }
-  return out;
-}
+const SHAPE_LABELS: Record<Shape, string> = { '16:9': '16:9', '9:16': '9:16', '1:1': '1:1', '4:3': '4:3', original: 'Original' };
 
 export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: DesktopBridge; platform: Platform }) {
-  const note = useDraft();
-  const { draft } = note;
+  const state = useApp((s) => s);
+  const { audio, image, shape, tier, codec, job, encoders } = state;
   const [theme, toggleTheme] = useTheme(desktop);
-  const narrow = useNarrow();
-  const job = useJob();
-  const tool = useTool();
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [railOpen, setRailOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [items] = useState(() => makeItems(10_000));
 
-  const query = filter.trim().toLowerCase();
-  const rows = query ? items.filter((item) => item.label.toLowerCase().includes(query)) : items;
-  const railShown = narrow ? railOpen : true;
+  const busy = jobBusy(job);
+  const blocked = state.tool.state === 'damaged';
+  const frame = frameOf(state);
+  const makeReady = canMake(state);
+  const crops = isCropShape(shape);
+  const room = roomOf(state);
+  const canReset = crops && !busy && (room.h > 0 || room.v > 0);
+  const hevcOk = hevcAvailable(encoders);
 
-  function clearNote() {
-    const before = draft;
-    note.clear();
-    toast({ title: 'Note cleared', action: { label: 'Undo', run: () => note.replace(before) } });
-  }
-
-  function addItem(item: Item) {
-    note.edit({ body: draft.body ? `${draft.body.replace(/\n?$/, '\n')}${item.label}\n` : `${item.label}\n` });
-  }
-
-  function showItems() {
-    if (narrow && railOpen) {
-      setRailOpen(false);
-      return;
-    }
-    setRailOpen(true);
-    focusField(FIELD.filter);
-  }
-
-  // The command list is the single registry: the palette shows it, the key
-  // handler and the shell's menu run it by id. A command a person repeats
-  // carries a shortcut from shortcuts.json.
-  const running = job.phase === 'running';
+  // The command list is the single registry: the palette shows it, the key handler and the shell's
+  // menu run it by id. A command a person repeats carries a shortcut from shortcuts.json.
   const cmd = (id: CommandId, rest: Omit<Command, 'id' | 'shortcut'>): Command => ({ id, shortcut: SHORTCUTS[id] ?? undefined, ...rest });
   const commands: Command[] = [
-    cmd('focus-title', { group: 'Go to', label: 'Title', keywords: 'focus', focus: FIELD.title, run: () => {} }),
-    cmd('focus-body', { group: 'Go to', label: 'Note', keywords: 'body text focus', focus: FIELD.body, run: () => {} }),
-    cmd('show-items', { group: 'Go to', label: `All ${items.length.toLocaleString('en-US')} items`, keywords: 'list filter browse', run: showItems }),
-    cmd('clear-note', { group: 'Note', label: 'Clear note', keywords: 'discard delete', disabled: note.blank, focus: FIELD.title, run: clearNote }),
-    cmd('run-example', { group: 'Example', label: 'Run the example', keywords: 'job start', disabled: running, run: () => void runExample() }),
-    cmd('cancel-example', { group: 'Example', label: 'Cancel the example', keywords: 'stop job', disabled: !running, run: cancelExample }),
+    cmd('choose-audio', { group: 'File', label: 'Choose Audio…', keywords: 'song music open file', disabled: busy || blocked || state.replace !== null, run: () => void chooseAudio().then(focusChoose('choose-audio')) }),
+    cmd('choose-image', { group: 'File', label: 'Choose Image…', keywords: 'picture photo cover open file', disabled: busy || blocked || state.replace !== null, run: () => void chooseImage().then(focusChoose('choose-image')) }),
+    cmd('make-video', { group: 'File', label: 'Make Video', keywords: 'save export create mp4', disabled: !makeReady, run: () => void makeVideo('ask') }),
+    cmd('cancel', { group: 'File', label: 'Cancel', keywords: 'stop video', disabled: !(job.phase === 'running' && !job.cancelling) && job.phase !== 'starting', run: cancel }),
+    cmd('show-in-folder', { group: 'File', label: 'Show in File Explorer', keywords: 'folder open saved video', disabled: job.phase !== 'done', run: showInFolder }),
+    cmd('copy-details', { group: 'File', label: 'Copy Details', keywords: 'error problem failure clipboard', disabled: state.failure === null && !blocked, run: () => void copyDetails() }),
+    cmd('reset-crop', { group: 'View', label: 'Reset Crop to Center', keywords: 'crop position move image', disabled: !canReset, run: resetCrop }),
     cmd('toggle-theme', { group: 'View', label: theme === 'dark' ? 'Use the light theme' : 'Use the dark theme', keywords: 'appearance dark light', run: toggleTheme }),
-    cmd('about', { group: 'View', label: `About ${config.productName}`, keywords: 'version data folder', run: () => setAboutOpen(true) }),
+    cmd('about', { group: 'App', label: `About ${config.productName}`, keywords: 'version licence notices', run: () => setAboutOpen(true) }),
   ];
 
-  const latest = useRef({ commands, paletteOpen });
+  const latest = useRef({ commands, paletteOpen, modal: false });
+  const modal = aboutOpen || state.replace !== null;
   useEffect(() => {
-    latest.current = { commands, paletteOpen };
+    latest.current = { commands, paletteOpen, modal };
   });
 
   // The shell's menu dims exactly the commands whose shortcut would do nothing now.
@@ -150,18 +113,21 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
     function runCommand(command: Command | undefined) {
       if (!command || command.disabled) return;
       command.run();
-      if (command.focus) focusField(command.focus);
+      if (command.focus) document.getElementById(command.focus)?.focus();
     }
     function onKeyDown(event: KeyboardEvent) {
-      const { commands: list, paletteOpen: palette } = latest.current;
+      const { commands: list, paletteOpen: palette, modal: dialog } = latest.current;
+      if (dialog) return; // a dialog takes its own keys
       if (matches(event, SHORTCUTS['command-palette'])) {
         event.preventDefault();
         setPaletteOpen(!palette);
         return;
       }
-      if (palette) return;
+      if (palette || event.defaultPrevented) return;
       const command = list.find((c) => c.shortcut && matches(event, c.shortcut));
       if (!command) return;
+      // Esc cancels only while a video is made; with nothing to cancel it is left to whatever else wants it.
+      if (command.disabled) return;
       event.preventDefault();
       runCommand(command);
     }
@@ -181,120 +147,194 @@ export function App({ boot, desktop, platform }: { boot: Bootstrap; desktop: Des
     };
   }, [desktop]);
 
-  // Start in the field a person needs first.
-  const startField = useRef(draft.title ? FIELD.body : FIELD.title);
+  // Start where a person starts: on Choose Audio.
   useEffect(() => {
-    if (document.activeElement === document.body) document.getElementById(startField.current)?.focus();
+    if (document.activeElement === document.body) document.getElementById('choose-audio')?.focus();
   }, []);
 
-  const about: Array<[string, string]> = [
-    [config.productName, boot.about?.appVersion ?? 'Development build'],
-    ['Saved work', boot.about?.dataDir ?? 'Kept on this computer'],
-  ];
+  // Controls that were disabled while a video was made lose focus. When the job ends, focus goes to
+  // the step that can succeed (the status bar's button), or back to Make Video (SPEC 27.4).
+  const ended = job.phase === 'done' || job.phase === 'cancelled' || state.failure !== null;
+  const wasEnded = useRef(false);
+  useEffect(() => {
+    if (ended && !wasEnded.current && document.activeElement === document.body) {
+      (document.querySelector<HTMLElement>('[data-status-bar] [data-filled]') ?? document.getElementById('make-video'))?.focus();
+    }
+    wasEnded.current = ended;
+  }, [ended]);
+
+  // ---- drops (SPEC 4a): the whole window accepts files, wherever they land.
+  const depth = useRef(0);
+  const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
+  function onDragEnter(event: DragEvent) {
+    if (!hasFiles(event)) return;
+    depth.current += 1;
+  }
+  function onDragOver(event: DragEvent) {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    const items = Array.from(event.dataTransfer.items, (item) => ({ kind: item.kind, type: item.type }));
+    const valid = dragLooksValid(items);
+    // A drop that cannot be used gets no highlight and no drop; while a video is made it is accepted so it can be refused in words.
+    event.dataTransfer.dropEffect = valid ? 'copy' : 'none';
+    setDragging(valid && !busy);
+  }
+  function onDragLeave(event: DragEvent) {
+    if (!hasFiles(event)) return;
+    depth.current = Math.max(0, depth.current - 1);
+    if (depth.current === 0) setDragging(false);
+  }
+  function onDrop(event: DragEvent) {
+    event.preventDefault();
+    depth.current = 0;
+    setDragging(false);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length) void dropFiles(files);
+    else say('Drop a song or an image.');
+  }
+
+  const version = boot.about?.appVersion ?? pkg.version;
+  const original = shape === 'original';
+  const output = original ? originalSize(state) : null;
+  const showEnlarge = Boolean(frame?.enlarged && image);
+  const makeKeys = keysOf(SHORTCUTS['make-video']);
+  const enlargeWidth = frame?.size.width ?? 0;
+  const enlargeHeight = frame?.size.height ?? 0;
 
   return (
     <Tooltip.Provider delay={500} closeDelay={0} timeout={400}>
-      <div className="app" data-running={jobRunning() ? '' : undefined}>
-        <TitleBar
-          title={draft.title.trim() || (note.blank ? 'New note' : 'Untitled note')}
-          theme={theme}
-          platform={platform}
-          railOpen={railShown}
-          onToggleTheme={toggleTheme}
-          onOpenPalette={() => setPaletteOpen(true)}
-          onToggleRail={() => setRailOpen(!railOpen)}
-        />
+      <div className="app" data-running={busy ? '' : undefined} onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+        <TitleBar theme={theme} platform={platform} onToggleTheme={toggleTheme} onOpenPalette={() => setPaletteOpen(true)} />
         <div className="workspace">
-          <main className="card">
-            <div className="row focus-mark">
-              <label className="row-label" htmlFor={FIELD.title}>
-                Title
-              </label>
-              <input
-                id={FIELD.title}
-                className="bare h-(--control-sm) text-body"
-                value={draft.title}
-                placeholder="Untitled"
-                autoComplete="off"
-                onChange={(event) => note.edit({ title: event.target.value })}
-              />
-            </div>
-            <div className="focus-mark body-mark relative flex min-h-0 flex-1">
-              <textarea
-                id={FIELD.body}
-                className="bare measure h-full resize-none px-5 py-4 text-reading"
-                value={draft.body}
-                placeholder="Write here"
-                aria-label="Note"
-                onChange={(event) => note.edit({ body: event.target.value })}
-              />
-            </div>
-            <footer className="hair-t flex flex-none items-center gap-2 px-5 py-2.5">
-              <span className="min-w-0 flex-1 truncate text-fg-3" data-footer-status="" aria-live="polite">
-                {note.savedAt ? `Saved at ${formatTime(note.savedAt)}` : 'Nothing to save yet'}
-              </span>
-              <Tip label="Clear note" keys={keysOf(SHORTCUTS['clear-note'])}>
-                <button id="action-clear" type="button" className="btn btn-secondary" disabled={note.blank} onClick={clearNote}>
-                  Clear
-                </button>
-              </Tip>
-            </footer>
-          </main>
-
-          <aside className="rail" data-open={railShown} inert={!railShown} aria-label="Items">
-            <div className="focus-mark relative flex h-11 flex-none items-center gap-2.5 px-4">
-              <Search size={16} strokeWidth={1.75} className="flex-none text-fg-3" aria-hidden="true" />
-              <input
-                id={FIELD.filter}
-                className="bare h-full"
-                value={filter}
-                placeholder="Filter items"
-                aria-label="Filter items"
-                autoComplete="off"
-                spellCheck={false}
-                onChange={(event) => setFilter(event.target.value)}
-              />
-            </div>
-            {rows.length > 0 ? (
-              <ItemList rows={rows} label={query ? 'Matching items' : 'All items'} onPick={addItem} />
-            ) : (
-              <div className="px-4 py-6 text-center">
-                <p className="text-fg-2">No item matches “{filter.trim()}”.</p>
-                <button type="button" className="btn btn-secondary mt-3" onClick={() => setFilter('')}>
-                  Show all items
-                </button>
+          <main className="card" data-card="">
+            {blocked ? (
+              <div className="blocked" data-blocked="" role="alert">
+                <p className="text-subhead font-semibold">{BLOCKED.first}</p>
+                <p className="text-fg-2">{BLOCKED.second}</p>
+                <div className="blocked-actions">
+                  <button type="button" className="btn btn-primary btn-lg" data-filled="" onClick={openDownloadPage}>
+                    {ACTION_LABELS[BLOCKED.action]}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-lg" onClick={() => void copyDetails()}>
+                    {ACTION_LABELS['copy-details']}
+                  </button>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="card-body scroll-cue" data-card-body="">
+                  <div className="row">
+                    <span className="row-label">Audio</span>
+                    <div className="file-line">
+                      <button id="choose-audio" type="button" className="btn btn-secondary" disabled={busy} aria-keyshortcuts={ariaKeys(SHORTCUTS['choose-audio'])} onClick={() => void chooseAudio().then(focusChoose('choose-audio'))}>
+                        Choose Audio…
+                      </button>
+                      {audio && (
+                        <>
+                          <Tip label={audio.name}>
+                            <span className="file-name selectable" data-file="audio">
+                              {audio.name}
+                            </span>
+                          </Tip>
+                          <span className="file-fact">{clock(audio.durationSeconds)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="row">
+                    <span className="row-label">Image</span>
+                    <div className="file-line">
+                      <button id="choose-image" type="button" className="btn btn-secondary" disabled={busy} aria-keyshortcuts={ariaKeys(SHORTCUTS['choose-image'])} onClick={() => void chooseImage().then(focusChoose('choose-image'))}>
+                        Choose Image…
+                      </button>
+                      {image && (
+                        <>
+                          <Tip label={image.name}>
+                            <span className="file-name selectable" data-file="image">
+                              {image.name}
+                            </span>
+                          </Tip>
+                          <span className="file-fact">{dimensions(image.width, image.height)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="row">
+                    <span className="row-label">Frame Shape</span>
+                    <Choice<Shape> label="Frame Shape" group="shape" value={shape} onChange={setShape} disabled={busy} options={SHAPES.map((value) => ({ value, label: SHAPE_LABELS[value] }))} />
+                  </div>
+                  <div className="row">
+                    <span className="row-label">Resolution</span>
+                    {original ? (
+                      <p className="output-line" data-output="">
+                        Output: {output ? dimensions(output.width, output.height) : 'not available'}
+                      </p>
+                    ) : (
+                      <Choice<Tier> label="Resolution" group="resolution" value={tier} onChange={setTier} disabled={busy} options={TIERS.map((value) => ({ value, label: value }))} />
+                    )}
+                  </div>
+                  <div className="row">
+                    <span className="row-label">Codec</span>
+                    <div>
+                      <Choice<'h264' | 'hevc'>
+                        label="Codec"
+                        group="codec"
+                        value={codec}
+                        onChange={setCodec}
+                        disabled={busy}
+                        options={[
+                          { value: 'h264', label: CODEC_NAMES.h264 },
+                          { value: 'hevc', label: CODEC_NAMES.hevc, disabled: !hevcOk },
+                        ]}
+                      />
+                      {!hevcOk && (
+                        <p className="choice-note text-small" data-hevc-note="">
+                          {HEVC_UNAVAILABLE}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="preview" data-preview="">
+                    <Preview />
+                    <div className="preview-foot">
+                      <button type="button" className="btn btn-secondary btn-sm" id="reset-crop" disabled={!canReset} aria-keyshortcuts={ariaKeys(SHORTCUTS['reset-crop'])} onClick={resetCrop}>
+                        Reset to Center
+                      </button>
+                      <p className="preview-note" data-enlarge-note="" aria-live="polite">
+                        {showEnlarge ? enlargeNote(enlargeWidth, enlargeHeight) : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card-foot">
+                  <button id="make-video" type="button" className="btn btn-primary btn-lg w-full" data-primary-action="" disabled={!makeReady} aria-keyshortcuts={ariaKeys(SHORTCUTS['make-video'])} onClick={() => void makeVideo('ask')}>
+                    <span>Make Video</span>
+                    <span className="only-wide flex gap-0.5" aria-hidden="true">
+                      {makeKeys.map((key) => (
+                        <Kbd key={key}>{key}</Kbd>
+                      ))}
+                    </span>
+                  </button>
+                </div>
+              </>
             )}
-          </aside>
+            <div className="drop-veil" data-active={state.dragging} aria-hidden="true">
+              <span className="drop-veil-words">Drop a song or an image</span>
+            </div>
+          </main>
         </div>
 
-        <StatusBar job={job} tool={tool} />
+        <StatusBar />
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} commands={commands} />
-
-        <Dialog.Root open={aboutOpen} onOpenChange={setAboutOpen}>
-          <Dialog.Portal>
-            <Dialog.Backdrop className="scrim dialog-scrim" />
-            <Dialog.Popup className="dialog">
-              <Dialog.Title className="text-subhead font-semibold">About {config.productName}</Dialog.Title>
-              <Dialog.Description className="mt-2 text-fg-2">{config.description}</Dialog.Description>
-              <dl className="facts mt-4" data-about="">
-                {about.map(([label, value]) => (
-                  <div key={label} className="px-3 py-2">
-                    <dt className="text-small text-fg-3">{label}</dt>
-                    <dd className="selectable mt-0.5 wrap-anywhere">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="mt-5 flex justify-end">
-                <Dialog.Close className="btn btn-secondary">Close</Dialog.Close>
-              </div>
-            </Dialog.Popup>
-          </Dialog.Portal>
-        </Dialog.Root>
-
-        <Toaster />
+        <ReplaceDialog />
+        <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} desktop={desktop} version={version} />
       </div>
     </Tooltip.Provider>
   );
+}
+
+/** After a file dialog closes, focus is on the control that opened it, however the dialog was opened (SPEC 27.2, journeys). */
+function focusChoose(id: 'choose-audio' | 'choose-image') {
+  return () => document.getElementById(id)?.focus();
 }
