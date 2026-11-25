@@ -326,12 +326,12 @@ test('a drop into empty slots fills them; onto filled ones it asks, and Keep Cur
 test('a rejected drop changes nothing and says why; a drop during a job is refused in words without asking the shell', async () => {
   const s = await ready();
   applyDrop({ status: 'rejected', reason: 'too-many' });
-  assert.equal(appState().notice, 'Drop no more than two files: one song, one image, or one of each.');
+  assert.deepEqual(appState().notice, { first: 'That is more than two files.', second: 'Drop one song, one image, or one of each.' });
   assert.equal(appState().audio?.id, 'f_song');
   await makeVideo('ask');
   const { dropFiles } = await import('../src/state/app.ts');
   await dropFiles([]);
-  assert.equal(appState().notice, 'Wait for the current video to finish.');
+  assert.deepEqual(appState().notice, { first: 'Wait for the current video to finish.', second: '' });
   assert.equal(s.calls.filter((c) => c.name === 'dropFiles').length, 0);
   s.opened({ status: 'ok', audio: { id: 'f_x', name: 'X.mp3', durationSeconds: 1 }, image: null });
   assert.equal(appState().replace, null, 'a file opened with the app during a job is refused too');
@@ -346,4 +346,84 @@ test('a file chosen that fails its check is a failure with its filled button, an
   assert.equal(appState().audio, null);
   assert.equal(appState().failure?.code, 'audio_unreadable');
   assert.equal(statusOf(appState()).button?.label, 'Choose Audio…');
+});
+
+// ---- S2V-031: the controls say what the message says ---------------------------------------------
+
+test('a job that fails because a loaded file is gone marks that slot, holds Make Video, and a new file frees it', async () => {
+  const s = await ready();
+  await makeVideo('ask');
+  s.job(failed('audio_not_found'));
+  assert.equal(appState().failure?.of, 'audio');
+  assert.equal(canMake(appState()), false, 'Make Video would only fail the same way');
+  assert.equal(statusOf(appState()).button?.label, 'Choose Audio…');
+  // Another song replaces the one that was lost: everything comes back.
+  s.bridge.chooseAudio = async () => ({ status: 'chosen', file: { id: 'f_song2', name: 'Other.mp3', durationSeconds: 10 } });
+  await chooseAudio();
+  assert.equal(appState().failure, null);
+  assert.equal(canMake(appState()), true);
+});
+
+test('an image that cannot be drawn is a problem with the image: the bar says so and Make Video waits', async () => {
+  const s = shell();
+  s.bridge.previewImage = async () => ({ status: 'failed', problem: { code: 'IMAGE_UNREADABLE', details: '{}' } });
+  startApp(s.bridge, s.boot);
+  await chooseAudio();
+  await chooseImage();
+  await tick();
+  assert.equal(appState().preview?.status, 'failed');
+  assert.equal(appState().failure?.of, 'image');
+  assert.equal(appState().failure?.code, 'image_unreadable', 'a code the page does not know is the unreadable image');
+  assert.equal(canMake(appState()), false);
+  assert.notEqual(statusOf(appState()).first, 'Ready to make your video.');
+  assert.equal(statusOf(appState()).tone, 'danger');
+});
+
+test('a file that is rejected when chosen does not mark the slot of the file that was already good', async () => {
+  const s = await ready();
+  s.bridge.chooseAudio = async () => ({ status: 'unusable', problem: { code: 'audio_unreadable', details: '{}' } });
+  await chooseAudio();
+  assert.equal(appState().failure?.code, 'audio_unreadable');
+  assert.equal(appState().failure?.of, null);
+  assert.equal(canMake(appState()), true, 'the song that was chosen before is still fine');
+});
+
+test('HEVC chosen after the tool said this computer cannot make it holds Make Video until H.264 is chosen', async () => {
+  const s = await ready();
+  setCodec('hevc');
+  await makeVideo('ask');
+  s.job(failed('codec_unavailable'));
+  assert.equal(canMake(appState()), false);
+  assert.equal(statusOf(appState()).button?.label, 'Use H.264');
+  await runAction('use-h264');
+  assert.equal(canMake(appState()), true);
+});
+
+test('an image too small for its frame is said by the bar in the table\'s words, not "Ready"', async () => {
+  const s = shell();
+  s.bridge.chooseImage = async () => ({ status: 'chosen', file: { id: 'f_tiny', name: 'Tiny.png', width: 10, height: 10, frames: [] } });
+  startApp(s.bridge, s.boot);
+  await chooseAudio();
+  await chooseImage();
+  setShape('original');
+  await tick();
+  assert.equal(canMake(appState()), false);
+  assert.deepEqual([statusOf(appState()).first, statusOf(appState()).second, statusOf(appState()).button?.label], ['This image is too small.', 'Each side needs at least 16 pixels.', 'Choose Image…']);
+});
+
+test('a missing tool says nothing that could be taken for ready', async () => {
+  await ready({ tool: { state: 'damaged', code: 'TOOL_NOT_FOUND', details: '{}' } });
+  const view = statusOf(appState());
+  assert.equal(view.kind, 'blocked');
+  assert.equal(view.first, '');
+});
+
+test('a dropped file that is refused is named when there is one, and the refusal has the warning tone', async () => {
+  const s = await ready();
+  s.bridge.dropFiles = async () => ({ status: 'rejected', reason: 'unsupported' });
+  const { dropFiles } = await import('../src/state/app.ts');
+  await dropFiles([{ name: 'Notes.txt' } as File]);
+  assert.equal(appState().notice?.first, '\u201cNotes.txt\u201d is not a song or an image Song2Vid can use.');
+  assert.equal(appState().notice?.second, 'Drop a song or an image.');
+  assert.equal(statusOf(appState()).tone, 'warning');
 });

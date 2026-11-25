@@ -10,9 +10,9 @@ import { decideDrop, idsToRelease } from './drops.ts';
 import { CENTER, drag, isCropShape, nudge, outputFrame, overflow } from './frame.ts';
 import type { Crop, Direction, Frame, Shape, Tier } from './frame.ts';
 import { jobBusy, startingCodec } from './model.ts';
-import type { AppState, JobView, Slots } from './model.ts';
+import type { AppState, JobView, Notice, Slots } from './model.ts';
 import { createStore, useStore } from './store.ts';
-import { WAIT_MESSAGE, isToolCode, mayShowTimeLeft, rejectionMessage, steadyPercent, steadyRemaining } from './words.ts';
+import { WAIT_LINES, isToolCode, mayShowTimeLeft, rejectionLines, slotOfFailure, steadyPercent, steadyRemaining } from './words.ts';
 import type { FailureAction } from './words.ts';
 
 const initialState = (): AppState => ({
@@ -104,8 +104,14 @@ export const canAdjustCrop = (s: AppState): boolean => !jobBusy(s.job) && (roomO
 
 export const toolReady = (s: AppState): boolean => s.tool.state !== 'damaged';
 
-/** Make Video: both files loaded, the tool usable, nothing running, and a frame the tool can make. */
+/**
+ * Make Video: both files loaded, the tool usable, nothing running, and a frame the tool can make. It waits while the bar
+ * says a loaded file is the problem, and while HEVC is chosen after the tool said this computer cannot make it, so the button
+ * never offers what the message says will fail (S2V-031).
+ */
 export function canMake(s: AppState): boolean {
+  if (s.failure?.of) return false;
+  if (s.failure?.code === 'codec_unavailable' && s.codec === 'hevc') return false;
   return Boolean(s.audio && s.image && toolReady(s) && !jobBusy(s.job) && !s.replace && frameOf(s) !== null);
 }
 
@@ -118,11 +124,11 @@ export function originalSize(s: AppState): { width: number; height: number } | n
 
 // ---- small things -----------------------------------------------------------------------------
 
-/** A message for a few seconds in the status bar. */
-export function say(text: string, ms = 4000): void {
+/** A message for a few seconds in the status bar: what was refused, and what to do instead. */
+export function say(notice: Notice, ms = 4000): void {
   const id = ++noticeId;
   if (noticeTimer) clearTimeout(noticeTimer);
-  set({ notice: text });
+  set({ notice });
   noticeTimer = setTimeout(() => {
     if (id === noticeId) set({ notice: null });
   }, ms);
@@ -164,7 +170,15 @@ async function loadPreview(imageId: FileId): Promise<void> {
   set({ preview: { imageId, status: 'loading' } });
   const result = await bridge.previewImage(imageId);
   if (mine !== previewId || get().image?.id !== imageId) return;
-  set({ preview: result.status === 'ready' ? { imageId, status: 'ready', src: result.src, width: result.width, height: result.height } : { imageId, status: 'failed', code: result.problem.code } });
+  if (result.status === 'ready') {
+    set({ preview: { imageId, status: 'ready', src: result.src, width: result.width, height: result.height } });
+    return;
+  }
+  set({ preview: { imageId, status: 'failed', code: result.problem.code } });
+  if (jobBusy(get().job)) return;
+  // An image that cannot be drawn is a problem with the image: the bar says so with its button, and Make Video waits.
+  const code = slotOfFailure(result.problem.code) === 'image' ? result.problem.code : 'image_unreadable';
+  fail(code, result.problem.details, null, 'image');
 }
 
 export async function chooseAudio(): Promise<void> {
@@ -186,14 +200,14 @@ export async function chooseImage(): Promise<void> {
 }
 
 /** A failure of a file or of a job: shown in the status bar with its filled button. A tool that is missing or wrong blocks the window instead. */
-function fail(code: string, details: string, key: string | null): void {
+function fail(code: string, details: string, key: string | null, slot: 'audio' | 'image' | null = key !== null ? slotOfFailure(code) : null): void {
   if (isToolCode(code)) {
     set((s) => ({ tool: { state: 'damaged', code, details }, failure: null, job: jobBusy(s.job) ? { phase: 'idle' } : s.job }));
     return;
   }
   const again = key !== null && key === lastFailureKey;
   lastFailureKey = key;
-  set({ failure: { code, details, again }, job: { phase: 'idle' } });
+  set({ failure: { code, details, again, of: slot }, job: { phase: 'idle' } });
 }
 
 // ---- drops ------------------------------------------------------------------------------------
@@ -207,19 +221,19 @@ export function setDragging(on: boolean): void {
 export async function dropFiles(files: File[]): Promise<void> {
   if (!bridge) return;
   set({ dragging: false });
-  if (jobBusy(get().job)) return say(WAIT_MESSAGE, 3000);
+  if (jobBusy(get().job)) return say(WAIT_LINES, 3000);
   if (get().replace) return;
   dropNotice();
-  applyDrop(await bridge.dropFiles(files));
+  applyDrop(await bridge.dropFiles(files), files.map((file) => file.name));
 }
 
 /** A judged drop (or a file opened with the app): nothing changes for a rejected one; an empty slot is filled; a filled one asks. */
-export function applyDrop(result: DropResult): void {
-  if (result.status === 'rejected') return say(rejectionMessage(result.reason), 5000);
+export function applyDrop(result: DropResult, names: readonly string[] = []): void {
+  if (result.status === 'rejected') return say(rejectionLines(result.reason, names), 5000);
   const s = get();
   if (jobBusy(s.job)) {
     release([result.audio?.id, result.image?.id].filter((id): id is FileId => id !== undefined));
-    return say(WAIT_MESSAGE, 3000);
+    return say(WAIT_LINES, 3000);
   }
   const dropped: Slots = { audio: result.audio, image: result.image };
   if (!dropped.audio && !dropped.image) return;

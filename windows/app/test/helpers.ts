@@ -37,7 +37,15 @@ export interface Sandbox {
 export function sandbox(t: TestContext, config: Record<string, unknown> = {}): Sandbox {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'starter-test-'));
   // Retries: on Windows a folder cannot be removed while a process still has it as its working folder (a background check that is finishing).
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 }));
+  // A folder that still cannot be removed after ten seconds (EPERM from a scanner or an indexer holding it, seen on Titan under S2V-030 and S2V-031) is
+  // left for the system's own temp clean-up and said once: removing a test's scratch folder is not what the test checks, and a failed test for it hid nothing real.
+  t.after(() => {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 100, retryDelay: 100 });
+    } catch (error) {
+      console.warn(`left ${dir}: ${(error as NodeJS.ErrnoException).code ?? error}`);
+    }
+  });
   return sandboxAt(dir, config);
 }
 

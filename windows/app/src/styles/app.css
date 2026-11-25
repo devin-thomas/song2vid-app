@@ -60,6 +60,14 @@
     outline-offset: var(--focus-offset);
   }
 
+  /* The ring is for the keyboard (S2V-031). The window starts in pointer modality (state/modality.ts) and a mouse action
+     returns to it, so the first paint and a click show no ring; the first key that is not a modifier brings it back at once.
+     A window that is not active shows none. */
+  :root[data-modality="pointer"] :focus-visible,
+  :root[data-window="inactive"] :focus-visible {
+    outline-style: none;
+  }
+
   h1,
   h2,
   h3 {
@@ -83,7 +91,7 @@
   .app {
     container: app / inline-size;
     display: grid;
-    grid-template-rows: var(--titlebar) minmax(0, 1fr) var(--statusbar);
+    grid-template-rows: var(--titlebar) minmax(0, 1fr) auto;
     height: 100dvh;
     overflow: clip;
   }
@@ -141,48 +149,113 @@
     opacity: 0.45;
   }
 
-  /* ---- status bar: two short lines, one height in every state --------------- */
+  /* ---- status bar: wrapped sentences, one height in every state ---------------- */
 
+  /* The bar is as tall as the tallest message it can say at the width it has (StatusBar.tsx stacks every message in one
+     grid cell, the live one visible and the rest not), so no sentence is cut and nothing around the bar moves. */
   .statusbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    position: relative;
     min-width: 0;
-    height: var(--statusbar);
-    padding: 0 var(--gutter) 0 calc(var(--gutter) + 12px);
+    min-height: var(--statusbar);
+    padding: 12px var(--gutter) 12px calc(var(--gutter) + 12px);
     border-top: var(--hairline) solid var(--stroke-1);
     background: var(--chrome);
   }
 
+  /* A failure and a refusal are not a status: a tinted bar with a 3px edge, a mark and a heavier first line. A saved
+     video has the same pattern in the success colour. */
+  .statusbar[data-tone="danger"],
+  .statusbar[data-tone="warning"],
+  .statusbar[data-tone="success"] {
+    --tone-of-bar: var(--danger);
+    background: color-mix(in srgb, var(--tone-of-bar) 10%, var(--chrome));
+    box-shadow: inset 3px 0 0 var(--tone-of-bar);
+  }
+
+  .statusbar[data-tone="warning"] {
+    --tone-of-bar: var(--warning);
+  }
+
+  .statusbar[data-tone="success"] {
+    --tone-of-bar: var(--success);
+  }
+
+  .statusbar-stack {
+    display: grid;
+    min-width: 0;
+  }
+
+  .statusbar-layer {
+    display: flex;
+    grid-area: 1 / 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* The messages that only set the bar's height. */
+  .statusbar-layer:not([data-live]) {
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .statusbar-mark {
+    flex: none;
+    align-self: flex-start;
+    margin-top: 0;
+  }
+
+  .statusbar-layer[data-tone="danger"] .statusbar-mark {
+    color: var(--danger);
+  }
+
+  .statusbar-layer[data-tone="warning"] .statusbar-mark {
+    color: var(--warning);
+  }
+
+  .statusbar-layer[data-tone="success"] .statusbar-mark {
+    color: var(--success);
+  }
+
   .statusbar-text {
     display: grid;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     gap: 2px;
     min-width: 0;
   }
 
-  /* One line each, cut at the end; the whole sentence stays in the page for reading aloud. */
-  .statusbar-line {
+  .statusbar-first,
+  .statusbar-second {
     min-width: 0;
-    height: var(--text-base--line-height);
-    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .statusbar-first {
     color: var(--fg);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-weight: var(--font-weight-medium);
   }
 
-  .statusbar-line + .statusbar-line {
+  .statusbar-layer:is([data-tone="danger"], [data-tone="warning"], [data-tone="success"]) .statusbar-first {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .statusbar-second {
     color: var(--fg-3);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
   }
 
+  .statusbar-second:empty {
+    display: none;
+  }
+
+  /* Progress: the bar across the top edge of the bar, the whole width of the window. The percent is in the words, once. */
   .statusbar-progress {
-    position: relative;
-    flex: 0 1 96px;
-    min-width: 40px;
-    height: 6px;
+    position: absolute;
+    inset: calc(var(--hairline) * -1) 0 auto 0;
+    height: 4px;
     overflow: hidden;
-    border-radius: 3px;
-    background: var(--fill-2);
+    background: var(--fill-3);
   }
 
   .statusbar-progress > span {
@@ -203,19 +276,20 @@
     gap: 8px;
   }
 
-  /* The 200% zoom case, 280 px wide: the filled button gives way at its end before the sentence does. */
+  /* The 200% zoom case, 280 px wide: the button takes its own line under the sentence, whole. */
   @container app (max-width: 420px) {
-    .statusbar-actions {
-      flex: 0 1 auto;
-      min-width: 0;
-      max-width: 48%;
+    .statusbar {
+      padding: 8px 12px;
     }
 
-    .statusbar-actions .btn {
-      flex: 0 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .statusbar-layer {
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+
+    .statusbar-actions {
+      flex-basis: 100%;
+      justify-content: flex-end;
     }
   }
 
@@ -247,7 +321,6 @@
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow-y: auto;
     overscroll-behavior: contain;
   }
 
@@ -310,10 +383,6 @@
   /* Focus wins over the invalid colour so the focused row is always marked. */
   .focus-mark:focus-within::before {
     background: var(--accent);
-  }
-
-  .row:focus-within > .row-label {
-    color: var(--fg);
   }
 
   .bare {
@@ -468,13 +537,15 @@
     color: var(--fg-3);
   }
 
+  /* The one filled button of a state is the accent's (S2V-031): ready is plainly different from not ready. */
   .btn-primary {
-    background: color-mix(in srgb, var(--fg) 88%, var(--surface));
-    color: var(--surface);
+    background: var(--accent);
+    color: var(--on-accent);
   }
 
   .btn-primary:disabled {
-    background: var(--fill-3);
+    background: transparent;
+    border-color: var(--stroke-2);
     color: var(--fg-4);
   }
 
@@ -507,7 +578,7 @@
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: var(--fg);
+      background: color-mix(in srgb, var(--accent) 86%, var(--fg));
     }
 
     .btn-secondary:hover:not(:disabled) {
@@ -583,7 +654,7 @@
   }
 
   .btn-primary .kbd {
-    color: color-mix(in srgb, var(--surface) 72%, transparent);
+    color: var(--on-accent);
   }
 
   .btn:disabled .kbd {
@@ -732,23 +803,27 @@
     color: color-mix(in srgb, var(--surface) 70%, transparent);
   }
 
-  /* A scroll area fades its lower edge while more content is below it. */
-  .scroll-cue {
-    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cue)), transparent);
-    animation: scroll-cue linear both;
-    animation-timeline: scroll(self);
+  /* A scroll area says so while more is below it: a strip under it (ScrollArea.tsx). It takes room only while there is more
+     to see. */
+  .scroll-area {
+    overflow-y: auto;
   }
 
-  @keyframes scroll-cue {
-    from {
-      --cue: 32px;
-    }
-    96% {
-      --cue: 32px;
-    }
-    to {
-      --cue: 0px;
-    }
+  .scroll-more {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-top: var(--hairline) solid var(--stroke-1);
+    color: var(--fg-2);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+  }
+
+  .scroll-more[hidden] {
+    display: none;
   }
 
   .tooltip[data-starting-style],
@@ -1100,9 +1175,10 @@
       color var(--dur-base) var(--ease-out);
   }
 
+  /* The chosen item is told from the track by its fill and a line, not by a 1.4:1 step of fill alone. */
   .choice-item[aria-checked="true"] {
     background: var(--surface);
-    box-shadow: var(--elev-low);
+    box-shadow: var(--elev-low), inset 0 0 0 var(--hairline) var(--stroke-3);
     color: var(--fg);
   }
 
@@ -1132,7 +1208,8 @@
     color: var(--fg-3);
   }
 
-  /* A chosen file: its name, cut at the end, and its facts beside it. */
+  /* A chosen file: its name, cut in the middle so the extension stays, and its facts beside it. At the 200% zoom case the
+     name and facts take their own line under the button instead of what the button leaves. */
   .file-line {
     display: flex;
     align-items: center;
@@ -1140,17 +1217,57 @@
     min-width: 0;
   }
 
+  .file-info {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
   .file-name {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .file-head {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+
+  .file-tail {
+    flex: none;
+    white-space: pre;
   }
 
   .file-fact {
     flex: none;
     color: var(--fg-3);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A file the tool could not find or read: its name and the words about it are in the error colour, not just listed. */
+  .file-name[data-problem],
+  .file-fact[data-problem] {
+    color: var(--danger);
+  }
+
+  @container app (max-width: 420px) {
+    .file-line {
+      flex-wrap: wrap;
+      row-gap: 4px;
+    }
+
+    .file-info {
+      flex-basis: 100%;
+    }
+
+    .choice[data-group="shape"] .choice-item {
+      flex-basis: calc((100% - 4px) / 3);
+    }
   }
 
   .output-line {
@@ -1223,6 +1340,8 @@
     box-shadow: 0 0 0 var(--hairline) var(--stroke-2);
   }
 
+  /* The enlarge note (whole, never cut) and Reset to Center. The note's two lines are reserved, so the preview does not move
+     when it appears. */
   .preview-foot {
     display: flex;
     flex: none;
@@ -1232,14 +1351,26 @@
   }
 
   .preview-note {
+    flex: 1 1 0;
     min-width: 0;
     color: var(--fg-3);
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  }
+
+  .preview-foot .btn {
+    flex: none;
+  }
+
+  @container app (max-width: 420px) {
+    .preview-foot {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+
+    .preview-note {
+      flex-basis: 100%;
+    }
   }
 
   .drop-veil-words {
@@ -1260,12 +1391,19 @@
   }
 
   .blocked {
-    display: grid;
+    display: flex;
     flex: 1 1 auto;
-    place-content: center;
+    flex-direction: column;
+    min-height: 0;
+    padding: 24px;
+  }
+
+  /* Centred while it fits; from the top, scrolling, when it does not (the 200% zoom case). */
+  .blocked-inner {
+    display: grid;
     justify-items: center;
     gap: 4px;
-    padding: 24px;
+    margin: auto;
     text-align: center;
   }
 

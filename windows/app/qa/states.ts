@@ -173,6 +173,8 @@ export const STATES: Record<string, State> = {
       await fill(page, mod);
       await make(page, mod);
       await waitStatus(page, 'running');
+      // The bar's first value arrives a beat after the stage does: wait for it, so the picture has the same bar every run.
+      await page.waitForSelector('[data-status-bar] [role="progressbar"][aria-valuenow="20"]');
       await page.keyboard.press('Escape');
       await waitStatus(page, 'cancelling');
     },
@@ -227,8 +229,9 @@ export const STATES: Record<string, State> = {
   '38-tool-missing': { fixture: 'tool-damaged', core: true, run: async () => {} },
   '39-tool-turns-missing': {
     fixture: 'tool-damaged-late',
-    run: async (page, mod) => {
-      await fill(page, mod);
+    run: async (page) => {
+      // The fixture turns the tool missing 300 ms after the page starts. A run that chose its files first raced that, and on a slow
+      // machine lost: the card was replaced between the two choices and the second never appeared (Titan, light theme, S2V-031).
       await page.waitForSelector('[data-blocked]', { timeout: 5000 });
     },
   },

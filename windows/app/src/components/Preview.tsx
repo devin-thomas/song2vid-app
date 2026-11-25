@@ -25,6 +25,8 @@ export function Preview() {
   const shape = useApp((s) => s.shape);
   const crop = useApp((s) => s.crop);
   const state = useApp((s) => s);
+  // An image the tool says is gone or unreadable is not drawn: the frame says so, as the bar does.
+  const bad = useApp((s) => (s.failure?.of === 'image' ? s.failure.code : null));
   const frame = frameOf(state);
   const adjustable = canAdjustCrop(state);
   const room = roomOf(state);
@@ -35,8 +37,9 @@ export function Preview() {
   let words: string | null = null;
   if (!image) words = 'Choose an image';
   else if (!frame) words = `${failureFor('image_too_small').first} ${failureFor('image_too_small').second}`;
+  else if (bad) words = knownFailureFirst(bad) ?? "The preview couldn't be made.";
   else if (preview?.status === 'failed') words = knownFailureFirst(preview.code) ?? "The preview couldn't be made.";
-  const drawn = ready && frame ? frame : null;
+  const drawn = ready && frame && !bad ? frame : null;
   const empty = !drawn;
   const ratio = drawn ? drawn.size.width / drawn.size.height : (EMPTY_RATIO[shape] ?? 16 / 9);
   const crops = isCropShape(shape);

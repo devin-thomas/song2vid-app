@@ -2,6 +2,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { keysOf, type Shortcut } from '../state/shortcuts';
+import { ScrollArea } from './ScrollArea';
 import { Kbd } from './ui';
 
 export interface Command {
@@ -160,7 +161,7 @@ export function CommandPalette({
             <Kbd>Esc</Kbd>
           </div>
           {visible.length > 0 ? (
-            <div ref={list} id="command-list" role="listbox" aria-label="Commands" className="scroll-cue min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5">
+            <ScrollArea ref={list} id="command-list" role="listbox" aria-label="Commands" className="min-h-0 flex-1 overscroll-contain p-1.5">
               {groups.map((group) => (
                 <div key={group.name} role="group" aria-label={group.name}>
                   <div className="px-2 pt-2 pb-1 text-small text-fg-3" aria-hidden="true">
@@ -193,7 +194,7 @@ export function CommandPalette({
                   ))}
                 </div>
               ))}
-            </div>
+            </ScrollArea>
           ) : (
             <div className="px-4 py-6 text-center">
               <p className="text-fg-2">No command matches “{query.trim()}”.</p>

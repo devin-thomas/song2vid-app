@@ -8,7 +8,7 @@ import { decideDrop, idsToRelease } from '../src/state/drops.ts';
 import type { AppState } from '../src/state/model.ts';
 import { startingCodec } from '../src/state/model.ts';
 import { statusOf, statusSentence } from '../src/state/status.ts';
-import { ACTION_LABELS, BLOCKED, ENCODER_NAMES, FAILURES, clock, doneFacts, dragLooksValid, encoderName, enlargeNote, failureFor, failureLines, hevcAvailable, mayShowTimeLeft, rejectionMessage, sentenceOf, steadyPercent, steadyRemaining, timeLeftWords } from '../src/state/words.ts';
+import { ACTION_LABELS, BLOCKED, ENCODER_NAMES, FAILURES, clock, doneFacts, dragLooksValid, encoderName, enlargeNote, failureFor, failureLines, hevcAvailable, mayShowTimeLeft, REJECTION_REASONS, rejectionLines, rejectionMessage, sentenceOf, shortName, slotOfFailure, slotProblemWords, steadyPercent, steadyRemaining, timeLeftWords } from '../src/state/words.ts';
 
 // SPEC 27.5, as written there.
 const TABLE: [code: string, sentence: string, filled: string][] = [
@@ -74,13 +74,36 @@ test('a length reads m:ss', () => {
   assert.deepEqual([0, 6, 59.6, 144, 3600].map(clock), ['0:00', '0:06', '1:00', '2:24', '60:00']);
 });
 
-test('the drop messages are the Mac app\'s words, one for each reason', () => {
-  assert.equal(rejectionMessage('folder'), "Song2Vid can't use folders. Drop a song or an image.");
-  assert.equal(rejectionMessage('too-many'), 'Drop no more than two files: one song, one image, or one of each.');
-  assert.equal(rejectionMessage('unsupported'), "Song2Vid can't read this kind of file. Drop a song or an image.");
-  assert.equal(rejectionMessage('more-audio'), 'Drop one song, one image, or one of each.');
-  assert.equal(rejectionMessage('more-images'), 'Drop one song, one image, or one of each.');
-  assert.match(rejectionMessage('unreadable'), /can't read/);
+test('every refused drop says what was refused, then what to do, in two lines', () => {
+  assert.deepEqual(rejectionLines('folder'), { first: "Song2Vid can't use folders.", second: 'Drop a song or an image.' });
+  assert.deepEqual(rejectionLines('too-many'), { first: 'That is more than two files.', second: 'Drop one song, one image, or one of each.' });
+  assert.deepEqual(rejectionLines('too-many', ['a.mp3', 'b.mp3', 'c.png']), { first: 'That is 3 files, and Song2Vid takes two at most.', second: 'Drop one song, one image, or one of each.' });
+  assert.equal(rejectionLines('more-audio').first, 'Song2Vid uses one song at a time.');
+  assert.equal(rejectionLines('more-images').first, 'Song2Vid uses one image at a time.');
+  // A single dropped file is named, cut in the middle so its end stays.
+  assert.equal(rejectionLines('unsupported', ['Notes.txt']).first, '\u201cNotes.txt\u201d is not a song or an image Song2Vid can use.');
+  assert.equal(rejectionLines('unsupported').first, "Song2Vid can't read this kind of file.");
+  assert.match(rejectionLines('unreadable', ['Broken.mp3']).first, /can't read \u201cBroken.mp3\u201d/);
+  for (const reason of REJECTION_REASONS) {
+    const lines = rejectionLines(reason, ['x.bin']);
+    assert.ok(lines.first && lines.second, `${reason} has both lines`);
+    assert.equal(rejectionMessage(reason, ['x.bin']), `${lines.first} ${lines.second}`);
+  }
+});
+
+test('a long file name is cut in the middle, so its start and its extension stay', () => {
+  assert.equal(shortName('Song.mp3', 40), 'Song.mp3');
+  const cut = shortName('A very long photograph name that keeps going and going.jpg', 32);
+  assert.equal(Array.from(cut).length, 32);
+  assert.match(cut, /^A very long photogr/);
+  assert.match(cut, /…[^…]*\.jpg$/);
+});
+
+test('a file the tool could not use is named in the row with words of its own', () => {
+  assert.equal(slotProblemWords('audio_not_found'), "Can't find it");
+  assert.equal(slotProblemWords('image_unreadable'), "Can't read it");
+  assert.equal(slotProblemWords('image_too_small'), 'Too small');
+  assert.deepEqual([slotOfFailure('audio_unreadable'), slotOfFailure('image_not_found'), slotOfFailure('disk_full')], ['audio', 'image', null]);
 });
 
 test('only a drag that could be used is highlighted (SPEC 4a)', () => {
@@ -194,14 +217,14 @@ test('the status bar says what is happening, in two short lines, in every state'
 });
 
 test('a failure shows its two lines and one filled button; a repeat says so', () => {
-  const once = statusOf(base({ audio, image, failure: { code: 'output_exists', details: '{}', again: false } }));
+  const once = statusOf(base({ audio, image, failure: { code: 'output_exists', details: '{}', again: false, of: null } }));
   assert.deepEqual([once.first, once.second, once.button?.label, once.button?.filled], ['A file with that name appeared while the video was being made.', "It was kept, and the new video wasn't saved.", 'Save As…', true]);
-  const twice = statusOf(base({ audio, image, failure: { code: 'output_in_use', details: '{}', again: true } }));
+  const twice = statusOf(base({ audio, image, failure: { code: 'output_in_use', details: '{}', again: true, of: null } }));
   assert.deepEqual([twice.second, twice.button?.label], ['It failed again. Close it, then try again.', 'Copy Details']);
 });
 
 test('a notice takes the two lines and leaves the progress and Cancel where they are', () => {
-  const view = statusOf(base({ audio, image, notice: 'Wait for the current video to finish.', job: { phase: 'running', jobId: 'j', stage: 'encoding', percent: 40, remaining: null, encoder: 'nvenc', stalled: false, cancelling: false } }));
+  const view = statusOf(base({ audio, image, notice: { first: 'Wait for the current video to finish.', second: '' }, job: { phase: 'running', jobId: 'j', stage: 'encoding', percent: 40, remaining: null, encoder: 'nvenc', stalled: false, cancelling: false } }));
   assert.deepEqual([view.kind, view.first, view.second, view.progress?.percent, view.button?.label], ['notice', 'Wait for the current video to finish.', '', 40, 'Cancel']);
 });
 
