@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>song2vid command - Song2Vid docs</title>
-<meta name="description" content="How to use the song2vid command that comes inside the Song2Vid Mac app: install, options, progress, JSON output and exit statuses.">
+<meta name="description" content="How to use the song2vid command that comes with Song2Vid for Mac and Windows: install, options, codecs, progress, JSON output and exit statuses.">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://song2vid.pages.dev/docs/">
 <link rel="alternate" type="text/markdown" href="/docs.md">
@@ -116,7 +116,7 @@
     <a href="/">Song2Vid</a>
   </div>
   <h1>The song2vid command</h1>
-  <p class="lede">Song2Vid is also a command for Terminal, for scripts and for agents. It comes inside the app and makes the same video as the window does.</p>
+  <p class="lede">Song2Vid is also a command for Terminal and PowerShell, for scripts and for agents. It comes with the app on Mac and on Windows, and makes the same video as the window does.</p>
 
   <nav class="toc" aria-label="On this page">
     <ul>
@@ -124,6 +124,7 @@
       <li><a href="#commands">Commands</a></li>
       <li><a href="#options">Options</a></li>
       <li><a href="#shapes">Sizes</a></li>
+      <li><a href="#codecs">Codecs</a></li>
       <li><a href="#examples">Examples</a></li>
       <li><a href="#progress">Progress</a></li>
       <li><a href="#json">JSON</a></li>
@@ -135,13 +136,21 @@
 
   <section aria-labelledby="install">
     <h2 id="install">Install</h2>
-    <p>Download Song2Vid from <a href="/">the download page</a>, move it to Applications and open it once (see the first-open step below). Then link the command onto your path:</p>
+    <p>Download Song2Vid for your system from <a href="/">the download page</a>. The command is inside the app. Both systems use the command name <code>song2vid</code>.</p>
+    <h3 id="install-mac">On a Mac</h3>
+    <p>Move Song2Vid to Applications and open it once (see the first-open step below). Then link the command onto your path:</p>
 <pre><code>mkdir -p ~/.local/bin
 ln -sf /Applications/Song2Vid.app/Contents/Helpers/song2vid ~/.local/bin/song2vid
 song2vid --version</code></pre>
     <p>If Terminal says <code>command not found</code>, add the folder to your path for zsh, then open a new Terminal window:</p>
 <pre><code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
     <p><strong>First open.</strong> The app is not signed with a paid Apple developer account. The first time, macOS says "Song2Vid.app Not Opened". Go to System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>. The command works after that.</p>
+    <h3 id="install-windows">On Windows</h3>
+    <p>Unzip the download and run <code>Install Song2Vid.cmd</code>. It copies the app to <code>%LOCALAPPDATA%\Programs\Song2Vid</code>, adds a Start menu shortcut and needs no administrator rights. It stops with a message if Song2Vid is running. To remove the app and its shortcut, run <code>Uninstall Song2Vid.cmd</code> in the installed folder. It never removes your data or videos.</p>
+    <p><strong>First open.</strong> The app is not signed, so Windows SmartScreen warns about a downloaded copy. Click <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+    <p>The installer does not change your path. To run the command from any terminal, run this line once in PowerShell:</p>
+<pre><code>[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ";$env:LOCALAPPDATA\Programs\Song2Vid\resources\bin\win32-x64", 'User')</code></pre>
+    <p>Then open a new terminal and run <code>song2vid --version</code>. The command is the file <code>%LOCALAPPDATA%\Programs\Song2Vid\resources\bin\win32-x64\song2vid.exe</code>, so you can also run it by that full path before you change your path.</p>
   </section>
 
   <section aria-labelledby="commands">
@@ -155,7 +164,7 @@ song2vid -h | -v | -S | -R | -u</code></pre>
     <ul>
       <li><code>check</code> reads a song and an image and reports what Song2Vid would make from them. It writes nothing. With one file, it reports only that file: the song's facts, or the image's size and every output size. The kind comes from what is inside the file.</li>
       <li><code>make</code> makes the video: the image for the whole length of the song. It never changes your files and never replaces a file unless you say so.</li>
-      <li><code>encoders</code> reports which Codecs are available on this computer.</li>
+      <li><code>encoders</code> reports which Codecs this computer can make, and with which encoder.</li>
       <li><code>preview</code> writes an oriented PNG within 2048 by 2048 pixels. Smaller images keep their size. Transparency becomes black.</li>
       <li><code>--help</code> prints help. After a command it prints that command's help.</li>
       <li><code>--version</code> prints the version, for example <code>song2vid 1.2.0</code>.</li>
@@ -209,8 +218,31 @@ song2vid -h | -v | -S | -R | -u</code></pre>
     <p><code>original</code> keeps the image's own size, up to 3840×2160 (or 2160×3840 for a tall image). Larger images are scaled down, and an odd size loses one pixel because video needs even sizes. An image smaller than the chosen size is enlarged and may look soft; <code>check</code> and the result say so with <code>enlarged</code>.</p>
   </section>
 
+  <section aria-labelledby="codecs">
+    <h2 id="codecs">Codecs and encoders</h2>
+    <p>A <strong>Codec</strong> is how the video is compressed: <code>h264</code> (the default) or <code>hevc</code>. Choose it with <code>--codec</code>. HEVC files carry the <code>hvc1</code> tag, so they play in QuickTime, Photos and browsers that support HEVC. Audio is the same for both: AAC at 256 kbps. The command never remembers a Codec between runs; the app windows do.</p>
+    <p>The <strong>encoder</strong> is the part that does the compressing. The command chooses it, in this order:</p>
+    <div class="table" role="region" aria-label="Encoders">
+      <table>
+        <thead><tr><th scope="col">System</th><th scope="col">Encoders, first choice first</th></tr></thead>
+        <tbody>
+          <tr><td data-label="System">Mac</td><td data-label="Encoders">Apple's encoder (<code>apple</code>), in hardware where the Mac has it. HEVC is available when this Mac can open an HEVC encoding session.</td></tr>
+          <tr><td data-label="System">Windows</td><td data-label="Encoders">NVIDIA encoder (<code>nvenc</code>), then a graphics hardware encoder from AMD or Intel (<code>media_foundation</code>), then the software encoder (<code>software</code>). The software encoder makes H.264 only: a PC with no hardware HEVC encoder cannot make HEVC.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>On Windows, if the chosen hardware encoder fails before it has written its first frame, the command tries the next one once, and the result says so with <code>"encoder_fallback":true</code>. A failure after encoding has started is <code>export_failed</code>, with no retry.</p>
+    <p><code>song2vid encoders</code> prints one line for each Codec. It reads and writes no files, and on Windows it finishes within 5 seconds.</p>
+<pre><code>H.264: NVIDIA encoder
+HEVC: not available on this computer</code></pre>
+    <p>The names in the text are "Apple encoder", "NVIDIA encoder", "graphics hardware encoder" and "software encoder". With <code>--json</code>:</p>
+<pre><code>{"api_version":"1","type":"result","command":"encoders","codecs":{"h264":{"available":true,"encoder":"nvenc"},"hevc":{"available":false,"encoder":null}}}</code></pre>
+    <p>Run <code>encoders</code> before you ask for HEVC. If the chosen Codec can't be made on this computer, <code>make</code> stops before encoding with exit status 3 and the code <code>codec_unavailable</code>. The result line names the Codec and encoder, for example <code>Saved song.mp4 (1920x1080, H.264, NVIDIA encoder, 2:24).</code></p>
+  </section>
+
   <section aria-labelledby="examples">
     <h2 id="examples">Examples</h2>
+    <p>The examples work the same in Terminal on a Mac and in PowerShell or Command Prompt on Windows.</p>
 <pre><code># What would Song2Vid make from these two files?
 song2vid check song.mp3 cover.png
 
@@ -235,7 +267,7 @@ song2vid preview photo.heic -o cover.png</code></pre>
     <h2 id="progress">Progress</h2>
     <p><code>make</code> never leaves you wondering whether it works. The stages are <code>Checking files</code>, <code>Preparing</code>, <code>Encoding</code> and <code>Finishing</code>.</p>
     <ul>
-      <li><strong>In a terminal</strong> one line is redrawn at least ten times a second: a spinner while the percent is not known yet, then a bar with the percent, the time elapsed and the time left. It is replaced by the result when the video is done. Colour is used unless <code>NO_COLOR</code> is set or <code>TERM</code> is <code>dumb</code>.</li>
+      <li><strong>In a terminal</strong> one line is redrawn at least ten times a second: a spinner while the percent is not known yet, then a bar with the percent, the time elapsed and the time left. It is replaced by the result when the video is done. Colour is used unless <code>NO_COLOR</code> is set or <code>TERM</code> is <code>dumb</code>. On Windows this works in Windows Terminal and the classic console, and falls back to the plain lines where the console can't draw it.</li>
       <li><strong>In a log or a pipe</strong> a plain line is written at each stage change and every second, such as <code>Encoding 52% (0:04 elapsed, about 0:04 left)</code>. It has no control characters.</li>
       <li><strong>With <code>--json</code></strong> progress is JSON Lines on standard output, at each stage change and four times a second, and standard error stays empty. A run in the background can be read at any moment by looking at its newest line.</li>
       <li><code>--quiet</code> shows no progress. <code>Checking files</code> is shown only if it takes more than a moment, so a mistyped file name gives just its error.</li>
@@ -259,9 +291,9 @@ song2vid preview photo.heic -o cover.png</code></pre>
           <tr><td data-label="Line"><code>check</code> result</td><td data-label="Keys"><code>command</code>, <code>audio</code> (<code>name</code>, <code>duration_seconds</code>, <code>sample_rate</code>, <code>channels</code>), <code>image</code> (<code>name</code>, <code>width</code>, <code>height</code>), <code>frames</code>: one for every shape and resolution with <code>shape</code>, <code>resolution</code>, <code>width</code>, <code>height</code>, <code>placement</code>, <code>enlarged</code>, <code>too_small</code>. With one file, only that file's keys: <code>audio</code>, or <code>image</code> and <code>frames</code></td><td data-label="Added in">1.1.0; one file 1.2.0</td></tr>
           <tr><td data-label="Line"><code>--update</code> result</td><td data-label="Keys"><code>command</code>, <code>current</code>, <code>latest</code>, <code>update_available</code>, <code>download_page</code></td><td data-label="Added in">1.1.0</td></tr>
           <tr><td data-label="Line"><code>error</code></td><td data-label="Keys"><code>error</code> (<code>code</code>, <code>message</code>)</td><td data-label="Added in">1.1.0</td></tr>
-          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>encoder</code> from the <code>encoding</code> stage onward</td><td data-label="Added in">1.2.0</td></tr>
-          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>codec</code> (<code>h264</code> or <code>hevc</code>), <code>encoder</code> (<code>apple</code> on Mac), <code>encoder_fallback</code> (always <code>false</code> on Mac)</td><td data-label="Added in">1.2.0</td></tr>
-          <tr><td data-label="Line"><code>encoders</code> result</td><td data-label="Keys"><code>codecs</code> contains <code>h264</code> and <code>hevc</code>, each with <code>available</code> and <code>encoder</code> (<code>null</code> if unavailable)</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>progress</code></td><td data-label="Keys"><code>encoder</code> (the values above) from the <code>encoding</code> stage onward</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>make</code> result</td><td data-label="Keys"><code>codec</code> (<code>h264</code> or <code>hevc</code>), <code>encoder</code> (<code>apple</code> on Mac; <code>nvenc</code>, <code>media_foundation</code> or <code>software</code> on Windows; for <code>--dry-run</code>, the encoder that would be used), <code>encoder_fallback</code> (<code>true</code> when the fallback above happened, always <code>false</code> on Mac)</td><td data-label="Added in">1.2.0</td></tr>
+          <tr><td data-label="Line"><code>encoders</code> result</td><td data-label="Keys"><code>codecs</code> contains <code>h264</code> and <code>hevc</code>, each with <code>available</code> and <code>encoder</code> (one of the values above, or <code>null</code> if unavailable)</td><td data-label="Added in">1.2.0</td></tr>
           <tr><td data-label="Line"><code>preview</code> result</td><td data-label="Keys"><code>output</code> (<code>name</code>, <code>width</code>, <code>height</code>) and <code>source</code> (oriented <code>width</code> and <code>height</code> before scaling)</td><td data-label="Added in">1.2.0</td></tr>
         </tbody>
       </table>
@@ -279,7 +311,7 @@ song2vid preview photo.heic -o cover.png</code></pre>
           <tr><td data-label="Status">1</td><td data-label="Meaning">An input file does not exist.</td><td data-label="Error codes"><code>audio_not_found</code>, <code>image_not_found</code></td></tr>
           <tr><td data-label="Status">2</td><td data-label="Meaning">Usage error.</td><td data-label="Error codes"><code>usage</code></td></tr>
           <tr><td data-label="Status">3</td><td data-label="Meaning">An input can't be used or the chosen Codec is unavailable.</td><td data-label="Error codes"><code>audio_unreadable</code>, <code>image_unreadable</code>, <code>image_too_small</code>, <code>codec_unavailable</code></td></tr>
-          <tr><td data-label="Status">4</td><td data-label="Meaning">The output can't be written.</td><td data-label="Error codes"><code>output_exists</code>, <code>output_not_writable</code>, <code>output_not_mp4</code>, <code>disk_full</code>, <code>output_in_use</code> (Windows only)</td></tr>
+          <tr><td data-label="Status">4</td><td data-label="Meaning">The output can't be written.</td><td data-label="Error codes"><code>output_exists</code>, <code>output_not_writable</code>, <code>output_not_mp4</code>, <code>disk_full</code>, <code>output_in_use</code> (Windows only: another program holds the existing output open, so <code>--overwrite</code> could not replace it within 2 seconds; nothing changed)</td></tr>
           <tr><td data-label="Status">5</td><td data-label="Meaning">Making the video or preview failed, or <code>--update</code> could not reach GitHub.</td><td data-label="Error codes"><code>export_failed</code>, <code>network</code></td></tr>
           <tr><td data-label="Status">130</td><td data-label="Meaning">Cancelled by a signal or by standard input with <code>--cancel-on-eof</code>. The unfinished file is deleted.</td><td data-label="Error codes"><code>cancelled</code></td></tr>
         </tbody>
@@ -290,12 +322,12 @@ song2vid preview photo.heic -o cover.png</code></pre>
 
   <section aria-labelledby="window">
     <h2 id="window">The app's window</h2>
-    <p>The window does the same job without Terminal: choose or drop in a song and an image, pick a <strong>Frame Shape</strong>, a <strong>Resolution</strong> and a <strong>Codec</strong>, drag the preview to choose the crop, press <strong>Make Video</strong> and choose where to save. It is described step by step, by its control names, in the <a href="/agent.md">agent instructions</a>.</p>
+    <p>The window does the same job without a terminal: choose or drop in a song and an image, pick a <strong>Frame Shape</strong>, a <strong>Resolution</strong> and a <strong>Codec</strong>, drag the preview to choose the crop, press <strong>Make Video</strong> and choose where to save. The Mac and Windows windows follow the same order. They remember the last Codec you chose, and start on H.264 the first time. If a computer can't make HEVC, the window disables that choice and says so. The windows are described step by step, by their control names, in the <a href="/agent.md">agent instructions</a>.</p>
   </section>
 
   <section aria-labelledby="agents">
     <h2 id="agents">For agents</h2>
-    <p>An agent can read <a href="/agent.md">song2vid.pages.dev/agent.md</a>, or run <code>song2vid --skill</code> for the same text. It covers both routes, the window and the command, and the rules an agent follows: ask before <code>--overwrite</code>, leave the input files alone, report only what the command printed, and leave the first-open step to the person.</p>
+    <p>An agent can read <a href="/agent.md">song2vid.pages.dev/agent.md</a>, or run <code>song2vid --skill</code> for the same text. It covers both routes, the window and the command, on Mac and on Windows, and the rules an agent follows: ask before <code>--overwrite</code>, leave the input files alone, report only what the command printed, and leave the first-open step to the person.</p>
   </section>
 </main>
 <footer>
@@ -303,7 +335,7 @@ song2vid preview photo.heic -o cover.png</code></pre>
   <a href="/agent.md">Agent Guide</a>
   <a href="/docs.md">Markdown copy</a>
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
-  <p>Updated <time datetime="2026-11-22">22 November 2026</time></p>
+  <p>Updated <time datetime="2026-11-25">25 November 2026</time></p>
 </footer>
 </body>
 </html>

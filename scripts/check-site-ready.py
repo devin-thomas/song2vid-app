@@ -146,10 +146,20 @@ def main(site, version):
         problem("index.html does not say that Song2Vid is free")
     if "Requires macOS 14 or later" not in home:
         problem("index.html does not say that Song2Vid requires macOS 14 or later")
+    if "Requires Windows 10 or 11, 64-bit" not in home:
+        problem("index.html does not say that Song2Vid requires Windows 10 or 11, 64-bit")
     if not shown_version:
         problem("index.html does not show the version as 'Version X.Y.Z'")
     elif shown_version.group(1) != version:
         problem(f"index.html shows version {shown_version.group(1)} but the command says {version}")
+    # Two downloads, each the release asset of the version the page shows (SPEC section 30).
+    release = "https://github.com/devin-thomas/song2vid-app/releases/latest/download/"
+    for label, asset in (("Download for Mac", f"Song2Vid-{version}.zip"), ("Download for Windows", f"Song2Vid-{version}-windows-x64.zip")):
+        if not re.search(r'<a [^>]*href="' + re.escape(release + asset) + r'"[^>]*>' + re.escape(label) + "</a>", home):
+            problem(f"index.html must have a '{label}' link to {release}{asset}")
+    # HEVC is mentioned once on the download page (SPEC section 30).
+    if home.count("HEVC") != 1:
+        problem(f"index.html must mention HEVC exactly once (found {home.count('HEVC')})")
     for needle in ("Exit statuses and error codes", "image_not_found"):
         if needle not in docs:
             problem(f"docs/index.html does not contain '{needle}'")

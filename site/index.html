@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Song2Vid - turn a song and an image into a video</title>
-<meta name="description" content="Song2Vid is a free Mac app that turns one song and one image into an MP4 video.">
+<meta name="description" content="Song2Vid is a free app for Mac and Windows that turns one song and one image into an MP4 video.">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://song2vid.pages.dev/">
 <link rel="alternate" type="text/markdown" href="/index.md">
@@ -71,6 +71,9 @@
   }
   .lede { margin: 0 auto; max-width: 28rem; font-size: 1.15rem; color: var(--muted); }
   .cta { text-align: center; margin: 2rem 0 2.5rem; }
+  .downloads { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem 2.5rem; }
+  .download { display: flex; flex-direction: column; align-items: center; }
+  .download .req { margin-top: .6rem; }
   .button {
     display: inline-block;
     padding: .9rem 2rem;
@@ -86,6 +89,8 @@
   .button:focus-visible, a:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
   .req { margin: .9rem 0 0; color: var(--muted); font-size: .95rem; }
   h2 { font-size: 1.3rem; margin: 0 0 1rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .6rem; }
+  .note { margin: 1.5rem 0 0; color: var(--muted); font-size: .95rem; }
   ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: .75rem; }
   li {
     counter-increment: step;
@@ -158,6 +163,10 @@
     .logo { width: 72px; height: 72px; margin-bottom: .75rem; }
     .lede { font-size: 1.05rem; }
     .cta { margin: 1.25rem 0 1.5rem; }
+    .downloads { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; align-items: start; }
+    .download { align-items: stretch; min-width: 0; }
+    .download .button { display: flex; align-items: center; justify-content: center; min-height: 3.6rem; padding: .5rem; font-size: .95rem; line-height: 1.25; text-align: center; }
+    .download .req { margin-top: .5rem; font-size: .85rem; text-align: center; }
     .handoff { margin-bottom: 1.75rem; padding: .9rem; }
   }
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
@@ -173,8 +182,17 @@
   </header>
 
   <div class="cta">
-    <a class="button" href="https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.2.0.zip">Download for Mac</a>
-    <p class="req">Free · Version 1.2.0 · Requires macOS 14 or later</p>
+    <div class="downloads">
+      <div class="download">
+        <a class="button" href="https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.2.0.zip">Download for Mac</a>
+        <p class="req">Requires macOS 14 or later</p>
+      </div>
+      <div class="download">
+        <a class="button" href="https://github.com/devin-thomas/song2vid-app/releases/latest/download/Song2Vid-1.2.0-windows-x64.zip">Download for Windows</a>
+        <p class="req">Requires Windows 10 or 11, 64-bit</p>
+      </div>
+    </div>
+    <p class="req">Free · Version 1.2.0</p>
   </div>
 
   <section class="handoff" id="handoff" aria-labelledby="handoff-title">
@@ -199,11 +217,19 @@
 
   <section aria-labelledby="steps">
     <h2 id="steps">How to get started</h2>
+    <h3>On a Mac</h3>
     <ol>
       <li><span>Unzip the download and move Song2Vid to your Applications folder.</span></li>
       <li><span>Open it. If macOS blocks it, go to System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>.</span></li>
       <li><span>Choose a song and an image, then click <strong>Make Video</strong>.</span></li>
     </ol>
+    <h3>On Windows</h3>
+    <ol>
+      <li><span>Unzip the download and run <strong>Install Song2Vid.cmd</strong>. It installs Song2Vid for your account, adds it to the Start menu and needs no administrator rights.</span></li>
+      <li><span>If Windows says it protected your PC, click <strong>More info</strong>, then <strong>Run anyway</strong>.</span></li>
+      <li><span>Open Song2Vid from the Start menu, choose a song and an image, then click <strong>Make Video</strong>.</span></li>
+    </ol>
+    <p class="note">Song2Vid makes H.264 videos, and HEVC videos on computers that can make them.</p>
   </section>
 </main>
 <footer>
@@ -211,7 +237,7 @@
   <a href="/agent.md">Agent Guide</a> &middot;
   <a href="/index.md">Markdown copy</a> &middot;
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
-  <p>Updated <time datetime="2026-11-22">22 November 2026</time></p>
+  <p>Updated <time datetime="2026-11-25">25 November 2026</time></p>
 </footer>
 <script src="/handoff.js" defer></script>
 </body>
