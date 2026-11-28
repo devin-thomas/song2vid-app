@@ -175,6 +175,10 @@
   @media (min-width: 40rem) and (max-width: 63.99rem) { .shot-grid { grid-template-columns: repeat(3, 1fr); gap: .75rem; } }
   .shots a.full { display: block; border-radius: 12px; }
   .shots a.full:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  .shots h3 + p, .shots-note { max-width: 36rem; margin: 0 auto 1.25rem; text-align: center; color: var(--muted); }
+  .shot-grid-win { grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); margin-top: 0; }
+  @media (min-width: 40rem) and (max-width: 63.99rem) { .shot-grid-win { grid-template-columns: repeat(2, 1fr); } }
+  .shot-command { margin-bottom: 2rem; }
   .shots h3 { font-size: 1.15rem; margin: 0 0 .5rem; text-align: center; }
   .shot-command { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; align-items: start; }
   @media (max-width: 40rem) { .shot-command { grid-template-columns: 1fr; } }
@@ -245,6 +249,39 @@
         <figcaption>A frame from the video it made.</figcaption>
       </figure>
     </div>
+
+    <h3>Song2Vid for Windows</h3>
+    <p class="shots-note">The Windows version arrives with Song2Vid 1.2 and adds a choice of H.264 or HEVC. These screenshots are of it; the download above is for Mac.</p>
+    <div class="shot-grid shot-grid-win">
+      <figure>
+        <a class="full" href="/screenshots/win-main-16x9-fit-light.webp"><picture>
+          <source srcset="/screenshots/win-main-16x9-fit-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/win-main-16x9-fit-light.webp" width="568" height="765" loading="lazy" alt="Song2Vid for Windows with a song and a square cover chosen, Frame Shape 16:9, Resolution 1080p and Codec H.264; the preview shows the cover between black bars.">
+        </picture></a>
+        <figcaption>The same choices as on a Mac, plus the codec.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/win-9x16-fit-light.webp"><picture>
+          <source srcset="/screenshots/win-9x16-fit-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/win-9x16-fit-light.webp" width="568" height="765" loading="lazy" alt="Song2Vid for Windows with the 9:16 frame shape chosen; the preview is a tall frame with the cover between black bars.">
+        </picture></a>
+        <figcaption>9:16 for vertical video.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/win-codec-hevc-light.webp"><picture>
+          <source srcset="/screenshots/win-codec-hevc-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/win-codec-hevc-light.webp" width="568" height="765" loading="lazy" alt="Song2Vid for Windows with HEVC chosen as the codec.">
+        </picture></a>
+        <figcaption>HEVC on computers that can make it.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/win-video-saved-light.webp"><picture>
+          <source srcset="/screenshots/win-video-saved-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/win-video-saved-light.webp" width="568" height="765" loading="lazy" alt="Song2Vid for Windows after making a video: the status bar says the MP4 was saved to Videos and offers Show in File Explorer.">
+        </picture></a>
+        <figcaption>Saved, with Show in File Explorer.</figcaption>
+      </figure>
+    </div>
   </section>
 
   <section class="handoff" id="handoff" aria-labelledby="handoff-title">
@@ -281,7 +318,7 @@
   <a href="/agent.md">Agent Guide</a> &middot;
   <a href="/index.md">Markdown copy</a> &middot;
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
-  <p>Updated <time datetime="2026-11-27">27 November 2026</time></p>
+  <p>Updated <time datetime="2026-11-28">28 November 2026</time></p>
 </footer>
 <script src="/handoff.js" defer></script>
 </body>
