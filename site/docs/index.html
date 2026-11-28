@@ -105,8 +105,14 @@
     td:empty { display: none; }
   }
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
-  footer a { margin: 0 .4rem; }
+  footer a { display: inline-block; margin: 0 .4rem; padding: .3rem .1rem; white-space: nowrap; }
   footer p { margin: .25rem 0; }
+  @media (max-width: 40rem) { pre { white-space: pre-wrap; overflow-wrap: anywhere; } }
+
+  /* Dark Reader: keep the purples readable when it darkens a light page. */
+  html[data-darkreader-scheme="dark"] {
+    --link: #c4b5ff; --accent-a: #8f85ff; --accent-b: #c77bff; --accent-c: #ff7ab0;
+  }
 </style>
 </head>
 <body>
@@ -287,7 +293,7 @@ song2vid make song.mp3 cover.png -o video.mp4 --overwrite</code></pre>
   <a href="/agent.md">Agent Guide</a>
   <a href="/docs.md">Markdown copy</a>
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
-  <p>Updated <time datetime="2026-11-22">22 November 2026</time></p>
+  <p>Updated <time datetime="2026-11-27">27 November 2026</time></p>
 </footer>
 </body>
 </html>

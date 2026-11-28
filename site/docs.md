@@ -143,4 +143,4 @@ An agent can read [song2vid.pages.dev/agent.md](https://song2vid.pages.dev/agent
 
 ---
 
-This is the Markdown copy of https://song2vid.pages.dev/docs/. Updated 2026-11-22.
+This is the Markdown copy of https://song2vid.pages.dev/docs/. Updated 2026-11-27.
