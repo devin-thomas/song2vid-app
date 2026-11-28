@@ -14,7 +14,6 @@
   if (!root || !promptEl || !picker || !copyButton || !status || !dialog || !manualText || !manualClose) return;
 
   var payload = promptEl.textContent.trim();
-  promptEl.textContent = payload;
   manualText.value = payload;
 
   var choices = Array.prototype.slice.call(picker.querySelectorAll("button[data-agent]"));

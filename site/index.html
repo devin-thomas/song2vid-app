@@ -162,6 +162,30 @@
   }
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
   footer p { margin: .25rem 0; }
+  footer a { display: inline-block; padding: .3rem .1rem; white-space: nowrap; }
+
+  .shots { width: min(64rem, calc(100vw - 2rem)); margin: 0 0 2.5rem 50%; transform: translateX(-50%); }
+  .shots h2 { text-align: center; }
+  .shots > p { max-width: 36rem; margin: 0 auto 1.25rem; text-align: center; color: var(--muted); }
+  .shots figure { margin: 0; }
+  .shots img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(79, 60, 240, 0.16); background: var(--card); }
+  .shots figcaption { margin: .6rem .25rem 0; color: var(--muted); font-size: .95rem; }
+  .shots .shot-main { max-width: 48rem; margin: 0 auto 1.5rem; }
+  .shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+  @media (min-width: 40rem) and (max-width: 63.99rem) { .shot-grid { grid-template-columns: repeat(3, 1fr); gap: .75rem; } }
+  .shots a.full { display: block; border-radius: 12px; }
+  .shots a.full:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+  .shots h3 { font-size: 1.15rem; margin: 0 0 .5rem; text-align: center; }
+  .shot-command { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 40rem) { .shot-command { grid-template-columns: 1fr; } }
+
+  /* Dark Reader: keep the purples readable when it darkens a light page. */
+  html[data-darkreader-scheme="dark"] {
+    --link: #c4b5ff; --accent-a: #8f85ff; --accent-b: #c77bff; --accent-c: #ff7ab0; --sel: #2e2a4a;
+  }
+  html[data-darkreader-scheme="dark"] h1 { background: none; color: var(--link); -webkit-text-fill-color: currentColor; }
+  html[data-darkreader-scheme="dark"] :focus-visible { outline-color: currentColor !important; }
+  @media (forced-colors: active) { .button { border: 2px solid ButtonText; } }
 </style>
 </head>
 <body>
@@ -177,6 +201,52 @@
     <p class="req">Free · Version 1.1.0 · Requires macOS 14 or later</p>
   </div>
 
+  <section class="shots" aria-labelledby="shots-title">
+    <h2 id="shots-title">Screenshots</h2>
+    <p>Song2Vid 1.1.0 on a Mac.</p>
+    <figure class="shot-main">
+      <a class="full" href="/screenshots/mac-main-16x9-fit-light.webp"><picture>
+        <source srcset="/screenshots/mac-main-16x9-fit-dark.webp" media="(prefers-color-scheme: dark)">
+        <img src="/screenshots/mac-main-16x9-fit-light.webp" width="1140" height="960" alt="The Song2Vid window with a song and a square cover image chosen. Frame Shape is 16:9 and Resolution is 1080p; the preview shows the cover centred with black bars on both sides.">
+      </picture></a>
+      <figcaption>Choose a song and an image, pick a frame shape and resolution, and the preview shows the video's frame.</figcaption>
+    </figure>
+    <div class="shot-grid">
+      <figure>
+        <a class="full" href="/screenshots/mac-9x16-fit-light.webp"><picture>
+          <source srcset="/screenshots/mac-9x16-fit-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/mac-9x16-fit-light.webp" width="1140" height="960" loading="lazy" alt="Song2Vid with the 9:16 frame shape chosen; the preview is a tall frame with the square cover between black bars above and below.">
+        </picture></a>
+        <figcaption>9:16 for vertical video, with the whole image kept.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/mac-1x1-crop-light.webp"><picture>
+          <source srcset="/screenshots/mac-1x1-crop-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/mac-1x1-crop-light.webp" width="1140" height="960" loading="lazy" alt="Song2Vid with the 1:1 frame shape chosen; the preview fills a square frame and Reset to Center is available.">
+        </picture></a>
+        <figcaption>1:1 for a square post. Drag the preview to choose the crop.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/mac-video-saved-light.webp"><picture>
+          <source srcset="/screenshots/mac-video-saved-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="/screenshots/mac-video-saved-light.webp" width="1140" height="960" loading="lazy" alt="Song2Vid after making a video: the window says Video saved and offers Show in Finder.">
+        </picture></a>
+        <figcaption>Make Video saves an MP4 and offers to show it in Finder.</figcaption>
+      </figure>
+    </div>
+    <h3>The song2vid command</h3>
+    <div class="shot-command">
+      <figure>
+        <a class="full" href="/screenshots/command-make.webp"><img src="/screenshots/command-make.webp" width="1320" height="565" loading="lazy" alt="A terminal running song2vid make with a song and an image, frame shape 1:1 and 1080p. It prints progress, then Made the MP4: 1080 by 1080 pixels, 2 minutes 55 seconds, Crop placement, and exit status 0."></a>
+        <figcaption>Make a video from the terminal with <code>song2vid make</code>. See the <a href="/docs/">command docs</a>.</figcaption>
+      </figure>
+      <figure>
+        <a class="full" href="/screenshots/command-frame.webp"><img src="/screenshots/command-frame.webp" width="720" height="720" loading="lazy" alt="A frame from the 1080 by 1080 video that command made: the square cover art filling the frame."></a>
+        <figcaption>A frame from the video it made.</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <section class="handoff" id="handoff" aria-labelledby="handoff-title">
     <h2 id="handoff-title">Or ask your agent to do it</h2>
     <noscript><p>Paste this into ChatGPT, Claude, Grok Bot or Muse.</p></noscript>
@@ -188,7 +258,7 @@
     </div>
     <button class="copy" id="copy-button" type="button" data-md="skip" hidden>Copy for ChatGPT</button>
     <p class="status" id="copy-status" role="status" aria-live="polite" data-md="skip"></p>
-    <p class="prompt"><code id="prompt-text">Use Song2Vid to make a video from my song and image. Instructions: https://song2vid.pages.dev/agent.md</code></p>
+    <p class="prompt"><code id="prompt-text">Use Song2Vid to make a video from my song and image. Instructions: https://<wbr>song2vid.pages.dev/<wbr>agent.md</code></p>
     <dialog class="manual" id="manual-dialog" data-md="skip" aria-labelledby="manual-title">
       <h2 id="manual-title">Copy the prompt by hand</h2>
       <p>Select all, then copy.</p>
@@ -211,7 +281,7 @@
   <a href="/agent.md">Agent Guide</a> &middot;
   <a href="/index.md">Markdown copy</a> &middot;
   <a href="https://github.com/devin-thomas/song2vid-app">Source code on GitHub</a></p>
-  <p>Updated <time datetime="2026-11-22">22 November 2026</time></p>
+  <p>Updated <time datetime="2026-11-27">27 November 2026</time></p>
 </footer>
 <script src="/handoff.js" defer></script>
 </body>

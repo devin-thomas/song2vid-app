@@ -29,6 +29,7 @@ HAND_WRITTEN = [
     "_headers", "404.html", "robots.txt", "agent.md", "handoff.js", "favicon.svg", "logo.svg", "apple-touch-icon.png",
     "brands/LOBE-ICONS-LICENSE.txt", "brands/chatgpt-original.svg", "brands/claude-original.svg",
     "brands/credits.txt", "brands/grok-bot-original.svg", "brands/muse-color.svg", "brands/muse.svg",
+    "screenshots/command-frame.webp", "screenshots/command-make.webp", "screenshots/mac-1x1-crop-dark.webp", "screenshots/mac-1x1-crop-light.webp", "screenshots/mac-9x16-fit-dark.webp", "screenshots/mac-9x16-fit-light.webp", "screenshots/mac-main-16x9-fit-dark.webp", "screenshots/mac-main-16x9-fit-light.webp", "screenshots/mac-video-saved-dark.webp", "screenshots/mac-video-saved-light.webp",
 ]
 GENERATED = ["index.md", "docs.md", "llms.txt", "sitemap.xml"]
 
