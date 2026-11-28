@@ -18,6 +18,12 @@ Song2Vid 1.1.0 on a Mac.
 
 [](https://song2vid.pages.dev/screenshots/command-make.webp) Make a video from the terminal with `song2vid make`. See the [command docs](https://song2vid.pages.dev/docs/). [](https://song2vid.pages.dev/screenshots/command-frame.webp) A frame from the video it made.
 
+### Song2Vid for Windows
+
+The Windows version arrives with Song2Vid 1.2 and adds a choice of H.264 or HEVC. These screenshots are of it; the download above is for Mac.
+
+[ ](https://song2vid.pages.dev/screenshots/win-main-16x9-fit-light.webp) The same choices as on a Mac, plus the codec. [ ](https://song2vid.pages.dev/screenshots/win-9x16-fit-light.webp) 9:16 for vertical video. [ ](https://song2vid.pages.dev/screenshots/win-codec-hevc-light.webp) HEVC on computers that can make it. [ ](https://song2vid.pages.dev/screenshots/win-video-saved-light.webp) Saved, with Show in File Explorer.
+
 ## Or ask your agent to do it
 
 `Use Song2Vid to make a video from my song and image. Instructions: https://song2vid.pages.dev/agent.md`
@@ -30,4 +36,4 @@ Song2Vid 1.1.0 on a Mac.
 
 ---
 
-This is the Markdown copy of https://song2vid.pages.dev/. Updated 2026-11-27.
+This is the Markdown copy of https://song2vid.pages.dev/. Updated 2026-11-28.
