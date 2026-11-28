@@ -1234,6 +1234,8 @@
 
   .file-head {
     min-width: 0;
+    /* A space at the cut belongs to the name: as a flex item the head would drop its trailing space. */
+    white-space: pre;
     overflow: hidden;
     text-overflow: ellipsis;
   }
