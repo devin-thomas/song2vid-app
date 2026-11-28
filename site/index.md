@@ -10,13 +10,13 @@ Free · Version 1.1.0 · Requires macOS 14 or later
 
 Song2Vid 1.1.0 on a Mac.
 
-Choose a song and an image, pick a frame shape and resolution, and the preview shows the video's frame.
+[ ](https://song2vid.pages.dev/screenshots/mac-main-16x9-fit-light.webp) Choose a song and an image, pick a frame shape and resolution, and the preview shows the video's frame.
 
-9:16 for vertical video, with the whole image kept. 1:1 for a square post. Drag the preview to choose the crop. Make Video saves an MP4 and offers to show it in Finder.
+[ ](https://song2vid.pages.dev/screenshots/mac-9x16-fit-light.webp) 9:16 for vertical video, with the whole image kept. [ ](https://song2vid.pages.dev/screenshots/mac-1x1-crop-light.webp) 1:1 for a square post. Drag the preview to choose the crop. [ ](https://song2vid.pages.dev/screenshots/mac-video-saved-light.webp) Make Video saves an MP4 and offers to show it in Finder.
 
 ### The song2vid command
 
-Make a video from the terminal with `song2vid make`. See the [command docs](https://song2vid.pages.dev/docs/). A frame from the video it made.
+[](https://song2vid.pages.dev/screenshots/command-make.webp) Make a video from the terminal with `song2vid make`. See the [command docs](https://song2vid.pages.dev/docs/). [](https://song2vid.pages.dev/screenshots/command-frame.webp) A frame from the video it made.
 
 ## Or ask your agent to do it
 

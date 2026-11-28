@@ -107,12 +107,14 @@
   footer { text-align: center; padding: 1.5rem 1rem 2.5rem; color: var(--muted); font-size: .95rem; }
   footer a { display: inline-block; margin: 0 .4rem; padding: .3rem .1rem; white-space: nowrap; }
   footer p { margin: .25rem 0; }
-  @media (max-width: 40rem) { pre { white-space: pre-wrap; overflow-wrap: anywhere; } }
+  @media (max-width: 40rem) { pre { white-space: pre-wrap; overflow-wrap: anywhere; } pre code { overflow-wrap: anywhere; } }
 
   /* Dark Reader: keep the purples readable when it darkens a light page. */
   html[data-darkreader-scheme="dark"] {
     --link: #c4b5ff; --accent-a: #8f85ff; --accent-b: #c77bff; --accent-c: #ff7ab0;
   }
+  html[data-darkreader-scheme="dark"] h1 { background: none; color: var(--link); -webkit-text-fill-color: currentColor; }
+  html[data-darkreader-scheme="dark"] :focus-visible { outline-color: currentColor !important; }
 </style>
 </head>
 <body>
