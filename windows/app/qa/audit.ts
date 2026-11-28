@@ -146,6 +146,7 @@ interface Gates {
   job?: JobGate;
   crop?: Record<string, unknown>;
   files?: Record<string, unknown>;
+  filename?: Record<string, unknown>;
   tool?: Record<string, unknown>;
   notices?: Record<string, unknown>;
   theme?: Record<string, unknown>;
@@ -1716,6 +1717,66 @@ async function filesGate() {
   report.gates.files = out;
 }
 
+// ------------------------------------------------------------ file name ---
+// The name in a file row is two spans cut at length-8. What the person sees must be the file's name, so a space at
+// the cut must not vanish (the old CSS drew "lofi man" as "lofiman"). The text of the element is right either way,
+// so this measures: the head and the tail together are as wide as the whole name set in the same font.
+async function fileNameGate(): Promise<void> {
+  const out: Record<string, unknown> = {};
+  const names = [
+    'Midnight Rhodes (prod. lofi man).mp3', // the head ends with a space
+    'Slow Rainy Afternoon a b.mp3', // the tail starts with a space
+    'Rainy Day Mix     b.mp3', // several spaces in a row, the cut inside them
+    'Slow Rainy Afternoon  a b.mp3', // a space on each side of the cut
+  ];
+  const errors: string[] = [];
+  for (const name of names) {
+    // A fresh page for each: a drop onto a filled slot asks the Replace question first.
+    const opened = await openPage(browser, { ...VIEW, width: 900 }); // wide enough that none of these names is cut
+    const page = opened.page;
+    errors.push(...opened.errors);
+    await load(page, url);
+    await drop(page, [{ name, type: 'audio/mpeg' }]);
+    await page.waitForFunction((n) => document.querySelector('[data-file="audio"]')?.textContent === n, name);
+    const m = await page.evaluate((n) => {
+      const el = document.querySelector('[data-file="audio"]') as HTMLElement;
+      const head = el.querySelector('.file-head') as HTMLElement;
+      const tail = el.querySelector('.file-tail') as HTMLElement | null;
+      const probe = document.createElement('span');
+      probe.textContent = n;
+      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;left:0;top:0';
+      el.append(probe);
+      const whole = probe.getBoundingClientRect().width;
+      probe.remove();
+      const seen = head.getBoundingClientRect().width + (tail?.getBoundingClientRect().width ?? 0);
+      return { whole, seen, truncated: head.scrollWidth > head.clientWidth + 1, text: el.textContent };
+    }, name);
+    out[name] = m;
+    if (m.truncated) fail('filename', `"${name}" is cut at the view width, so its width cannot be compared; use a shorter fixture`);
+    else if (Math.abs(m.whole - m.seen) > 0.5) fail('filename', `"${name}" is drawn ${m.seen}px wide but the name set in the same font is ${m.whole}px: a space at the cut is lost`);
+    await opened.context.close();
+  }
+  const opened = await openPage(browser, VIEW);
+  const { context, page } = opened;
+  await load(page, url);
+  // Too long for the room: the head gives way with an ellipsis and the tail (the extension) stays whole.
+  const long = `${'A very long photograph name that cannot fit '.repeat(3)}at the end of the line.mp3`;
+  await drop(page, [{ name: long, type: 'audio/mpeg' }]);
+  await page.waitForFunction((n) => document.querySelector('[data-file="audio"]')?.textContent === n, long);
+  const cut = await page.evaluate(() => {
+    const head = document.querySelector('[data-file="audio"] .file-head') as HTMLElement;
+    const tail = document.querySelector('[data-file="audio"] .file-tail') as HTMLElement;
+    return { overflow: getComputedStyle(head).textOverflow, clipped: head.scrollWidth > head.clientWidth + 1, tail: tail.textContent, tailWhole: tail.scrollWidth <= tail.clientWidth + 1 };
+  });
+  out.long = cut;
+  if (cut.overflow !== 'ellipsis' || !cut.clipped) fail('filename', `a long name is not cut with an ellipsis: ${JSON.stringify(cut)}`);
+  if (!cut.tailWhole || cut.tail !== long.slice(-8)) fail('filename', `a long name lost its ending: ${JSON.stringify(cut)}`);
+  errors.push(...opened.errors);
+  if (errors.length) fail('page', `filename: ${errors.join(' | ')}`);
+  await context.close();
+  report.gates.filename = out;
+}
+
 // ----------------------------------------------------------------- tool ---
 async function toolGate() {
   const out: Record<string, unknown> = {};
@@ -2013,6 +2074,7 @@ try {
   await gate('job', jobGate);
   await gate('crop', cropGate);
   await gate('files', filesGate);
+  await gate('filename', fileNameGate);
   await gate('tool', toolGate);
   await gate('notices', noticesGate);
   await gate('theme', themeGate);
@@ -2045,6 +2107,7 @@ console.log(`overlay    ${g.overlay ? Object.entries(g.overlay).map(([p, r]) => 
 console.log(`job        ${g.job ? `cancel acknowledged as "${g.job.cancelAcknowledged}", ${Object.keys(g.job).filter((k) => k.startsWith('row:')).length} rows of the error table, repeated failure "${g.job.secondFailure?.text ?? ''}"` : 'not run'}`);
 console.log(`crop       ${g.crop ? 'slider, keys, drag, reset and edges checked' : 'not run'}`);
 console.log(`files      ${g.files ? 'drop, Replace question, refused drops, highlight and a second launch checked' : 'not run'}`);
+console.log(`filename   ${g.filename ? 'a space at the cut keeps its width; a long name keeps its ending behind an ellipsis' : 'not run'}`);
 console.log(`tool       ${g.tool ? 'the missing-tool state, at launch and after it' : 'not run'}`);
 console.log(`theme      ${g.theme ? 'light and dark are painted differently, the choice survives a reload' : 'not run'}`);
 console.log(`distinct   ${g.distinct ? 'a failure, a refusal and a saved video are not a status line; progress spans the bar; one bar height' : 'not run'}`);
